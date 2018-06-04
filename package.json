@@ -1,0 +1,29 @@
+{
+  "name": "peer-star-app",
+  "version": "0.1.0",
+  "description": "Peer-Star App support",
+  "main": "index.js",
+  "scripts": {
+    "test": "aegir"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ipfs-shipyard/peer-star-app.git"
+  },
+  "keywords": [
+    "ipfs",
+    "app",
+    "dapp",
+    "collaborative",
+    "crdt"
+  ],
+  "author": "IPFS Shipyard",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ipfs-shipyard/peer-star-app/issues"
+  },
+  "homepage": "https://github.com/ipfs-shipyard/peer-star-app#readme",
+  "devDependencies": {
+    "aegir": "^14.0.0"
+  }
+}
