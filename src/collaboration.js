@@ -7,8 +7,8 @@ module.exports = (app, collaborationName, options) =>
 
 class Collaboration extends EventEmitter {
   constructor (app, name, options) {
+    super()
     this._app = app
     this.name = name
-    super()
   }
 }

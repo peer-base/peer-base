@@ -25,6 +25,7 @@ class App extends EventEmitter {
     let collaboration = this._collaborations.get(name)
     if (!collaboration) {
       collaboration = Collaboration(this, name, options)
+      this._collaborations.set(name, collaboration)
     }
     return collaboration
   }

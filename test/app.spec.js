@@ -15,6 +15,7 @@ describe('app', function () {
   let rendezvous
   let repo
   let app
+  let collaboration
 
   before(() => {
     repo = Repo()
@@ -39,6 +40,15 @@ describe('app', function () {
   })
 
   it('can be started', () => app.start())
+
+  it('can get collaboration', () => {
+    collaboration = app.collaborate('collaboration name')
+    expect(collaboration).to.not.be.empty()
+  })
+
+  it('can reget collaboration', () => {
+    expect(app.collaborate('collaboration name')).to.equal(collaboration)
+  })
 
   it('can be stopped', () => app.stop())
 })
