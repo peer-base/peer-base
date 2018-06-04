@@ -4,7 +4,7 @@
   "description": "Peer-Star App support",
   "main": "src/index.js",
   "scripts": {
-    "test": "aegir"
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -35,8 +35,10 @@
     "aegir": "^14.0.0",
     "chai": "^4.1.2",
     "dirty-chai": "^2.0.1",
+    "execa": "^0.10.0",
     "hat": "0.0.3",
     "ipfs-repo": "^0.22.1",
+    "libp2p-websocket-star-rendezvous": "^0.2.3",
     "rimraf": "^2.6.2"
   },
   "browser": {

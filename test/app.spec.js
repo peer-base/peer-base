@@ -8,9 +8,11 @@ const expect = chai.expect
 
 const PeerStar = require('../')
 const Repo = require('./utils/repo')
+const Rendezvous = require('./utils/rendezvous')
 
 describe('app', function () {
   this.timeout(10000)
+  let rendezvous
   let repo
   let app
 
@@ -20,9 +22,19 @@ describe('app', function () {
 
   after((done) => repo.teardown(done))
 
+  before(() => {
+    rendezvous = Rendezvous()
+    return rendezvous.start()
+  })
+
+  after(() => rendezvous.stop())
+
   it('can be created', () => {
     app = PeerStar('peer star test app', {
-      ipfs: { repo }
+      ipfs: {
+        repo,
+        swarm: [ '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star' ]
+      }
     })
   })
 
