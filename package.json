@@ -2,7 +2,7 @@
   "name": "peer-star-app",
   "version": "0.1.0",
   "description": "Peer-Star App support",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "test": "aegir"
   },
@@ -23,7 +23,23 @@
     "url": "https://github.com/ipfs-shipyard/peer-star-app/issues"
   },
   "homepage": "https://github.com/ipfs-shipyard/peer-star-app#readme",
+  "dependencies": {
+    "debug": "^3.1.0",
+    "ipfs": "^0.29.2",
+    "libp2p-websocket-star": "^0.8.0",
+    "multiaddr": "^5.0.0",
+    "peer-id": "^0.10.7",
+    "peer-info": "^0.14.1"
+  },
   "devDependencies": {
-    "aegir": "^14.0.0"
+    "aegir": "^14.0.0",
+    "chai": "^4.1.2",
+    "dirty-chai": "^2.0.1",
+    "hat": "0.0.3",
+    "ipfs-repo": "^0.22.1",
+    "rimraf": "^2.6.2"
+  },
+  "browser": {
+    "./test/utils/repo.js": "./test/utils/repo-browser.js"
   }
 }
