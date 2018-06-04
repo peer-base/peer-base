@@ -11,4 +11,12 @@ class Collaboration extends EventEmitter {
     this._app = app
     this.name = name
   }
+
+  start () {
+    // TODO
+  }
+
+  stop () {
+    // TODO
+  }
 }

@@ -4,7 +4,7 @@ const IPFS = require('ipfs')
 const WebSocketStar = require('libp2p-websocket-star')
 const AppTransport = require('./app-transport')
 
-module.exports = (appName, options) => {
+module.exports = (app, options) => {
   const ipfs = new IPFS({
     repo: options && options.repo,
     EXPERIMENTAL: {
@@ -23,7 +23,8 @@ module.exports = (appName, options) => {
   return ipfs
 
   function modules (peerInfo) {
-    const appTransport = AppTransport(appName, new WebSocketStar({ id: peerInfo.id }))
+    const appTransport = AppTransport(app.name, ipfs, new WebSocketStar({ id: peerInfo.id }))
+    appTransport.on('error', (err) => app.emit('error', err))
 
     return {
       transport: [ appTransport ],

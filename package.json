@@ -39,7 +39,8 @@
     "hat": "0.0.3",
     "ipfs-repo": "^0.22.1",
     "libp2p-websocket-star-rendezvous": "^0.2.3",
-    "rimraf": "^2.6.2"
+    "rimraf": "^2.6.2",
+    "sinon": "^5.0.10"
   },
   "browser": {
     "./test/utils/repo.js": "./test/utils/repo-browser.js"

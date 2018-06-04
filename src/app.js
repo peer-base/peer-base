@@ -13,7 +13,7 @@ class App extends EventEmitter {
   constructor (name, options) {
     super()
     this.name = name
-    this.ipfs = IPFS(name, options && options.ipfs)
+    this.ipfs = IPFS(this, name, options && options.ipfs)
     this._collaborations = new Map()
   }
 
