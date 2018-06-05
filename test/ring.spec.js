@@ -20,7 +20,6 @@ describe('ring', () => {
 
   it('can get successor', () => {
     const succ = r.successorOf([1])
-    console.log('succ:', succ)
     expect(succ).to.deep.equal([1])
   })
 
