@@ -1,7 +1,6 @@
 /* eslint-env mocha */
 'use strict'
 
-const hat = require('hat')
 const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect

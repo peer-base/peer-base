@@ -1,7 +1,6 @@
 /* eslint-env mocha */
 'use strict'
 
-const hat = require('hat')
 const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
@@ -14,7 +13,7 @@ const fail = require('./utils/fail')
 describe('app-transport', function () {
   let appTransport
   let listener = (conn) => {
-    console.log('listening to conn...')
+    // TODO
   }
   let discovery
   let transport
@@ -38,7 +37,7 @@ describe('app-transport', function () {
       stop: fake()
     })
     transport = {
-      createListener() {
+      createListener () {
         // TODO
       },
       discovery: discovery,

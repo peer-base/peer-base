@@ -85,7 +85,7 @@ class AppTransport extends EventEmitter {
     this._isInterestedInApp(peerInfo)
       .then((isInterestedInApp) => {
         // TODO: put in on a hashring
-        console.log('peer %s is interested:', maStr)
+        debug('peer %s is interested:', maStr)
         this._ring.add(peerInfo.id.toBytes())
         this.discovery.emit('peer', peerInfo)
       })
@@ -144,10 +144,4 @@ class AppTransport extends EventEmitter {
   _appTopic () {
     return this._appName
   }
-
-}
-
-function multiaddrMatches (ma) {
-  const pnames = ma.protoNames()
-  return pnames.length === 1 && pnames[0] === 'peer-star-websocket-star'
 }

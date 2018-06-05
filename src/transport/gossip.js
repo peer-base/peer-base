@@ -29,7 +29,7 @@ class Gossip extends EventEmitter {
   }
 
   stop (callback) {
-    this._ipfs.pubsub.unsubscribe(appName, this._pubSubHandler, callback)
+    this._ipfs.pubsub.unsubscribe(this._appName, this._pubSubHandler, callback)
   }
 
   _pubSubHandler ({from, data}) {

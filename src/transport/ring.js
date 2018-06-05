@@ -70,7 +70,7 @@ class Ring {
 
 function compare (a, b) {
   const bytes = Math.max(a.length, b.length)
-  for (let i = 0 ; i < bytes; i ++) {
+  for (let i = 0; i < bytes; i++) {
     // || 0 is for when byte length is not the same
     const l = a[i] || 0
     const r = b[i] || 0

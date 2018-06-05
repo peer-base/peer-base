@@ -4,7 +4,8 @@
   "description": "Peer-Star App support",
   "main": "src/index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "lint": "aegir lint"
   },
   "repository": {
     "type": "git",
@@ -25,24 +26,25 @@
   "homepage": "https://github.com/ipfs-shipyard/peer-star-app#readme",
   "dependencies": {
     "debug": "^3.1.0",
-    "ipfs": "^0.29.2",
-    "libp2p-websocket-star": "^0.8.0",
+    "ipfs": "~0.29.2",
+    "libp2p-websocket-star": "~0.8.0",
     "multiaddr": "^5.0.0",
-    "peer-id": "^0.10.7",
-    "peer-info": "^0.14.1"
+    "peer-id": "~0.10.7",
+    "peer-info": "~0.14.1"
   },
   "devDependencies": {
     "aegir": "^14.0.0",
     "chai": "^4.1.2",
     "dirty-chai": "^2.0.1",
-    "execa": "^0.10.0",
+    "execa": "~0.10.0",
     "hat": "0.0.3",
-    "ipfs-repo": "^0.22.1",
-    "libp2p-websocket-star-rendezvous": "^0.2.3",
+    "ipfs-repo": "~0.22.1",
+    "libp2p-websocket-star-rendezvous": "~0.2.3",
     "rimraf": "^2.6.2",
     "sinon": "^5.0.10"
   },
   "browser": {
     "./test/utils/repo.js": "./test/utils/repo-browser.js"
-  }
+  },
+  "pre-push": ["lint", "test"]
 }
