@@ -36,6 +36,6 @@ describe('app swarm', function () {
   }
 
   it('can be created', () => {
-    console.log('hello!')
+    expect('hello').to.equal('hello')
   })
 })
