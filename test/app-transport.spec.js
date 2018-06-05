@@ -24,6 +24,12 @@ describe('app-transport', function () {
     ipfs = {
       _libp2pNode: {
         pubsub: {
+        },
+        on: fake()
+      },
+      pubsub: {
+        subscribe: (topic, handler, callback) => {
+          setImmediate(() => callback())
         }
       }
     }

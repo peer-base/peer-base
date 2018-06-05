@@ -85,8 +85,8 @@ class AppTransport extends EventEmitter {
     this._isInterestedInApp(peerInfo)
       .then((isInterestedInApp) => {
         // TODO: put in on a hashring
-        console.log('peerInfo:', peerInfo)
-        this._ring.add(peerInfo.id)
+        console.log('peer %s is interested:', maStr)
+        this._ring.add(peerInfo.id.toBytes())
         this.discovery.emit('peer', peerInfo)
       })
       .catch((err) => {
@@ -95,8 +95,8 @@ class AppTransport extends EventEmitter {
   }
 
   _onPeerDisconnect (peerInfo) {
-    console.log('peer disconnected')
-    peerInfo.id.toB58String
+    debug('peer %s disconnected', peerInfo.id.toB58String())
+    this._ring.remove(peerInfo.id.toBytes())
   }
 
   _isInterestedInApp (peerInfo) {
