@@ -81,7 +81,7 @@ class AppTransport extends EventEmitter {
         const pollPeer = () => {
           const pubsubPeer = pubsub.peers.get(idB58Str)
           if (!pubsubPeer) {
-            maybeSchedulePeerPoll()
+            return maybeSchedulePeerPoll()
           }
           console.log('app topics:', pubsubPeer.topics)
           if (pubsubPeer.topics.has(appTopic)) {
