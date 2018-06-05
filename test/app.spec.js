@@ -20,7 +20,7 @@ describe('app', function () {
     repo = Repo()
   })
 
-  after((done) => repo.teardown(done))
+  after(() => repo.teardown())
 
   before(() => {
     rendezvous = Rendezvous()

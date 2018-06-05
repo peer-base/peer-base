@@ -14,11 +14,13 @@ function createTempRepo (repoPath) {
 
   const repo = new IPFSRepo(repoPath)
 
-  repo.teardown = (done) => {
-    repo.close(() => {
-      idb.deleteDatabase(repoPath)
-      idb.deleteDatabase(repoPath + '/blocks')
-      done()
+  repo.teardown = () => {
+    return new Promise((resolve, reject) => {
+      repo.close(() => {
+        idb.deleteDatabase(repoPath)
+        idb.deleteDatabase(repoPath + '/blocks')
+        resolve()
+      })
     })
   }
 
