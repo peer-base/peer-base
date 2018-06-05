@@ -4,23 +4,29 @@ const debug = require('debug')('peer-star:app-transport')
 const PeerInfo = require('peer-info')
 const PeerId = require('peer-id')
 const multiaddr = require('multiaddr')
+const Ring = require('./ring')
 const EventEmitter = require('events')
+const Gossip = require('./gossip')
 
 module.exports = (...args) => new AppTransport(...args)
 
 class AppTransport extends EventEmitter {
   constructor (appName, ipfs, transport) {
     super()
+    this._started = false
     this._ipfs = ipfs
     this._transport = transport
     this._appName = appName
 
+    this._ring = Ring()
     this.listeners = []
 
     this._peerDiscovered = this._peerDiscovered.bind(this)
+    this._onPeerDisconnect = this._onPeerDisconnect.bind(this)
 
     this.discovery = new EventEmitter()
     this.discovery.start = (callback) => {
+      this._maybeStart()
       debug('starting discovery')
       this._transport.discovery.on('peer', this._peerDiscovered)
       return this._transport.discovery.start(callback)
@@ -30,6 +36,9 @@ class AppTransport extends EventEmitter {
       this._transport.discovery.removeListener('peer', this._peerDiscovered)
       return this._transport.discovery.stop(callback)
     }
+
+    this._gossip = Gossip(appName, ipfs)
+    this._gossip.on('error', (err) => this.emit('error', err))
   }
 
   dial (ma, options, callback) {
@@ -44,6 +53,28 @@ class AppTransport extends EventEmitter {
     return this._transport.filter(multiaddrs)
   }
 
+  close (callback) {
+    this._ipfs._libp2pNode.removeListener('peer:disconnect', this._onPeerDisconnect)
+    this._gossip.stop((err) => {
+      if (err) {
+        debug('error stopping gossip: ', err)
+      }
+      this._transport.close(callback)
+    })
+  }
+
+  _maybeStart () {
+    if (!this._started) {
+      this._started = true
+      this._start()
+    }
+  }
+
+  _start () {
+    this._gossip.start()
+    this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
+  }
+
   _peerDiscovered (maStr) {
     debug('peer discovered %s', maStr)
     const peerIdStr = maStr.split('/ipfs/').pop()
@@ -54,11 +85,18 @@ class AppTransport extends EventEmitter {
     this._isInterestedInApp(peerInfo)
       .then((isInterestedInApp) => {
         // TODO: put in on a hashring
+        console.log('peerInfo:', peerInfo)
+        this._ring.add(peerInfo.id)
         this.discovery.emit('peer', peerInfo)
       })
       .catch((err) => {
         debug('error caught while finding out if peer is interested in app', err)
       })
+  }
+
+  _onPeerDisconnect (peerInfo) {
+    console.log('peer disconnected')
+    peerInfo.id.toB58String
   }
 
   _isInterestedInApp (peerInfo) {

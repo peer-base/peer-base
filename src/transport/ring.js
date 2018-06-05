@@ -20,10 +20,12 @@ class Ring {
       const p = this._points[i]
       const comparison = compare(point, p)
       if (comparison === 0) {
+        // found point
         const points = this._points
         this._points = points.slice(0, i).concat(points.slice(i + 1))
         break
       } else if (comparison < 0) {
+        // point not here
         break
       }
     }
@@ -32,6 +34,7 @@ class Ring {
   has (point) {
     for (let p of this._points) {
       if (compare(point, p) === 0) {
+        // found point
         return true
       }
     }
@@ -41,8 +44,8 @@ class Ring {
   successorOf (point) {
     for (let p of this._points) {
       const comparison = compare(point, p)
-      console.log('compare(%j, %j) = ', point, p, comparison)
       if (comparison < 0) {
+        // we're after the given point
         return p
       }
     }
@@ -54,8 +57,10 @@ class Ring {
     for (let p of this._points) {
       const comparison = compare(point, p)
       if (comparison >= 0) {
+        // we're at or before the given point
         last = p
       } else {
+        // we're after the given point
         return last
       }
     }
@@ -66,9 +71,11 @@ class Ring {
 function compare (a, b) {
   const bytes = Math.max(a.length, b.length)
   for (let i = 0 ; i < bytes; i ++) {
+    // || 0 is for when byte length is not the same
     const l = a[i] || 0
     const r = b[i] || 0
     if (l === r) {
+      // damn it.. proceeding to the next byte
       continue
     }
     return l - r
