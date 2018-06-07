@@ -55,3 +55,9 @@ describe('app swarm', function () {
     expect(1).to.equal(1)
   })
 })
+
+process.on('uncaughtException', (err) => {
+  if (err.message !== 'Multiplexer is destroyed') {
+    throw err
+  }
+})

@@ -34,11 +34,9 @@ module.exports = (bytes, peerInfo, preambleBytes) => {
     return peers
 
     function add (peer) {
-      if (peers.has(peer)) {
-        return false
+      if (peer && !peers.has(peer)) {
+        peers.add(peer)
       }
-
-      return peers.add(peer) || true
     }
   }
 

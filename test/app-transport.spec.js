@@ -23,10 +23,9 @@ describe('app-transport', function () {
 
   before(() => {
     ipfs = {
-      libp2p: {
-        dial: fake()
-      },
       _libp2pNode: {
+        dial: fake(),
+        hangUp: fake(),
         pubsub: {
         },
         on: fake()
@@ -76,7 +75,7 @@ describe('app-transport', function () {
         dialCalled = true
         callback(new Error('nope, not today!'))
       }
-      ipfs.libp2p.dial = dial
+      ipfs._libp2pNode.dial = dial
 
       const onPeerDiscovered = fail('should not discover peer')
       appTransport.discovery.on('peer', onPeerDiscovered)
@@ -95,7 +94,7 @@ describe('app-transport', function () {
         dialCalled = true
         setImmediate(callback)
       }
-      ipfs.libp2p.dial = dial
+      ipfs._libp2pNode.dial = dial
 
       const onPeerDiscovered = fail('should not discover peer')
       appTransport.discovery.on('peer', onPeerDiscovered)
@@ -122,7 +121,7 @@ describe('app-transport', function () {
           callback()
         })
       }
-      ipfs.libp2p.dial = dial
+      ipfs._libp2pNode.dial = dial
 
       const onPeerDiscovered = (peerId) => {
         expect(peerId.id.toB58String()).to.equal('8SxqM')

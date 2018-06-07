@@ -118,7 +118,7 @@ class AppTransport extends EventEmitter {
           }
         } else {
           // peer is not interested. maybe disconnect?
-          this.ipfs.libp2p.dial(peerInfo, (err) => {
+          this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
             if (err) {
               this.emit('error', err)
             }
@@ -141,7 +141,7 @@ class AppTransport extends EventEmitter {
 
       debug('finding out whether peer %s is interested in app', idB58Str)
 
-      this._ipfs.libp2p.dial(peerInfo, (err) => {
+      this._ipfs._libp2pNode.dial(peerInfo, (err) => {
         if (err) {
           return reject(err)
         }
@@ -187,7 +187,7 @@ class AppTransport extends EventEmitter {
     // make sure we're connected to every peer of the Dias Peer Set
     for (let peerInfo of diasSet.values()) {
       if (!this._connectedTo.has(peerInfo)) {
-        this._ipfs.libp2p.dial(peerInfo, (err) => {
+        this._ipfs._libp2pNode.dial(peerInfo, (err) => {
           if (err) {
             debug('error dialing:', err)
           }
@@ -198,7 +198,7 @@ class AppTransport extends EventEmitter {
     // make sure we disconnect from peers not in the Dias Peer Set
     for (let peerInfo of this._connectedTo.values()) {
       if (!diasSet.has(peerInfo)) {
-        this._ipfs.libp2p.hangup(peerInfo, (err) => {
+        this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
           if (err) {
             this.emit('error', err)
           }
