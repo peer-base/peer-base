@@ -1,9 +1,11 @@
 'use strict'
 
+const PeerSet = require('./peer-set')
 const equal = require('./ring').equal
 
-module.exports = (bytes, id) => {
-  const fullRing = new Buffer(bytes)
+module.exports = (bytes, peerInfo, preambleBytes) => {
+  const id = peerInfo.id.toBytes().slice(preambleBytes)
+  const fullRing = Buffer.alloc(bytes)
   for (let i = 0; i < bytes; i++) {
     fullRing[i] = 0xff
   }
@@ -13,48 +15,30 @@ module.exports = (bytes, id) => {
   const oneHalf = oneHalfFrom(id)
 
   return (ring) => {
-    const peers = new Set()
+    const peers = new PeerSet()
 
-    const succ = ring.successorOf(id)
-    if (!succ || equal(id, succ) || !peers.add(succ) ) {
+    const ringSize = ring.size
+
+    if (!ringSize) {
       return peers
     }
 
-    const succ2 = ring.successorOf(succ)
-    if (!succ2 || equal(id, succ2) || !peers.add(succ2) ) {
-      return peers
-    }
-
-    const oneFifthAccross = ring.at(oneFifth)
-    if (!oneFifthAccross || equal(id, oneFifthAccross) || !peers.add(oneFifthAccross) ) {
-      return peers
-    }
-
-    const oneFourthAccross = ring.at(oneFourth)
-    if (!oneFourthAccross || equal(id, oneFourthAccross) || !peers.add(oneFourthAccross) ) {
-      return peers
-    }
-
-    const oneThirdAccross = ring.at(oneThird)
-    if (!oneThirdAccross || equal(id, oneThirdAccross) || !peers.add(oneThirdAccross) ) {
-      return peers
-    }
-
-    const halfWayAcrossPlusOne = ring.successorOf(oneHalf)
-    if (equal(id, halfWayAcrossPlusOne) || !peers.add(halfWayAcrossPlusOne) ) {
-      return peers
-    }
+    const succ = ring.successorOf(peerInfo)
+    add(succ)
+    add(ring.successorOf(succ))
+    add(ring.at(oneFifth))
+    add(ring.at(oneFourth))
+    add(ring.at(oneThird))
+    add(ring.successorOf(oneHalf))
 
     return peers
 
     function add (peer) {
-      for (let p of peers) {
-        if (equal(p, peer)) {
-          return false
-        }
+      if (peers.has(peer)) {
+        return false
       }
-      peers.add(peer)
-      return true
+
+      return peers.add(peer) || true
     }
   }
 

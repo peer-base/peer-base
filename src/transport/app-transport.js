@@ -1,15 +1,14 @@
 'use strict'
 
 const debug = require('debug')('peer-star:app-transport')
-const PeerInfo = require('peer-info')
-const PeerId = require('peer-id')
-const multiaddr = require('multiaddr')
 const Ring = require('./ring')
 const EventEmitter = require('events')
 const Gossip = require('./gossip')
 const DiasSet = require('./dias-peer-set')
+const PeerSet = require('./peer-set')
 
 const PEER_ID_BYTE_COUNT = 32
+const PREAMBLE_BYTE_COUNT = 2
 
 module.exports = (...args) => new AppTransport(...args)
 
@@ -22,10 +21,12 @@ class AppTransport extends EventEmitter {
     this._appName = appName
 
     this._ring = Ring()
+    this._connectedTo = new PeerSet()
     this.listeners = []
 
     this._peerDiscovered = this._peerDiscovered.bind(this)
     this._onPeerDisconnect = this._onPeerDisconnect.bind(this)
+    this._onPeerConnect = this._onPeerConnect.bind(this)
 
     this.discovery = new EventEmitter()
     this.discovery.start = (callback) => {
@@ -77,11 +78,12 @@ class AppTransport extends EventEmitter {
     this._startPeerId()
     this._gossip.start()
     this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
+    this._ipfs._libp2pNode.on('peer:connect', this._onPeerConnect)
   }
 
   _startPeerId () {
     if (this._ipfs._peerInfo) {
-      this._diasSet = DiasSet(PEER_ID_BYTE_COUNT, this._getPeerId())
+      this._diasSet = DiasSet(PEER_ID_BYTE_COUNT, this._ipfs._peerInfo, PREAMBLE_BYTE_COUNT)
     } else {
       this._ipfs.once('ready', this._startPeerId.bind(this))
     }
@@ -89,7 +91,16 @@ class AppTransport extends EventEmitter {
 
   _onPeerDisconnect (peerInfo) {
     debug('peer %s disconnected', peerInfo.id.toB58String())
-    this._ring.remove(peerIdFromPeerInfo(peerInfo))
+    this._connectedTo.delete(peerInfo)
+    if (this._ring.remove(peerInfo)) {
+      this._keepConnectedToDiasSet()
+      this.emit('peer disconnected', peerInfo)
+    }
+  }
+
+  _onPeerConnect (peerInfo) {
+    debug('peer %s connected', peerInfo.id.toB58String())
+    this._connectedTo.add(peerInfo)
   }
 
   _peerDiscovered (peerInfo) {
@@ -99,20 +110,19 @@ class AppTransport extends EventEmitter {
     this._isInterestedInApp(peerInfo)
       .then((isInterestedInApp) => {
         if (isInterestedInApp) {
-          debug('peer %s is interested:', maStr)
-          this._ring.add(peerIdFromPeerInfo(peerInfo))
-          const peers = this._diasSet(this._ring)
-          this.discovery.emit('peer', peerInfo)
+          debug('peer %s is interested:', peerInfo.id.toB58String())
+          this._ring.add(peerInfo)
+          const diasSet = this._keepConnectedToDiasSet()
+          if (diasSet.has(peerInfo)) {
+            this.discovery.emit('peer', peerInfo)
+          }
         } else {
           // peer is not interested. maybe disconnect?
-          const addresses = peerInfo.multiaddrs.toArray()
-          if (addresses.length) {
-            this.ipfs.swarm.disconnect(addresses[0], (err) => {
-              if (err) {
-                this.emit('error', err)
-              }
-            })
-          }
+          this.ipfs.libp2p.dial(peerInfo, (err) => {
+            if (err) {
+              this.emit('error', err)
+            }
+          })
         }
       })
       .catch((err) => {
@@ -121,16 +131,17 @@ class AppTransport extends EventEmitter {
   }
 
   _isInterestedInApp (peerInfo) {
+    if (Buffer.isBuffer(peerInfo) || Array.isArray(peerInfo)) {
+      throw new Error('needs peer info!')
+    }
+    console.log('_isInterestedInApp', peerInfo)
     // TODO: refactor this, PLEASE!
     return new Promise((resolve, reject) => {
       const idB58Str = peerInfo.id.toB58String()
-      debug('findig out whether peer %s is interested in app', idB58Str)
-      console.log('peer info:', peerInfo)
-      const addresses = peerInfo.multiaddrs.toArray()
-      if (!addresses.length) {
-        return reject(new Error('no addresses'))
-      }
-      this._ipfs.swarm.connect(addresses[0], (err) => {
+
+      debug('finding out whether peer %s is interested in app', idB58Str)
+
+      this._ipfs.libp2p.dial(peerInfo, (err) => {
         if (err) {
           return reject(err)
         }
@@ -144,6 +155,11 @@ class AppTransport extends EventEmitter {
 
         const pollPeer = () => {
           this._ipfs.pubsub.peers(appTopic, (err, peers) => {
+            if (err) {
+              return reject(err)
+            }
+            console.log('peers:', peers)
+            console.log('looking for ', idB58Str)
             if (peers.indexOf(idB58Str) >= 0) {
               resolve(true)
             } else {
@@ -165,16 +181,35 @@ class AppTransport extends EventEmitter {
     })
   }
 
-  _getPeerId () {
-    return peerIdFromPeerInfo(this._ipfs._peerInfo)
+  _keepConnectedToDiasSet () {
+    const diasSet = this._diasSet(this._ring)
+
+    // make sure we're connected to every peer of the Dias Peer Set
+    for (let peerInfo of diasSet.values()) {
+      if (!this._connectedTo.has(peerInfo)) {
+        this._ipfs.libp2p.dial(peerInfo, (err) => {
+          if (err) {
+            debug('error dialing:', err)
+          }
+        })
+      }
+    }
+
+    // make sure we disconnect from peers not in the Dias Peer Set
+    for (let peerInfo of this._connectedTo.values()) {
+      if (!diasSet.has(peerInfo)) {
+        this._ipfs.libp2p.hangup(peerInfo, (err) => {
+          if (err) {
+            this.emit('error', err)
+          }
+        })
+      }
+    }
+
+    return diasSet
   }
 
   _appTopic () {
     return this._appName
   }
-}
-
-function peerIdFromPeerInfo (peerInfo) {
-  // slice off the preamble so that we get a better distribution
-  return peerInfo.id.toBytes().slice(2)
 }

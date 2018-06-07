@@ -15,7 +15,7 @@ describe('dias set', () => {
 
   it('can be created', () => {
     r = Ring()
-    diasSet = DiasSet(2, id)
+    diasSet = DiasSet(2, new FakePeerInfo(id), 0)
   })
 
   it('is empty at start', () => {
@@ -23,37 +23,47 @@ describe('dias set', () => {
   })
 
   it('can add a node', () => {
-    r.add([0, 1])
-    expect(Array.from(diasSet(r))).to.deep.equal([[0, 1]])
+    r.add(new FakePeerInfo([0, 1]))
+    expect(Array.from(diasSet(r).values()).map(peerInfoToId)).to.deep.equal([[0, 1]])
   })
 
   it('can add some nodes before 1/5th', () => {
-    r.add([0, 2])
-    r.add([0, 3])
-    r.add([0, 4])
-    r.add([0, 5])
-    r.add([0, 6])
-    expect(Array.from(diasSet(r)).sort(sort)).to.deep.equal([[0, 1], [0, 2], [0, 6]])
+    r.add(new FakePeerInfo([0, 2]))
+    r.add(new FakePeerInfo([0, 3]))
+    r.add(new FakePeerInfo([0, 4]))
+    r.add(new FakePeerInfo([0, 5]))
+    r.add(new FakePeerInfo([0, 6]))
+    expect(
+      Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
+      .to.deep.equal([[0, 1], [0, 2], [0, 6]])
   })
 
   it('can add a node before 1/5th', () => {
-    r.add([51, 0])
-    expect(Array.from(diasSet(r)).sort(sort)).to.deep.equal([[0, 1], [0, 2], [51, 0]])
+    r.add(new FakePeerInfo([51, 0]))
+    expect(
+      Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
+      .to.deep.equal([[0, 1], [0, 2], [51, 0]])
   })
 
   it('can add a node before 1/4th', () => {
-    r.add([63, 0])
-    expect(Array.from(diasSet(r)).sort(sort)).to.deep.equal([[0, 1], [0, 2], [51, 0], [63, 0]])
+    r.add(new FakePeerInfo([63, 0]))
+    expect(
+      Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
+      .to.deep.equal([[0, 1], [0, 2], [51, 0], [63, 0]])
   })
 
   it('can add a node before 1/3rd', () => {
-    r.add([85, 0])
-    expect(Array.from(diasSet(r)).sort(sort)).to.deep.equal([[0, 1], [0, 2], [51, 0], [63, 0], [85, 0]])
+    r.add(new FakePeerInfo([85, 0]))
+    expect(
+      Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
+      .to.deep.equal([[0, 1], [0, 2], [51, 0], [63, 0], [85, 0]])
   })
 
   it('can add a node after 1/2', () => {
-    r.add([128, 0])
-    expect(Array.from(diasSet(r)).sort(sort)).to.deep.equal([[0, 1], [0, 2], [51, 0], [63, 0], [85, 0], [128, 0]])
+    r.add(new FakePeerInfo([128, 0]))
+    expect(
+      Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
+      .to.deep.equal([[0, 1], [0, 2], [51, 0], [63, 0], [85, 0], [128, 0]])
   })
 })
 
@@ -68,4 +78,18 @@ function sort (a, b) {
   }
 
   return 0
+}
+
+class FakePeerInfo {
+  constructor (id) {
+    this.id = {
+      toBytes () {
+        return id
+      }
+    }
+  }
+}
+
+function peerInfoToId (pi) {
+  return pi.id.toBytes()
 }

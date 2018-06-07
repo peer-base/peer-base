@@ -8,6 +8,8 @@ const expect = chai.expect
 const App = require('./utils/create-app')
 const Rendezvous = require('./utils/rendezvous')
 
+const A_BIT = 3000
+
 describe('app swarm', function () {
   this.timeout(10000)
 
@@ -27,6 +29,15 @@ describe('app swarm', function () {
     ((i) => {
       before(() => {
         const app = App()
+
+        app.app.on('peer connected', (peerInfo) => {
+          console.log('connected to peer %s', peerInfo.id.toB58String())
+        })
+
+        app.app.on('peer disconnected', (peerInfo) => {
+          console.log('disconnected from peer %s', peerInfo.id.toB58String())
+        })
+
         swarm.push(app)
         return app.start()
       })
@@ -35,7 +46,12 @@ describe('app swarm', function () {
     })(i)
   }
 
-  it('can be created', () => {
-    expect('hello').to.equal('hello')
+  before((done) => {
+    // wait a bit for things to sync
+    setTimeout(done, A_BIT)
+  })
+
+  it('broadcasting eventually reaches all nodes', () => {
+    expect(1).to.equal(1)
   })
 })

@@ -2,7 +2,6 @@
 
 const EventEmitter = require('events')
 const Collaboration = require('./collaboration')
-const awaitIpfsInit = require('./utils/await-ipfs-init')
 const IPFS = require('./transport/ipfs')
 
 module.exports = (appName, options) => {

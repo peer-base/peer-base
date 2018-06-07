@@ -7,6 +7,8 @@ const expect = chai.expect
 const fake = require('sinon').fake
 
 const EventEmitter = require('events')
+const bs58 = require('bs58')
+
 const AppTransport = require('../src/transport/app-transport')
 const fail = require('./utils/fail')
 
@@ -21,14 +23,23 @@ describe('app-transport', function () {
 
   before(() => {
     ipfs = {
+      libp2p: {
+        dial: fake()
+      },
       _libp2pNode: {
         pubsub: {
         },
         on: fake()
       },
       pubsub: {
+        peers: (topic, cb) => setImmediate(() => cb(null, [])),
         subscribe: (topic, handler, callback) => {
           setImmediate(() => callback())
+        }
+      },
+      _peerInfo: {
+        id: {
+          toBytes: () => [1, 2]
         }
       }
     }
@@ -60,30 +71,37 @@ describe('app-transport', function () {
 
     it('unconnected peer is filtered', function (done) {
       this.timeout(6000)
+      let dialCalled = false
       const dial = (peerInfo, callback) => {
+        dialCalled = true
         callback(new Error('nope, not today!'))
       }
-      ipfs._libp2pNode.pubsub._dialPeer = dial
+      ipfs.libp2p.dial = dial
 
       const onPeerDiscovered = fail('should not discover peer')
       appTransport.discovery.on('peer', onPeerDiscovered)
-      transport.discovery.emit('peer', '/ipfs/abcdef')
+      transport.discovery.emit('peer', new FakePeerInfo([1, 2, 3, 4]))
       setTimeout(() => {
+        expect(dialCalled).to.be.true()
         appTransport.discovery.removeListener('peer', onPeerDiscovered)
         done()
-      }, 5000)
+      }, 1000)
     })
 
     it('uninteresting peer is filtered', function (done) {
       this.timeout(6000)
-      const dial = fake()
-      ipfs._libp2pNode.pubsub._dialPeer = dial
+      let dialCalled = false
+      const dial = (peerInfo, callback) => {
+        dialCalled = true
+        setImmediate(callback)
+      }
+      ipfs.libp2p.dial = dial
 
       const onPeerDiscovered = fail('should not discover peer')
       appTransport.discovery.on('peer', onPeerDiscovered)
-      transport.discovery.emit('peer', '/ipfs/abcdef')
+      transport.discovery.emit('peer', new FakePeerInfo([3, 4, 5, 6]))
       setTimeout(() => {
-        expect(dial.callCount).to.be.least(1)
+        expect(dialCalled).to.be.true()
         appTransport.discovery.removeListener('peer', onPeerDiscovered)
         done()
       }, 5000)
@@ -92,25 +110,39 @@ describe('app-transport', function () {
     it('interesting peer is discovered', function (done) {
       this.timeout(6000)
       const dial = (peerInfo, callback) => {
-        const peers = new Map()
-        ipfs._libp2pNode.pubsub.peers = new Map()
+        const peers = []
+        ipfs.pubsub.peers = (topic, callback) => {
+          console.log('peers?', topic, peers)
+          callback(null, peers)
+        }
         setImmediate(() => {
           setTimeout(() => {
-            peers.set('ghijklmn', {
-              topics: new Set(['peer-star test app name'])
-            })
+            peers.push('8SxqM')
           }, 2000)
           callback()
         })
       }
-      ipfs._libp2pNode.pubsub._dialPeer = dial
+      ipfs.libp2p.dial = dial
 
       const onPeerDiscovered = (peerId) => {
-        expect(peerId.id.toB58String()).to.equal('Qmabcdef')
+        expect(peerId.id.toB58String()).to.equal('8SxqM')
         done()
       }
       appTransport.discovery.once('peer', onPeerDiscovered)
-      transport.discovery.emit('peer', '/ipfs/Qmabcdef')
+      transport.discovery.emit('peer', new FakePeerInfo([5, 6, 7, 8]))
     })
   })
 })
+
+class FakePeerInfo {
+  constructor (id) {
+    this.id = {
+      toBytes () {
+        return id
+      },
+      toB58String () {
+        return bs58.encode(id)
+      }
+    }
+  }
+}

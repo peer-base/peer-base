@@ -5,18 +5,31 @@ exports.compare = compare
 exports.equal = equal
 
 class Ring {
-  constructor () {
+  constructor (preambleByteCount) {
+    this._preambleByteCount = preambleByteCount
     this._points = []
+    this._contacts = new Map()
   }
 
-  add (point) {
+  get size () {
+    return this._points.length
+  }
+
+  add (peerInfo) {
+    if (Buffer.isBuffer(peerInfo) || Array.isArray(peerInfo)) {
+      throw new Error('should only add peerInfos')
+    }
+
+    const point = this._peerIdFromPeerInfo(peerInfo)
     if (!this.has(point)) {
       this._points.push(point)
       this._points.sort(compare)
+      this._contacts.set(point.toString('hex'), peerInfo)
     }
   }
 
-  remove (point) {
+  remove (peerInfo) {
+    const point = this._peerIdFromPeerInfo(peerInfo)
     for (let i in this._points) {
       const p = this._points[i]
       const comparison = compare(point, p)
@@ -24,15 +37,19 @@ class Ring {
         // found point
         const points = this._points
         this._points = points.slice(0, i).concat(points.slice(i + 1))
+        this._contacts.delete(p.toString('hex'))
+        return true
         break
       } else if (comparison < 0) {
         // point not here
         break
       }
     }
+    return false
   }
 
-  has (point) {
+  has (peerInfo) {
+    const point = this._peerIdFromPeerInfo(peerInfo)
     for (let p of this._points) {
       if (compare(point, p) === 0) {
         // found point
@@ -42,18 +59,22 @@ class Ring {
     return false
   }
 
-  successorOf (point) {
+  successorOf (peerInfo) {
+    const point = this._peerIdFromPeerInfo(peerInfo)
+
     for (let p of this._points) {
       const comparison = compare(point, p)
       if (comparison < 0) {
         // we're after the given point
-        return p
+        return this._peerInfoFromPoint(p)
       }
     }
-    return this._points[0]
+    return this._peerInfoFromPoint(this._points[0])
   }
 
-  at (point) {
+  at (peerInfo) {
+    const point = this._peerIdFromPeerInfo(peerInfo)
+
     let last
     for (let p of this._points) {
       const comparison = compare(point, p)
@@ -62,10 +83,22 @@ class Ring {
         last = p
       } else {
         // we're after the given point
-        return last
+        return this._peerInfoFromPoint(last)
       }
     }
-    return this._points[this._points.length - 1]
+    return this._peerInfoFromPoint(this._points[this._points.length - 1])
+  }
+
+  _peerInfoFromPoint (point) {
+    return point && this._contacts.get(point.toString('hex'))
+  }
+
+  _peerIdFromPeerInfo (peerInfo) {
+    if (Buffer.isBuffer(peerInfo) || Array.isArray(peerInfo)) {
+      return peerInfo
+    }
+    // slice off the preamble so that we get a better distribution
+    return peerInfo.id.toBytes().slice(this._preambleByteCount)
   }
 }
 
