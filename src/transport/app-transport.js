@@ -7,6 +7,9 @@ const multiaddr = require('multiaddr')
 const Ring = require('./ring')
 const EventEmitter = require('events')
 const Gossip = require('./gossip')
+const DiasSet = require('./dias-peer-set')
+
+const PEER_ID_BYTE_COUNT = 32
 
 module.exports = (...args) => new AppTransport(...args)
 
@@ -71,40 +74,63 @@ class AppTransport extends EventEmitter {
   }
 
   _start () {
+    this._startPeerId()
     this._gossip.start()
     this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
   }
 
-  _peerDiscovered (maStr) {
-    debug('peer discovered %s', maStr)
-    const peerIdStr = maStr.split('/ipfs/').pop()
-    const peerId = PeerId.createFromB58String(peerIdStr)
-    const peerInfo = new PeerInfo(peerId)
-    peerInfo.multiaddrs.add(multiaddr(maStr))
+  _startPeerId () {
+    if (this._ipfs._peerInfo) {
+      this._diasSet = DiasSet(PEER_ID_BYTE_COUNT, this._getPeerId())
+    } else {
+      this._ipfs.once('ready', this._startPeerId.bind(this))
+    }
+  }
+
+  _onPeerDisconnect (peerInfo) {
+    debug('peer %s disconnected', peerInfo.id.toB58String())
+    this._ring.remove(peerIdFromPeerInfo(peerInfo))
+  }
+
+  _peerDiscovered (peerInfo) {
+    // TODO: refactor this, PLEASE!
+    debug('peer discovered %j', peerInfo)
 
     this._isInterestedInApp(peerInfo)
       .then((isInterestedInApp) => {
-        // TODO: put in on a hashring
-        debug('peer %s is interested:', maStr)
-        this._ring.add(peerInfo.id.toBytes())
-        this.discovery.emit('peer', peerInfo)
+        if (isInterestedInApp) {
+          debug('peer %s is interested:', maStr)
+          this._ring.add(peerIdFromPeerInfo(peerInfo))
+          const peers = this._diasSet(this._ring)
+          this.discovery.emit('peer', peerInfo)
+        } else {
+          // peer is not interested. maybe disconnect?
+          const addresses = peerInfo.multiaddrs.toArray()
+          if (addresses.length) {
+            this.ipfs.swarm.disconnect(addresses[0], (err) => {
+              if (err) {
+                this.emit('error', err)
+              }
+            })
+          }
+        }
       })
       .catch((err) => {
         debug('error caught while finding out if peer is interested in app', err)
       })
   }
 
-  _onPeerDisconnect (peerInfo) {
-    debug('peer %s disconnected', peerInfo.id.toB58String())
-    this._ring.remove(peerInfo.id.toBytes())
-  }
-
   _isInterestedInApp (peerInfo) {
+    // TODO: refactor this, PLEASE!
     return new Promise((resolve, reject) => {
-      const pubsub = this._ipfs._libp2pNode.pubsub
       const idB58Str = peerInfo.id.toB58String()
       debug('findig out whether peer %s is interested in app', idB58Str)
-      pubsub._dialPeer(peerInfo, (err) => {
+      console.log('peer info:', peerInfo)
+      const addresses = peerInfo.multiaddrs.toArray()
+      if (!addresses.length) {
+        return reject(new Error('no addresses'))
+      }
+      this._ipfs.swarm.connect(addresses[0], (err) => {
         if (err) {
           return reject(err)
         }
@@ -117,15 +143,13 @@ class AppTransport extends EventEmitter {
         let tryUntil = Date.now() + 5000 // TODO: this should go to config
 
         const pollPeer = () => {
-          const pubsubPeer = pubsub.peers.get(idB58Str)
-          if (!pubsubPeer) {
-            return maybeSchedulePeerPoll()
-          }
-          if (pubsubPeer.topics.has(appTopic)) {
-            resolve(true)
-          } else {
-            maybeSchedulePeerPoll()
-          }
+          this._ipfs.pubsub.peers(appTopic, (err, peers) => {
+            if (peers.indexOf(idB58Str) >= 0) {
+              resolve(true)
+            } else {
+              maybeSchedulePeerPoll()
+            }
+          })
         }
 
         const maybeSchedulePeerPoll = () => {
@@ -141,7 +165,16 @@ class AppTransport extends EventEmitter {
     })
   }
 
+  _getPeerId () {
+    return peerIdFromPeerInfo(this._ipfs._peerInfo)
+  }
+
   _appTopic () {
     return this._appName
   }
+}
+
+function peerIdFromPeerInfo (peerInfo) {
+  // slice off the preamble so that we get a better distribution
+  return peerInfo.id.toBytes().slice(2)
 }

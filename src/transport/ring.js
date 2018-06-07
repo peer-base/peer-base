@@ -1,10 +1,11 @@
 'use strict'
 
-module.exports = (...args) => new Ring(...args)
+exports = module.exports = (...args) => new Ring(...args)
+exports.compare = compare
+exports.equal = equal
 
 class Ring {
-  constructor (bytes) {
-    this._bytes = bytes
+  constructor () {
     this._points = []
   }
 
@@ -81,4 +82,8 @@ function compare (a, b) {
     return l - r
   }
   return 0
+}
+
+function equal (a, b) {
+  return compare(a, b) === 0
 }

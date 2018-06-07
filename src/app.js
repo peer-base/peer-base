@@ -17,8 +17,14 @@ class App extends EventEmitter {
     this._collaborations = new Map()
   }
 
-  async start () {
-    await awaitIpfsInit(this.ipfs)
+  start () {
+    return new Promise((resolve, reject) => {
+      if (this.ipfs.isOnline()) {
+        resolve()
+      } else {
+        this.ipfs.once('ready', resolve)
+      }
+    })
   }
 
   collaborate (name, options) {
