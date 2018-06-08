@@ -8,12 +8,12 @@ const expect = chai.expect
 const App = require('./utils/create-app')
 const Rendezvous = require('./utils/rendezvous')
 
-const A_BIT = 3000
+const A_BIT = 9000
 
 describe('app swarm', function () {
-  this.timeout(10000)
+  this.timeout(20000)
 
-  const peerCount = 10
+  const peerCount = 19
 
   let rendezvous
   let swarm = []
@@ -42,7 +42,7 @@ describe('app swarm', function () {
         return app.start()
       })
 
-      after(() => swarm[i].stop())
+      after(() => swarm[i] && swarm[i].stop())
     })(i)
   }
 
@@ -51,13 +51,34 @@ describe('app swarm', function () {
     setTimeout(done, A_BIT)
   })
 
-  it('broadcasting eventually reaches all nodes', () => {
-    expect(1).to.equal(1)
+  it('broadcasting eventually reaches all nodes', (done) => {
+    console.log('---- 1')
+    let missing = peerCount
+    swarm.forEach(({ app }, index) => app.once('gossip', (message) => {
+      expect(message.from).to.equal(swarm[0].app.ipfs._peerInfo.id.toB58String())
+      expect(message.data.toString()).to.equal('hello world!')
+      console.log('gossip in %d: %j', index, message)
+      missing--
+      if (!missing) {
+        done()
+      }
+    }))
+
+    swarm[0].app.gossip(Buffer.from('hello world!'))
   })
 })
 
+// js-ipfs sometimes likes to present us with an uncaught exception
+// "Multiplexer is destroyed" when shutting down.
+// Ignoring it.
+
+const ignoreMessages = [
+  'Multiplexer is destroyed',
+  'already piped',
+  'websocket error']
+
 process.on('uncaughtException', (err) => {
-  if (err.message !== 'Multiplexer is destroyed') {
+  if (!ignoreMessages.find((m) => err.message.indexOf(m) >= 0)) {
     throw err
   }
 })

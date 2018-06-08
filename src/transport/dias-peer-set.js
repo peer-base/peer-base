@@ -1,7 +1,6 @@
 'use strict'
 
 const PeerSet = require('./peer-set')
-const equal = require('./ring').equal
 
 module.exports = (bytes, peerInfo, preambleBytes) => {
   const id = peerInfo.id.toBytes().slice(preambleBytes)
@@ -41,7 +40,7 @@ module.exports = (bytes, peerInfo, preambleBytes) => {
   }
 
   function sum (a, b) {
-    const result = new Buffer(bytes)
+    const result = Buffer.alloc(bytes)
     let carry = 0
     for (let i = bytes - 1; i >= 0; i--) {
       const l = a[i] || 0
@@ -55,9 +54,9 @@ module.exports = (bytes, peerInfo, preambleBytes) => {
   }
 
   function divideBy (id, d) {
-    const result = new Buffer(bytes)
+    const result = Buffer.alloc(bytes)
     let remainder = 0
-    for(let i = 0; i < bytes; i++) {
+    for (let i = 0; i < bytes; i++) {
       let byte = id[i] + (remainder << 8)
       if (byte < d) {
         result[i] = 0
@@ -70,8 +69,8 @@ module.exports = (bytes, peerInfo, preambleBytes) => {
   }
 
   function oneHalfFrom (id) {
-    const half = new Buffer(bytes)
-    for (let i=1; i < bytes; i++) {
+    const half = Buffer.alloc(bytes)
+    for (let i = 1; i < bytes; i++) {
       half[i] = 0xff
     }
     half[0] = 0x7f

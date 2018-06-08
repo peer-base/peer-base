@@ -11,6 +11,8 @@ module.exports = () => {
         daemon = execa('rendezvous')
         daemon.stdout.setEncoding('utf8')
         daemon.stdout.on('data', onStdOut)
+        daemon.stderr.setEncoding('utf8')
+        daemon.stderr.on('data', onStdOut)
 
         function onStdOut (d) {
           process.stdout.write('rendezvous: ' + d)

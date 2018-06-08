@@ -1,7 +1,5 @@
 'use strict'
 
-const equal = require('./ring').equal
-
 class PeerSet extends Set {
   constructor () {
     super()

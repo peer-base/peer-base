@@ -1,8 +1,6 @@
 'use strict'
 
 exports = module.exports = (...args) => new Ring(...args)
-exports.compare = compare
-exports.equal = equal
 
 class Ring {
   constructor (preambleByteCount) {
@@ -39,7 +37,6 @@ class Ring {
         this._points = points.slice(0, i).concat(points.slice(i + 1))
         this._contacts.delete(p.toString('hex'))
         return true
-        break
       } else if (comparison < 0) {
         // point not here
         break
@@ -108,15 +105,9 @@ function compare (a, b) {
     // || 0 is for when byte length is not the same
     const l = a[i] || 0
     const r = b[i] || 0
-    if (l === r) {
-      // damn it.. proceeding to the next byte
-      continue
+    if (l !== r) {
+      return l - r
     }
-    return l - r
   }
   return 0
-}
-
-function equal (a, b) {
-  return compare(a, b) === 0
 }

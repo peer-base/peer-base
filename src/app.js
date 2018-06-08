@@ -14,6 +14,8 @@ class App extends EventEmitter {
     this.name = name
     this.ipfs = IPFS(this, options && options.ipfs)
     this._collaborations = new Map()
+
+    this._onGossipMessage = this._onGossipMessage.bind(this)
   }
 
   start () {
@@ -33,6 +35,21 @@ class App extends EventEmitter {
       this._collaborations.set(name, collaboration)
     }
     return collaboration
+  }
+
+  gossip (message) {
+    if (this._gossip) {
+      this._gossip.broadcast(message)
+    }
+  }
+
+  setGossip (gossip) {
+    this._gossip = gossip
+    gossip.on('message', this._onGossipMessage)
+  }
+
+  _onGossipMessage (message) {
+    this.emit('gossip', message)
   }
 
   stop () {

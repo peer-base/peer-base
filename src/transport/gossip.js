@@ -32,8 +32,12 @@ class Gossip extends EventEmitter {
     this._ipfs.pubsub.unsubscribe(this._appName, this._pubSubHandler, callback)
   }
 
-  _pubSubHandler ({from, data}) {
-    // TODO: handle
+  broadcast (message) {
+    this._ipfs.pubsub.publish(this._appName, message)
+  }
+
+  _pubSubHandler (message) {
+    this.emit('message', message)
   }
 
   _propagateError (err) {

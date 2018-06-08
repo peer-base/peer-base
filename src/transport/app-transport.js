@@ -13,12 +13,12 @@ const PREAMBLE_BYTE_COUNT = 2
 module.exports = (...args) => new AppTransport(...args)
 
 class AppTransport extends EventEmitter {
-  constructor (appName, ipfs, transport) {
+  constructor (app, ipfs, transport) {
     super()
     this._started = false
     this._ipfs = ipfs
     this._transport = transport
-    this._appName = appName
+    this._app = app
 
     this._ring = Ring()
     this._connectedTo = new PeerSet()
@@ -41,8 +41,9 @@ class AppTransport extends EventEmitter {
       return this._transport.discovery.stop(callback)
     }
 
-    this._gossip = Gossip(appName, ipfs)
+    this._gossip = Gossip(app.name, ipfs)
     this._gossip.on('error', (err) => this.emit('error', err))
+    this._app.setGossip(this._gossip)
   }
 
   dial (ma, options, callback) {
@@ -134,7 +135,6 @@ class AppTransport extends EventEmitter {
     if (Buffer.isBuffer(peerInfo) || Array.isArray(peerInfo)) {
       throw new Error('needs peer info!')
     }
-    console.log('_isInterestedInApp', peerInfo)
     // TODO: refactor this, PLEASE!
     return new Promise((resolve, reject) => {
       const idB58Str = peerInfo.id.toB58String()
@@ -158,8 +158,6 @@ class AppTransport extends EventEmitter {
             if (err) {
               return reject(err)
             }
-            console.log('peers:', peers)
-            console.log('looking for ', idB58Str)
             if (peers.indexOf(idB58Str) >= 0) {
               resolve(true)
             } else {
@@ -196,6 +194,9 @@ class AppTransport extends EventEmitter {
     }
 
     // make sure we disconnect from peers not in the Dias Peer Set
+
+    // TODO: keep inbound connections alive. we just want to redefine the outbound connections,
+    // not the inbound ones.
     for (let peerInfo of this._connectedTo.values()) {
       if (!diasSet.has(peerInfo)) {
         this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
@@ -210,6 +211,6 @@ class AppTransport extends EventEmitter {
   }
 
   _appTopic () {
-    return this._appName
+    return this._app.name
   }
 }
