@@ -21,7 +21,8 @@ class AppTransport extends EventEmitter {
     this._app = app
 
     this._ring = Ring()
-    this._connectedTo = new PeerSet()
+    this._outboundConnections = new PeerSet()
+    this._inboundConnections = new PeerSet()
     this.listeners = []
 
     this._peerDiscovered = this._peerDiscovered.bind(this)
@@ -92,7 +93,8 @@ class AppTransport extends EventEmitter {
 
   _onPeerDisconnect (peerInfo) {
     debug('peer %s disconnected', peerInfo.id.toB58String())
-    this._connectedTo.delete(peerInfo)
+    this._outboundConnections.delete(peerInfo)
+    this._inboundConnections.delete(peerInfo)
     if (this._ring.remove(peerInfo)) {
       this._keepConnectedToDiasSet()
       this.emit('peer disconnected', peerInfo)
@@ -101,7 +103,9 @@ class AppTransport extends EventEmitter {
 
   _onPeerConnect (peerInfo) {
     debug('peer %s connected', peerInfo.id.toB58String())
-    this._connectedTo.add(peerInfo)
+    if (!this._outboundConnections.has(peerInfo)) {
+      this._inboundConnections.add(peerInfo)
+    }
   }
 
   _peerDiscovered (peerInfo) {
@@ -140,6 +144,10 @@ class AppTransport extends EventEmitter {
       const idB58Str = peerInfo.id.toB58String()
 
       debug('finding out whether peer %s is interested in app', idB58Str)
+
+      if (!this._inboundConnections.has(peerInfo)) {
+        this._outboundConnections.add(peerInfo)
+      }
 
       this._ipfs._libp2pNode.dial(peerInfo, (err) => {
         if (err) {
@@ -184,7 +192,8 @@ class AppTransport extends EventEmitter {
 
     // make sure we're connected to every peer of the Dias Peer Set
     for (let peerInfo of diasSet.values()) {
-      if (!this._connectedTo.has(peerInfo)) {
+      if (!this._outboundConnections.has(peerInfo)) {
+        this._outboundConnections.add(peerInfo)
         this._ipfs._libp2pNode.dial(peerInfo, (err) => {
           if (err) {
             debug('error dialing:', err)
@@ -197,7 +206,7 @@ class AppTransport extends EventEmitter {
 
     // TODO: keep inbound connections alive. we just want to redefine the outbound connections,
     // not the inbound ones.
-    for (let peerInfo of this._connectedTo.values()) {
+    for (let peerInfo of this._outboundConnections.values()) {
       if (!diasSet.has(peerInfo)) {
         this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
           if (err) {

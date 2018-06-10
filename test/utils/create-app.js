@@ -17,7 +17,10 @@ module.exports = () => {
 
   const stop = () => {
     return app.stop()
-      .then(() => repo.teardown())
+      .then(() => {
+        console.log('stopped app')
+        repo.teardown()
+      })
       .catch(() => repo.teardown())
   }
 

@@ -53,6 +53,7 @@ class App extends EventEmitter {
   }
 
   stop () {
+    console.log('stopping')
     return this.ipfs.stop()
   }
 }

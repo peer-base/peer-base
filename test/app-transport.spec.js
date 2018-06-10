@@ -20,8 +20,14 @@ describe('app-transport', function () {
   let discovery
   let transport
   let ipfs
+  let app
 
   before(() => {
+    app = {
+      name: 'peer-star test app name',
+      setGossip: fake()
+    }
+
     ipfs = {
       _libp2pNode: {
         dial: fake(),
@@ -56,7 +62,7 @@ describe('app-transport', function () {
   })
 
   it('can be created', () => {
-    appTransport = AppTransport('peer-star test app name', ipfs, transport)
+    appTransport = AppTransport(app, ipfs, transport)
   })
 
   it('can create a listener', () => {

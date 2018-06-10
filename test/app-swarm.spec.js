@@ -13,7 +13,7 @@ const A_BIT = 9000
 describe('app swarm', function () {
   this.timeout(20000)
 
-  const peerCount = 19
+  const peerCount = 10
 
   let rendezvous
   let swarm = []
@@ -65,6 +65,10 @@ describe('app swarm', function () {
     }))
 
     swarm[0].app.gossip(Buffer.from('hello world!'))
+  })
+
+  it('each node is outbound connected to maximum 6 other nodes', () => {
+
   })
 })
 
