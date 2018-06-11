@@ -6,6 +6,7 @@ const EventEmitter = require('events')
 const Gossip = require('./gossip')
 const DiasSet = require('./dias-peer-set')
 const PeerSet = require('./peer-set')
+const Discovery = require('./discovery')
 
 const PEER_ID_BYTE_COUNT = 32
 const PREAMBLE_BYTE_COUNT = 2
@@ -21,26 +22,30 @@ class AppTransport extends EventEmitter {
     this._app = app
 
     this._ring = Ring()
+
+    this._ring.on('changed', (peerInfo) => {
+      const diasSet = this._keepConnectedToDiasSet()
+      if (peerInfo && diasSet.has(peerInfo)) {
+        this.discovery.emit('peer', peerInfo)
+      }
+    })
+
     this._outboundConnections = new PeerSet()
     this._inboundConnections = new PeerSet()
     this.listeners = []
 
-    this._peerDiscovered = this._peerDiscovered.bind(this)
     this._onPeerDisconnect = this._onPeerDisconnect.bind(this)
     this._onPeerConnect = this._onPeerConnect.bind(this)
 
-    this.discovery = new EventEmitter()
-    this.discovery.start = (callback) => {
-      this._maybeStart()
-      debug('starting discovery')
-      this._transport.discovery.on('peer', this._peerDiscovered)
-      return this._transport.discovery.start(callback)
-    }
-    this.discovery.stop = (callback) => {
-      debug('stopping discovery')
-      this._transport.discovery.removeListener('peer', this._peerDiscovered)
-      return this._transport.discovery.stop(callback)
-    }
+    this.discovery = new Discovery(
+      this._appTopic(),
+      this._ipfs,
+      this._transport.discovery,
+      this._ring,
+      this._inboundConnections,
+      this._outboundConnections)
+
+    this.discovery.on('start', () => this._maybeStart())
 
     this._gossip = Gossip(app.name, ipfs)
     this._gossip.on('error', (err) => this.emit('error', err))
@@ -107,85 +112,6 @@ class AppTransport extends EventEmitter {
     if (!this._outboundConnections.has(peerInfo)) {
       this._inboundConnections.add(peerInfo)
     }
-  }
-
-  _peerDiscovered (peerInfo) {
-    // TODO: refactor this, PLEASE!
-    debug('peer discovered %j', peerInfo)
-
-    this._isInterestedInApp(peerInfo)
-      .then((isInterestedInApp) => {
-        if (isInterestedInApp) {
-          debug('peer %s is interested:', peerInfo.id.toB58String())
-          this._ring.add(peerInfo)
-          const diasSet = this._keepConnectedToDiasSet()
-          if (diasSet.has(peerInfo)) {
-            this.discovery.emit('peer', peerInfo)
-          }
-        } else {
-          // peer is not interested. maybe disconnect?
-          this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
-            if (err) {
-              this.emit('error', err)
-            }
-          })
-        }
-      })
-      .catch((err) => {
-        debug('error caught while finding out if peer is interested in app', err)
-      })
-  }
-
-  _isInterestedInApp (peerInfo) {
-    if (Buffer.isBuffer(peerInfo) || Array.isArray(peerInfo)) {
-      throw new Error('needs peer info!')
-    }
-    // TODO: refactor this, PLEASE!
-    return new Promise((resolve, reject) => {
-      const idB58Str = peerInfo.id.toB58String()
-
-      debug('finding out whether peer %s is interested in app', idB58Str)
-
-      if (!this._inboundConnections.has(peerInfo)) {
-        this._outboundConnections.add(peerInfo)
-      }
-
-      this._ipfs._libp2pNode.dial(peerInfo, (err) => {
-        if (err) {
-          return reject(err)
-        }
-
-        // we're connected to the peer
-        // let's wait until we know the peer subscriptions
-
-        const appTopic = this._appTopic()
-        const pollTimeout = 500 // TODO: this should go to config
-        let tryUntil = Date.now() + 5000 // TODO: this should go to config
-
-        const pollPeer = () => {
-          this._ipfs.pubsub.peers(appTopic, (err, peers) => {
-            if (err) {
-              return reject(err)
-            }
-            if (peers.indexOf(idB58Str) >= 0) {
-              resolve(true)
-            } else {
-              maybeSchedulePeerPoll()
-            }
-          })
-        }
-
-        const maybeSchedulePeerPoll = () => {
-          if (Date.now() < tryUntil) {
-            setTimeout(pollPeer, pollTimeout)
-          } else {
-            resolve(false)
-          }
-        }
-
-        maybeSchedulePeerPoll()
-      })
-    })
   }
 
   _keepConnectedToDiasSet () {

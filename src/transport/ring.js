@@ -1,9 +1,13 @@
 'use strict'
 
+const EventEmitter = require('events')
+
 exports = module.exports = (...args) => new Ring(...args)
 
-class Ring {
+class Ring extends EventEmitter {
   constructor (preambleByteCount) {
+    super()
+
     this._preambleByteCount = preambleByteCount
     this._points = []
     this._contacts = new Map()
@@ -23,6 +27,7 @@ class Ring {
       this._points.push(point)
       this._points.sort(compare)
       this._contacts.set(point.toString('hex'), peerInfo)
+      this.emit('changed', peerInfo)
     }
   }
 
@@ -36,6 +41,7 @@ class Ring {
         const points = this._points
         this._points = points.slice(0, i).concat(points.slice(i + 1))
         this._contacts.delete(p.toString('hex'))
+        this.emit('changed', peerInfo)
         return true
       } else if (comparison < 0) {
         // point not here
