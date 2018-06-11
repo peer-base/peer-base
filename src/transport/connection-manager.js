@@ -53,7 +53,7 @@ module.exports = class ConnectionManager extends EventEmitter {
     const peers = this._newPeers
     this._newPeers = []
     peers.forEach((peerInfo) => {
-      if (peerInfo && diasSet.has(peerInfo)) {
+      if (diasSet.has(peerInfo)) {
         this.emit('peer', peerInfo)
       }
     })
