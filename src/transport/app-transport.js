@@ -7,6 +7,7 @@ const Gossip = require('./gossip')
 const DiasSet = require('./dias-peer-set')
 const PeerSet = require('./peer-set')
 const Discovery = require('./discovery')
+const ConnectionManager = require('./connection-manager')
 
 const PEER_ID_BYTE_COUNT = 32
 const PREAMBLE_BYTE_COUNT = 2
@@ -33,13 +34,6 @@ class AppTransport extends EventEmitter {
 
     this._ring = Ring()
 
-    this._ring.on('changed', (peerInfo) => {
-      const diasSet = this._keepConnectedToDiasSet()
-      if (peerInfo && diasSet.has(peerInfo)) {
-        this.discovery.emit('peer', peerInfo)
-      }
-    })
-
     this._outboundConnections = new PeerSet()
     this._inboundConnections = new PeerSet()
     this.listeners = []
@@ -57,6 +51,16 @@ class AppTransport extends EventEmitter {
       this._options)
 
     this.discovery.on('start', () => this._maybeStart())
+
+    this._connectionManager = new ConnectionManager(
+      this._ipfs,
+      this._ring,
+      this._outboundConnections,
+      this._inboundConnections)
+
+    this._connectionManager.on('peer', (peerInfo) => {
+      this.discovery.emit('peer', peerInfo)
+    })
 
     this._gossip = Gossip(app.name, ipfs)
     this._gossip.on('error', (err) => this.emit('error', err))
@@ -76,6 +80,7 @@ class AppTransport extends EventEmitter {
   }
 
   close (callback) {
+    this._connectionManager.stop()
     this._ipfs._libp2pNode.removeListener('peer:disconnect', this._onPeerDisconnect)
     this._gossip.stop((err) => {
       if (err) {
@@ -95,6 +100,7 @@ class AppTransport extends EventEmitter {
   _start () {
     this._startPeerId()
     this._gossip.start()
+    this._connectionManager.start(this._diasSet)
     this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
     this._ipfs._libp2pNode.on('peer:connect', this._onPeerConnect)
   }
@@ -116,9 +122,7 @@ class AppTransport extends EventEmitter {
       this._inboundConnections.delete(peerInfo)
     }
 
-    if (this._ring.remove(peerInfo)) {
-      this._keepConnectedToDiasSet()
-    }
+    this._ring.remove(peerInfo)
     this.emit('peer disconnected', peerInfo)
     if (isOutbound) {
       console.log('%d: outbound peer disconnected, now has %d', this._id, this._outboundConnections.size)
@@ -141,46 +145,6 @@ class AppTransport extends EventEmitter {
       console.log('%d: inbound peer connected, now has %d', this._id, this._inboundConnections.size)
       this.emit('inbound peer connected', peerInfo)
     }
-  }
-
-  _keepConnectedToDiasSet () {
-    const diasSet = this._diasSet(this._ring)
-
-    // make sure we're connected to every peer of the Dias Peer Set
-    for (let peerInfo of diasSet.values()) {
-      if (!this._outboundConnections.has(peerInfo)) {
-        this._outboundConnections.add(peerInfo)
-        try {
-          this._ipfs._libp2pNode.dial(peerInfo, (err) => {
-            if (err) {
-              debug('error dialing:', err)
-            }
-          })
-        } catch (err) {
-          debug('error dialing:', err)
-        }
-      }
-    }
-
-    // make sure we disconnect from peers not in the Dias Peer Set
-
-    // TODO: keep inbound connections alive. we just want to redefine the outbound connections,
-    // not the inbound ones.
-    for (let peerInfo of this._outboundConnections.values()) {
-      if (!diasSet.has(peerInfo)) {
-        try {
-          this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
-            if (err) {
-              debug('error hanging up:', err)
-            }
-          })
-        } catch (err) {
-          debug('error hanging up:', err)
-        }
-      }
-    }
-
-    return diasSet
   }
 
   _appTopic () {

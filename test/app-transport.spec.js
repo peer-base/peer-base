@@ -31,7 +31,7 @@ describe('app-transport', function () {
     ipfs = {
       _libp2pNode: {
         dial: fake(),
-        hangUp: (p, callback) => {setImmediate(() => callback())},
+        hangUp: (p, callback) => { setImmediate(() => callback()) },
         pubsub: {
         },
         on: fake()
