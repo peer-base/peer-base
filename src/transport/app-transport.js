@@ -103,6 +103,7 @@ class AppTransport extends EventEmitter {
 
   _onPeerConnect (peerInfo) {
     debug('peer %s connected', peerInfo.id.toB58String())
+    this.emit('peer connected', peerInfo)
     if (!this._outboundConnections.has(peerInfo)) {
       this._inboundConnections.add(peerInfo)
     }
