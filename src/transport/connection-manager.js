@@ -11,6 +11,8 @@ const defaultOptions = {
 module.exports = class ConnectionManager extends EventEmitter {
   constructor (ipfs, ring, inboundConnections, outboundConnections, options) {
     super()
+
+    this._stopped = true
     this._ipfs = ipfs
     this._ring = ring
     this._inboundConnections = inboundConnections
@@ -27,19 +29,26 @@ module.exports = class ConnectionManager extends EventEmitter {
   }
 
   start (diasSet) {
+    this._stopped = false
     this._diasSet = diasSet
   }
 
   stop () {
-    // nothing to do
+    this._stopped = true
   }
 
   _onRingChange (peerInfo) {
-    this._newPeers.push(peerInfo)
+    if (peerInfo) {
+      this._newPeers.push(peerInfo)
+    }
     this._debouncedResetConnectionsAndEmitNewPeers()
   }
 
   _resetConnectionsAndEmitNewPeers () {
+    if (this._stopped) {
+      return
+    }
+
     const diasSet = this._resetConnections()
     const peers = this._newPeers
     this._newPeers = []

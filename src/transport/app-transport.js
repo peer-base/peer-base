@@ -30,8 +30,6 @@ class AppTransport extends EventEmitter {
     this._app = app
     this._options = Object.assign({}, defaultOptions, options)
 
-    console.log('options:', this._options)
-
     this._ring = Ring()
 
     this._outboundConnections = new PeerSet()

@@ -62,12 +62,11 @@ module.exports = class Discovery extends EventEmitter {
   }
 
   _maybeDiscoverPeer (peerInfo) {
-    // TODO: refactor this, PLEASE!
-    debug('maybe discover peer %j', peerInfo)
-
     if (this._stopped) {
       return
     }
+
+    debug('maybe discover peer %j', peerInfo)
 
     return new Promise((resolve, reject) => {
       this._isInterestedInApp(peerInfo)
