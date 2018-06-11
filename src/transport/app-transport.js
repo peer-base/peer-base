@@ -116,7 +116,6 @@ class AppTransport extends EventEmitter {
       this._inboundConnections.delete(peerInfo)
     }
 
-
     if (this._ring.remove(peerInfo)) {
       this._keepConnectedToDiasSet()
     }
@@ -138,6 +137,7 @@ class AppTransport extends EventEmitter {
       this.emit('outbound peer connected', peerInfo)
     } else {
       this._inboundConnections.add(peerInfo)
+      this._ring.add(peerInfo)
       console.log('%d: inbound peer connected, now has %d', this._id, this._inboundConnections.size)
       this.emit('inbound peer connected', peerInfo)
     }
@@ -150,11 +150,15 @@ class AppTransport extends EventEmitter {
     for (let peerInfo of diasSet.values()) {
       if (!this._outboundConnections.has(peerInfo)) {
         this._outboundConnections.add(peerInfo)
-        this._ipfs._libp2pNode.dial(peerInfo, (err) => {
-          if (err) {
-            debug('error dialing:', err)
-          }
-        })
+        try {
+          this._ipfs._libp2pNode.dial(peerInfo, (err) => {
+            if (err) {
+              debug('error dialing:', err)
+            }
+          })
+        } catch (err) {
+          debug('error dialing:', err)
+        }
       }
     }
 
@@ -164,11 +168,15 @@ class AppTransport extends EventEmitter {
     // not the inbound ones.
     for (let peerInfo of this._outboundConnections.values()) {
       if (!diasSet.has(peerInfo)) {
-        this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
-          if (err) {
-            debug('error hanging up:', err)
-          }
-        })
+        try {
+          this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
+            if (err) {
+              debug('error hanging up:', err)
+            }
+          })
+        } catch (err) {
+          debug('error hanging up:', err)
+        }
       }
     }
 

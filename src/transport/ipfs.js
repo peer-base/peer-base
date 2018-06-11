@@ -12,7 +12,7 @@ module.exports = (app, options) => {
     },
     config: {
       Addresses: {
-        Swarm: (options && options.swarm) || [
+        Swarm: (options && options.ipfs && options.ipfs.swarm) || [
           '/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star'
         ]
       }

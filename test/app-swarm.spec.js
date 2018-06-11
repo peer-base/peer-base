@@ -40,7 +40,7 @@ describe('app swarm', function () {
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App()
+        const app = App({ maxThrottleDelayMS: 1000 })
 
         app.app.on('outbound peer connected', (peerInfo) => {
           outboundConnectionCounts[i] = (outboundConnectionCounts[i] || 0) + 1
@@ -101,7 +101,8 @@ describe('app swarm', function () {
 const ignoreMessages = [
   'Multiplexer is destroyed',
   'already piped',
-  'websocket error']
+  'websocket error',
+  'The libp2p node is not started yet']
 
 process.on('uncaughtException', (err) => {
   if (!ignoreMessages.find((m) => err.message.indexOf(m) >= 0)) {
