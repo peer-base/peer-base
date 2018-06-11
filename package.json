@@ -29,6 +29,7 @@
     "delay": "^3.0.0",
     "ipfs": "~0.29.2",
     "libp2p-websocket-star": "~0.8.0",
+    "lodash.debounce": "^4.0.8",
     "multiaddr": "^5.0.0",
     "p-queue": "^2.4.2",
     "peer-id": "~0.10.7",

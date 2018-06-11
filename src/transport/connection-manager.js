@@ -2,17 +2,28 @@
 
 const debug = require('debug')('peer-star:connection-manager')
 const EventEmitter = require('events')
+const debounce = require('lodash.debounce')
+
+const defaultOptions = {
+  debounceResetConnectionsMS: 1000
+}
 
 module.exports = class ConnectionManager extends EventEmitter {
-  constructor (ipfs, ring, inboundConnections, outboundConnections) {
+  constructor (ipfs, ring, inboundConnections, outboundConnections, options) {
     super()
     this._ipfs = ipfs
     this._ring = ring
     this._inboundConnections = inboundConnections
     this._outboundConnections = outboundConnections
+    this._options = Object.assign({}, defaultOptions, options)
+
+    this._newPeers = []
 
     this._onRingChange = this._onRingChange.bind(this)
-    this._ring.on('change', this._onRingChange)
+    this._ring.on('changed', this._onRingChange)
+
+    this._debouncedResetConnectionsAndEmitNewPeers = debounce(
+      this._resetConnectionsAndEmitNewPeers.bind(this), this._options.debounceResetConnectionsMS)
   }
 
   start (diasSet) {
@@ -20,17 +31,26 @@ module.exports = class ConnectionManager extends EventEmitter {
   }
 
   stop () {
-
+    // nothing to do
   }
 
   _onRingChange (peerInfo) {
-    const diasSet = this._keepConnectedToDiasSet()
-    if (peerInfo && diasSet.has(peerInfo)) {
-      this.emit('peer', peerInfo)
-    }
+    this._newPeers.push(peerInfo)
+    this._debouncedResetConnectionsAndEmitNewPeers()
   }
 
-  _keepConnectedToDiasSet () {
+  _resetConnectionsAndEmitNewPeers () {
+    const diasSet = this._resetConnections()
+    const peers = this._newPeers
+    this._newPeers = []
+    peers.forEach((peerInfo) => {
+      if (peerInfo && diasSet.has(peerInfo)) {
+        this.emit('peer', peerInfo)
+      }
+    })
+  }
+
+  _resetConnections () {
     const diasSet = this._diasSet(this._ring)
 
     // make sure we're connected to every peer of the Dias Peer Set
@@ -45,9 +65,6 @@ module.exports = class ConnectionManager extends EventEmitter {
     }
 
     // make sure we disconnect from peers not in the Dias Peer Set
-
-    // TODO: keep inbound connections alive. we just want to redefine the outbound connections,
-    // not the inbound ones.
     for (let peerInfo of this._outboundConnections.values()) {
       if (!diasSet.has(peerInfo)) {
         try {

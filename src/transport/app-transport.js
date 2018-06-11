@@ -56,7 +56,8 @@ class AppTransport extends EventEmitter {
       this._ipfs,
       this._ring,
       this._outboundConnections,
-      this._inboundConnections)
+      this._inboundConnections,
+      this._options)
 
     this._connectionManager.on('peer', (peerInfo) => {
       this.discovery.emit('peer', peerInfo)

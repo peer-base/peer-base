@@ -73,7 +73,7 @@ module.exports = class Discovery extends EventEmitter {
       this._isInterestedInApp(peerInfo)
         .then((isInterestedInApp) => {
           if (isInterestedInApp) {
-            debug('peer %s is interested:', peerInfo.id.toB58String())
+            debug('peer %s is interested', peerInfo.id.toB58String())
             this._ring.add(peerInfo)
             resolve()
           } else {
