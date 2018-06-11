@@ -30,6 +30,10 @@ class PeerSet extends Set {
   values () {
     return this._idMap.values()
   }
+
+  get size () {
+    return super.size
+  }
 }
 
 module.exports = PeerSet

@@ -8,7 +8,7 @@ const expect = chai.expect
 const App = require('./utils/create-app')
 const Rendezvous = require('./utils/rendezvous')
 
-const A_BIT = 9000
+const A_BIT = 19000
 
 describe('app swarm', function () {
   this.timeout(20000)
@@ -17,9 +17,11 @@ describe('app swarm', function () {
 
   let rendezvous
   let swarm = []
+  const connectionCounts = []
 
   before(() => {
     rendezvous = Rendezvous()
+    setInterval(() => console.log('connection counts:', connectionCounts), 1000).unref()
     return rendezvous.start()
   })
 
@@ -32,10 +34,12 @@ describe('app swarm', function () {
 
         app.app.on('peer connected', (peerInfo) => {
           console.log('connected to peer %s', peerInfo.id.toB58String())
+          connectionCounts[i] = (connectionCounts[i] || 0) + 1
         })
 
         app.app.on('peer disconnected', (peerInfo) => {
           console.log('disconnected from peer %s', peerInfo.id.toB58String())
+          connectionCounts[i] = (connectionCounts[i] || 0) - 1
         })
 
         swarm.push(app)
@@ -60,6 +64,7 @@ describe('app swarm', function () {
       console.log('gossip in %d: %j', index, message)
       missing--
       if (!missing) {
+        console.log('connection counts:', connectionCounts)
         done()
       }
     }))

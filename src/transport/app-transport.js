@@ -25,6 +25,7 @@ class AppTransport extends EventEmitter {
 
     this._ring.on('changed', (peerInfo) => {
       const diasSet = this._keepConnectedToDiasSet()
+      console.log('ring changed, and has %d dias set peers', diasSet.size)
       if (peerInfo && diasSet.has(peerInfo)) {
         this.discovery.emit('peer', peerInfo)
       }
@@ -102,8 +103,8 @@ class AppTransport extends EventEmitter {
     this._inboundConnections.delete(peerInfo)
     if (this._ring.remove(peerInfo)) {
       this._keepConnectedToDiasSet()
-      this.emit('peer disconnected', peerInfo)
     }
+    this.emit('peer disconnected', peerInfo)
   }
 
   _onPeerConnect (peerInfo) {
