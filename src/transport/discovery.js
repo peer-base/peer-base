@@ -5,6 +5,12 @@ const EventEmitter = require('events')
 const Queue = require('p-queue')
 const delay = require('delay')
 
+const HAPPENS_ERRORS = [
+  'The libp2p node is not started yet',
+  'Stream ended prematurely',
+  'Circuit not enabled!'
+]
+
 module.exports = class Discovery extends EventEmitter {
   constructor (appTopic, ipfs, discovery, ring, inboundConnections, outboundConnections) {
     super()
@@ -76,7 +82,7 @@ module.exports = class Discovery extends EventEmitter {
           }
         })
         .catch((err) => {
-          debug('error caught while finding out if peer is interested in app', err)
+          this._maybeLogError(err)
           resolve()
         })
     })
@@ -86,6 +92,11 @@ module.exports = class Discovery extends EventEmitter {
     if (Buffer.isBuffer(peerInfo) || Array.isArray(peerInfo)) {
       throw new Error('needs peer info!')
     }
+
+    if (this._stopped) {
+      return
+    }
+
     // TODO: refactor this, PLEASE!
     return new Promise((resolve, reject) => {
       const idB58Str = peerInfo.id.toB58String()
@@ -121,7 +132,7 @@ module.exports = class Discovery extends EventEmitter {
         }
 
         const maybeSchedulePeerPoll = () => {
-          if (!this._stopped && Date.now() < tryUntil) {
+          if (!this._stopped && (Date.now() < tryUntil)) {
             setTimeout(pollPeer, pollTimeout)
           } else {
             resolve(false)
@@ -136,5 +147,11 @@ module.exports = class Discovery extends EventEmitter {
   _delayTime () {
     // return 0
     return Math.floor(Math.random() * 5000) // TODO: make this value an option
+  }
+
+  _maybeLogError (err) {
+    if (HAPPENS_ERRORS.indexOf(err.message) < 0) {
+      console.error('error caught while finding out if peer is interested in app', err)
+    }
   }
 }

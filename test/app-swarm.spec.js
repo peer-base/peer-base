@@ -17,29 +17,45 @@ describe('app swarm', function () {
 
   let rendezvous
   let swarm = []
-  const connectionCounts = []
+  const outboundConnectionCounts = []
+  const inboundConnectionCounts = []
+  let interval
 
   before(() => {
     rendezvous = Rendezvous()
-    setInterval(() => console.log('connection counts:', connectionCounts), 1000).unref()
     return rendezvous.start()
   })
 
   after(() => rendezvous.stop())
+
+  before(() => {
+    interval = setInterval(() => {
+      console.log('outbound connection counts:', outboundConnectionCounts)
+      console.log('inbound connection counts:', inboundConnectionCounts)
+    }, 1000).unref()
+  })
+
+  after(() => clearInterval(interval))
 
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
         const app = App()
 
-        app.app.on('peer connected', (peerInfo) => {
-          console.log('connected to peer %s', peerInfo.id.toB58String())
-          connectionCounts[i] = (connectionCounts[i] || 0) + 1
+        app.app.on('outbound peer connected', (peerInfo) => {
+          outboundConnectionCounts[i] = (outboundConnectionCounts[i] || 0) + 1
         })
 
-        app.app.on('peer disconnected', (peerInfo) => {
-          console.log('disconnected from peer %s', peerInfo.id.toB58String())
-          connectionCounts[i] = (connectionCounts[i] || 0) - 1
+        app.app.on('inbound peer connected', (peerInfo) => {
+          inboundConnectionCounts[i] = (inboundConnectionCounts[i] || 0) + 1
+        })
+
+        app.app.on('outbound peer disconnected', (peerInfo) => {
+          outboundConnectionCounts[i] = (outboundConnectionCounts[i] || 0) - 1
+        })
+
+        app.app.on('inbound peer disconnected', (peerInfo) => {
+          inboundConnectionCounts[i] = (inboundConnectionCounts[i] || 0) - 1
         })
 
         swarm.push(app)
@@ -61,10 +77,9 @@ describe('app swarm', function () {
     swarm.forEach(({ app }, index) => app.once('gossip', (message) => {
       expect(message.from).to.equal(swarm[0].app.ipfs._peerInfo.id.toB58String())
       expect(message.data.toString()).to.equal('hello world!')
-      console.log('gossip in %d: %j', index, message)
+      console.log('gossip in %d: %j', index, message.data.toString())
       missing--
       if (!missing) {
-        console.log('connection counts:', connectionCounts)
         done()
       }
     }))
@@ -73,7 +88,9 @@ describe('app swarm', function () {
   })
 
   it('each node is outbound connected to maximum 6 other nodes', () => {
-
+    outboundConnectionCounts.forEach((connCount) => {
+      expect(connCount).to.be.most(6)
+    })
   })
 })
 

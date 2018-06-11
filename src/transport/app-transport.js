@@ -11,11 +11,14 @@ const Discovery = require('./discovery')
 const PEER_ID_BYTE_COUNT = 32
 const PREAMBLE_BYTE_COUNT = 2
 
+let seq = 0
+
 module.exports = (...args) => new AppTransport(...args)
 
 class AppTransport extends EventEmitter {
   constructor (app, ipfs, transport) {
     super()
+    this._id = ++seq
     this._started = false
     this._ipfs = ipfs
     this._transport = transport
@@ -25,7 +28,6 @@ class AppTransport extends EventEmitter {
 
     this._ring.on('changed', (peerInfo) => {
       const diasSet = this._keepConnectedToDiasSet()
-      console.log('ring changed, and has %d dias set peers', diasSet.size)
       if (peerInfo && diasSet.has(peerInfo)) {
         this.discovery.emit('peer', peerInfo)
       }
@@ -99,19 +101,37 @@ class AppTransport extends EventEmitter {
 
   _onPeerDisconnect (peerInfo) {
     debug('peer %s disconnected', peerInfo.id.toB58String())
-    this._outboundConnections.delete(peerInfo)
-    this._inboundConnections.delete(peerInfo)
+    const isOutbound = this._outboundConnections.has(peerInfo)
+    if (isOutbound) {
+      this._outboundConnections.delete(peerInfo)
+    } else {
+      this._inboundConnections.delete(peerInfo)
+    }
+
+
     if (this._ring.remove(peerInfo)) {
       this._keepConnectedToDiasSet()
     }
     this.emit('peer disconnected', peerInfo)
+    if (isOutbound) {
+      console.log('%d: outbound peer disconnected, now has %d', this._id, this._outboundConnections.size)
+      this.emit('outbound peer disconnected', peerInfo)
+    } else {
+      console.log('%d: inbound peer disconnected, now has %d', this._id, this._inboundConnections.size)
+      this.emit('inbound peer disconnected', peerInfo)
+    }
   }
 
   _onPeerConnect (peerInfo) {
     debug('peer %s connected', peerInfo.id.toB58String())
     this.emit('peer connected', peerInfo)
-    if (!this._outboundConnections.has(peerInfo)) {
+    if (this._outboundConnections.has(peerInfo)) {
+      console.log('%d: outbound peer connected, now has %d', this._id, this._outboundConnections.size)
+      this.emit('outbound peer connected', peerInfo)
+    } else {
       this._inboundConnections.add(peerInfo)
+      console.log('%d: inbound peer connected, now has %d', this._id, this._inboundConnections.size)
+      this.emit('inbound peer connected', peerInfo)
     }
   }
 
@@ -138,7 +158,7 @@ class AppTransport extends EventEmitter {
       if (!diasSet.has(peerInfo)) {
         this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
           if (err) {
-            this.emit('error', err)
+            debug('error hanging up:', err)
           }
         })
       }
