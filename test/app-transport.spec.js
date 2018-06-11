@@ -31,7 +31,7 @@ describe('app-transport', function () {
     ipfs = {
       _libp2pNode: {
         dial: fake(),
-        hangUp: fake(),
+        hangUp: (p, callback) => {setImmediate(() => callback())},
         pubsub: {
         },
         on: fake()
@@ -62,7 +62,7 @@ describe('app-transport', function () {
   })
 
   it('can be created', () => {
-    appTransport = AppTransport(app, ipfs, transport)
+    appTransport = AppTransport(app, ipfs, transport, { maxThrottleDelayMS: 0 })
   })
 
   it('can create a listener', () => {
@@ -117,7 +117,6 @@ describe('app-transport', function () {
       const dial = (peerInfo, callback) => {
         const peers = []
         ipfs.pubsub.peers = (topic, callback) => {
-          console.log('peers?', topic, peers)
           callback(null, peers)
         }
         setImmediate(() => {

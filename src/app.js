@@ -12,7 +12,7 @@ class App extends EventEmitter {
   constructor (name, options) {
     super()
     this.name = name
-    this.ipfs = IPFS(this, options && options.ipfs)
+    this.ipfs = IPFS(this, options)
     this._collaborations = new Map()
 
     this._onGossipMessage = this._onGossipMessage.bind(this)

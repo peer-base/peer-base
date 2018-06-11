@@ -6,7 +6,7 @@ const AppTransport = require('./app-transport')
 
 module.exports = (app, options) => {
   const ipfs = new IPFS({
-    repo: options && options.repo,
+    repo: options && options.ipfs && options.ipfs.repo,
     EXPERIMENTAL: {
       pubsub: true
     },
@@ -23,7 +23,7 @@ module.exports = (app, options) => {
   return ipfs
 
   function modules (peerInfo) {
-    const appTransport = AppTransport(app, ipfs, new WebSocketStar({ id: peerInfo.id }))
+    const appTransport = AppTransport(app, ipfs, new WebSocketStar({ id: peerInfo.id }), options.transport)
     appTransport.on('error', (err) => app.emit('error', err))
     appTransport.on('peer connected', (peerInfo) => app.emit('peer connected', peerInfo))
     appTransport.on('outbound peer connected', (peerInfo) => app.emit('outbound peer connected', peerInfo))

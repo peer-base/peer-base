@@ -11,9 +11,15 @@ const HAPPENS_ERRORS = [
   'Circuit not enabled!'
 ]
 
+const defaultOptions = {
+  maxThrottleDelayMS: 5000
+}
+
 module.exports = class Discovery extends EventEmitter {
-  constructor (appTopic, ipfs, discovery, ring, inboundConnections, outboundConnections) {
+  constructor (appTopic, ipfs, discovery, ring, inboundConnections, outboundConnections, options) {
     super()
+
+    this._options = Object.assign({}, defaultOptions, options)
 
     this._appTopic = appTopic
     this._discovery = discovery
@@ -146,7 +152,7 @@ module.exports = class Discovery extends EventEmitter {
 
   _delayTime () {
     // return 0
-    return Math.floor(Math.random() * 5000) // TODO: make this value an option
+    return Math.floor(Math.random() * this._options.maxThrottleDelayMS) // TODO: make this value an option
   }
 
   _maybeLogError (err) {

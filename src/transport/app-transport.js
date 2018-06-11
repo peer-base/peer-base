@@ -11,18 +11,25 @@ const Discovery = require('./discovery')
 const PEER_ID_BYTE_COUNT = 32
 const PREAMBLE_BYTE_COUNT = 2
 
+const defaultOptions = {
+  // TODO
+}
+
 let seq = 0
 
 module.exports = (...args) => new AppTransport(...args)
 
 class AppTransport extends EventEmitter {
-  constructor (app, ipfs, transport) {
+  constructor (app, ipfs, transport, options) {
     super()
     this._id = ++seq
     this._started = false
     this._ipfs = ipfs
     this._transport = transport
     this._app = app
+    this._options = Object.assign({}, defaultOptions, options)
+
+    console.log('options:', this._options)
 
     this._ring = Ring()
 
@@ -46,7 +53,8 @@ class AppTransport extends EventEmitter {
       this._transport.discovery,
       this._ring,
       this._inboundConnections,
-      this._outboundConnections)
+      this._outboundConnections,
+      this._options)
 
     this.discovery.on('start', () => this._maybeStart())
 
