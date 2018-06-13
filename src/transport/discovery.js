@@ -31,6 +31,7 @@ module.exports = class Discovery extends EventEmitter {
     this._stopped = true
 
     this._queue = new Queue({concurrency: 1}) // TODO: make this an option
+    this._peersPending = []
 
     this._peerDiscovered = this._peerDiscovered.bind(this)
   }
@@ -53,7 +54,15 @@ module.exports = class Discovery extends EventEmitter {
   }
 
   _peerDiscovered (peerInfo) {
-    this._queue.add(() => this._throttledMaybeDiscoverPeer(peerInfo))
+    this._peersPending.push(peerInfo)
+    this._queue.add(() => this._maybeDiscoverOneRandomPeer())
+  }
+
+  _maybeDiscoverOneRandomPeer () {
+    const peer = this._pickRandomPendingPeer()
+    if (peer) {
+      return this._throttledMaybeDiscoverPeer(peer)
+    }
   }
 
   _throttledMaybeDiscoverPeer (peerInfo) {
@@ -158,5 +167,12 @@ module.exports = class Discovery extends EventEmitter {
     if (HAPPENS_ERRORS.indexOf(err.message) < 0) {
       console.error('error caught while finding out if peer is interested in app', err)
     }
+  }
+
+  _pickRandomPendingPeer () {
+    const index = Math.floor(Math.random() * this._peersPending.length)
+    const peer = this._peersPending[index]
+    this._peersPending.splice(index, 1)
+    return peer
   }
 }
