@@ -12,7 +12,7 @@ module.exports = class Membership extends EventEmitter {
     this._gossip = new Gossip(app)
   }
 
-  start () {
+  start () {
     this._gossip.on('message', this._onGossipMessage)
   }
 
