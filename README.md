@@ -32,6 +32,11 @@ await app.start()
 
 ```js
 const collaboration = app.collaborate('collaboration name')
+
+await collaboration.start()
+
+// stop collaboration
+await collaboration.stop()
 ```
 
 ### Collaboration

@@ -3,6 +3,7 @@
 const EventEmitter = require('events')
 const Collaboration = require('./collaboration')
 const IPFS = require('./transport/ipfs')
+const PeerCountGuess = require('./peer-count-guess')
 
 module.exports = (appName, options) => {
   return new App(appName, options)
@@ -13,6 +14,7 @@ class App extends EventEmitter {
     super()
     this.name = name
     this.ipfs = IPFS(this, options)
+    this._peerCountGuess = new PeerCountGuess(this, options && options.peerCountGuess)
     this._collaborations = new Map()
 
     this._onGossipMessage = this._onGossipMessage.bind(this)
@@ -25,7 +27,7 @@ class App extends EventEmitter {
       } else {
         this.ipfs.once('ready', resolve)
       }
-    })
+    }).then(() => this._peerCountGuess.start())
   }
 
   collaborate (name, options) {
@@ -33,6 +35,7 @@ class App extends EventEmitter {
     if (!collaboration) {
       collaboration = Collaboration(this, name, options)
       this._collaborations.set(name, collaboration)
+      collaboration.once('stop', () => this._collaborations.delete(name))
     }
     return collaboration
   }
@@ -54,5 +57,6 @@ class App extends EventEmitter {
 
   stop () {
     return this.ipfs.stop()
+      .then(() => this._peerCountGuess.stop())
   }
 }

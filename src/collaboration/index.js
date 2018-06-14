@@ -12,14 +12,15 @@ class Collaboration extends EventEmitter {
     this._app = app
     this.name = name
 
-    this._membership = new Membership(app)
+    this._membership = new Membership(app, name)
   }
 
   start () {
-    this._membership.start()
+    return this._membership.start()
   }
 
   stop () {
-    this._membership.stop()
+    this.emit('stopped')
+    return this._membership.stop()
   }
 }
