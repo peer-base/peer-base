@@ -60,20 +60,29 @@ describe('app swarm', function () {
       })
     })
   })
-})
 
-// js-ipfs sometimes likes to present us with an uncaught exception
-// "Multiplexer is destroyed" when shutting down.
-// Ignoring it.
+  it('adding another peer', () => {
+    const peer = App({ maxThrottleDelayMS: 1000 })
+    const collaboration = peer.app.collaborate('test collaboration')
+    swarm.push(peer)
+    collaborations.push(collaboration)
+    return peer.app.start()
+  })
 
-const ignoreMessages = [
-  'Multiplexer is destroyed',
-  'already piped',
-  'websocket error',
-  'The libp2p node is not started yet']
+  it('waits a bit for membership to propagate', (done) => {
+    setTimeout(done, A_BIT)
+  })
 
-process.on('uncaughtException', (err) => {
-  if (!ignoreMessages.find((m) => err.message.indexOf(m) >= 0)) {
-    throw err
-  }
+  it('all peers have entire membership', () => {
+    return Promise.all(swarm.map((peer) => peer.app.ipfs.id())).then((ids) => {
+      ids = ids.map((id) => id.id)
+      collaborations.forEach((collaboration) => {
+        expect(Array.from(collaboration.peers()).sort()).to.deep.equal(ids.sort())
+      })
+    })
+  })
+
+  it('closes peer', () => {
+    return swarm[swarm.length - 1].app.stop()
+  })
 })

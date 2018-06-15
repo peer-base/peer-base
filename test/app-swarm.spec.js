@@ -76,7 +76,7 @@ describe('app swarm', function () {
     let missing = peerCount
     swarm.forEach(({ app }, index) => app.once('gossip', (message) => {
       expect(message.from).to.equal(swarm[0].app.ipfs._peerInfo.id.toB58String())
-      expect(message.data.toString()).to.equal('hello world!')
+      expect(JSON.parse(message.data.toString())).to.equal('hello world!')
       console.log('gossip in %d: %j', index, message.data.toString())
       missing--
       if (!missing) {
@@ -84,7 +84,7 @@ describe('app swarm', function () {
       }
     }))
 
-    swarm[0].app.gossip(Buffer.from('hello world!'))
+    swarm[0].app.gossip(Buffer.from(JSON.stringify('hello world!')))
   })
 
   it('each node is outbound connected to maximum 6 other nodes', () => {
@@ -92,20 +92,4 @@ describe('app swarm', function () {
       expect(connCount).to.be.most(6)
     })
   })
-})
-
-// js-ipfs sometimes likes to present us with an uncaught exception
-// "Multiplexer is destroyed" when shutting down.
-// Ignoring it.
-
-const ignoreMessages = [
-  'Multiplexer is destroyed',
-  'already piped',
-  'websocket error',
-  'The libp2p node is not started yet']
-
-process.on('uncaughtException', (err) => {
-  if (!ignoreMessages.find((m) => err.message.indexOf(m) >= 0)) {
-    throw err
-  }
 })
