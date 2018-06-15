@@ -16,14 +16,11 @@ const defaultOptions = {
   // TODO
 }
 
-let seq = 0
-
 module.exports = (...args) => new AppTransport(...args)
 
 class AppTransport extends EventEmitter {
   constructor (app, ipfs, transport, options) {
     super()
-    this._id = ++seq
     this._started = false
     this._ipfs = ipfs
     this._transport = transport
@@ -124,10 +121,8 @@ class AppTransport extends EventEmitter {
     this._ring.remove(peerInfo)
     this.emit('peer disconnected', peerInfo)
     if (isOutbound) {
-      console.log('%d: outbound peer disconnected, now has %d', this._id, this._outboundConnections.size)
       this.emit('outbound peer disconnected', peerInfo)
     } else {
-      console.log('%d: inbound peer disconnected, now has %d', this._id, this._inboundConnections.size)
       this.emit('inbound peer disconnected', peerInfo)
     }
   }
@@ -136,12 +131,10 @@ class AppTransport extends EventEmitter {
     debug('peer %s connected', peerInfo.id.toB58String())
     this.emit('peer connected', peerInfo)
     if (this._outboundConnections.has(peerInfo)) {
-      console.log('%d: outbound peer connected, now has %d', this._id, this._outboundConnections.size)
       this.emit('outbound peer connected', peerInfo)
     } else {
       this._inboundConnections.add(peerInfo)
       this._ring.add(peerInfo)
-      console.log('%d: inbound peer connected, now has %d', this._id, this._inboundConnections.size)
       this.emit('inbound peer connected', peerInfo)
     }
   }

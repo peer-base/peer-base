@@ -18,10 +18,7 @@ module.exports = (transportOptions) => {
 
   const stop = () => {
     return app.stop()
-      .then(() => {
-        console.log('stopped app')
-        repo.teardown()
-      })
+      .then(() => repo.teardown())
       .catch(() => repo.teardown())
   }
 

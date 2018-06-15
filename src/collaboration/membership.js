@@ -1,31 +1,114 @@
 'use strict'
 
 const EventEmitter = require('events')
-const Gossip = require('./gossip')
+const multihash = require('multihashes')
+const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
 
 module.exports = class Membership extends EventEmitter {
-  constructor (app, collaborationName) {
+  constructor (ipfs, app, collaborationName) {
     super()
 
+    this._ipfs = ipfs
     this._app = app
     this._collaborationName = collaborationName
 
     this._members = new Set()
-    this._onGossipMessage = this._onGossipMessage.bind(this)
+    this._gossipNow = this._gossipNow.bind(this)
 
-    this._gossip = new Gossip(app)
-    // this._frequencyHeuristic = new FrequencyHeuristic(app, this._collaborationName)
+    this._membershipGossipFrequencyHeuristic = new MembershipGossipFrequencyHeuristic(app, this)
+    this._someoneHasMembershipWrong = true
   }
 
   start () {
-    this._gossip.on('message', this._onGossipMessage)
+    this._membershipGossipFrequencyHeuristic.on('gossip now', this._gossipNow)
+    this._membershipGossipFrequencyHeuristic.start()
   }
 
   stop () {
-    this._gossip.removeListener('message', this._onGossipMessage)
+    this._membershipGossipFrequencyHeuristic.stop()
+    this._membershipGossipFrequencyHeuristic.removeListener('gossip now', this._gossipNow)
   }
 
-  _onGossipMessage (message) {
+  peerCount () {
+    return this._members.size
+  }
 
+  peers () {
+    return new Set(this._members)
+  }
+
+  needsUrgentBroadcast () {
+    // needs to broadcast if self id is not included in the member set yet
+    if (this._someoneHasMembershipWrong) {
+      return true
+    }
+    return this._ipfs.id()
+      .then((peer) => peer.id)
+      .then((id) => {
+        const isUrgent = !this._members.has(id)
+        return isUrgent
+      })
+  }
+
+  deliverRemoteMembership (membership) {
+    if ((typeof membership) === 'string') {
+      const expectedMembershipHash = this._createMembershipSummaryHash()
+      this._someoneHasMembershipWrong = membership !== expectedMembershipHash
+    } else if (Array.isArray(membership)) {
+      this._joinMembership(membership)
+      this._someoneHasMembershipWrong = false
+    }
+  }
+
+  async _gossipNow () {
+    return this._ipfs.id()
+      .then((peer) => peer.id)
+      .then(async (id) => {
+        let message
+        if (await this.needsUrgentBroadcast()) {
+          message = this._createMembershipMessage(id)
+        } else {
+          message = this._createMembershipSummaryMessage(id)
+        }
+        this._app.gossip(message)
+      })
+  }
+
+  _createMembershipSummaryMessage (selfId) {
+    const message = [
+      this._membershipTopic(),
+      this._createMembershipSummaryHash()]
+    return Buffer.from(JSON.stringify(message))
+  }
+
+  _createMembershipSummaryHash () {
+    return multihash.encode(
+      Buffer.from(JSON.stringify(Array.from(this._members).sort())),
+      'sha1').toString('hex')
+  }
+
+  _createMembershipMessage (selfId) {
+    this._members.add(selfId)
+    const message = [this._membershipTopic(), Array.from(this._members)]
+    // TODO: sign and encrypt membership message
+    return Buffer.from(JSON.stringify(message))
+  }
+
+  _joinMembership (remoteMembershipArray) {
+    let hasChanges = false
+    remoteMembershipArray.forEach((member) => {
+      if (!this._members.has(member)) {
+        hasChanges = true
+        this._members.add(member)
+      }
+    })
+
+    if (hasChanges) {
+      this.emit('changed')
+    }
+  }
+
+  _membershipTopic () {
+    return this._collaborationName
   }
 }

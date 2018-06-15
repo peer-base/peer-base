@@ -61,6 +61,12 @@ collaboration.on('peer left', (peerId) => {
 await app.stop()
 ```
 
+### Guess peer count
+
+```js
+app.peerCountGuess() // returns integer Number >= 0
+```
+
 
 # License
 

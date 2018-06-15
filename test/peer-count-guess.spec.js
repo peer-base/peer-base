@@ -19,7 +19,7 @@ describe('peer count guess', () => {
     app = new EventEmitter()
   })
 
-  it ('can be created', () => {
+  it('can be created', () => {
     guesser = new PeerCountGuess(app, {
       periodWindowMS: 4000
     })
@@ -31,7 +31,7 @@ describe('peer count guess', () => {
     this.timeout(11000)
 
     const peers = []
-    for(let i = 0; i < peerCount; i++) {
+    for (let i = 0; i < peerCount; i++) {
       peers.push(randomPeerId())
     }
     const interval = setInterval(() => {

@@ -33,9 +33,10 @@ class App extends EventEmitter {
   collaborate (name, options) {
     let collaboration = this._collaborations.get(name)
     if (!collaboration) {
-      collaboration = Collaboration(this, name, options)
+      collaboration = Collaboration(this.ipfs, this, name, options)
       this._collaborations.set(name, collaboration)
       collaboration.once('stop', () => this._collaborations.delete(name))
+      collaboration.start()
     }
     return collaboration
   }
@@ -51,11 +52,29 @@ class App extends EventEmitter {
     gossip.on('message', this._onGossipMessage)
   }
 
+  peerCountGuess () {
+    return this._peerCountGuess.guess()
+  }
+
   _onGossipMessage (message) {
     this.emit('gossip', message)
+    let collaborationName, membership
+    try {
+      [collaborationName, membership] = JSON.parse(message.data.toString())
+    } catch (err) {
+      console.log('error parsing gossip message:', err)
+      return
+    }
+
+    if (this._collaborations.has(collaborationName)) {
+      const collaboration = this._collaborations.get(collaborationName)
+      collaboration.deliverRemoteMembership(membership)
+    }
   }
 
   stop () {
+    this._collaborations.forEach((collaboration) => collaboration.stop())
+    this._collaborations.clear()
     return this.ipfs.stop()
       .then(() => this._peerCountGuess.stop())
   }
