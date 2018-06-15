@@ -70,7 +70,6 @@ module.exports = class Membership extends EventEmitter {
           message = this._createMembershipSummaryMessage(id)
         }
         this._someoneHasMembershipWrong = false
-        console.log('gossiping', message.toString())
         this._app.gossip(message)
       })
   }
@@ -90,6 +89,7 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _createMembershipMessage (selfId) {
+    // TODO: membership should be a AW-OR-Set CRDT instead of a G-Set
     this._members.add(selfId)
     const message = [this._membershipTopic(), Array.from(this._members)]
     // TODO: sign and encrypt membership message
