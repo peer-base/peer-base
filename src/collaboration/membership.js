@@ -1,7 +1,7 @@
 'use strict'
 
 const EventEmitter = require('events')
-const multihash = require('multihashes')
+const multihashing = require('multihashing')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
 
 module.exports = class Membership extends EventEmitter {
@@ -56,7 +56,6 @@ module.exports = class Membership extends EventEmitter {
       this._someoneHasMembershipWrong = membership !== expectedMembershipHash
     } else if (Array.isArray(membership)) {
       this._joinMembership(membership)
-      this._someoneHasMembershipWrong = false
     }
   }
 
@@ -70,6 +69,8 @@ module.exports = class Membership extends EventEmitter {
         } else {
           message = this._createMembershipSummaryMessage(id)
         }
+        this._someoneHasMembershipWrong = false
+        console.log('gossiping', message.toString())
         this._app.gossip(message)
       })
   }
@@ -82,9 +83,10 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _createMembershipSummaryHash () {
-    return multihash.encode(
-      Buffer.from(JSON.stringify(Array.from(this._members).sort())),
-      'sha1').toString('hex')
+    const membership = Buffer.from(JSON.stringify(Array.from(this._members).sort()))
+    return multihashing.digest(
+      membership,
+      'sha1').toString('base64')
   }
 
   _createMembershipMessage (selfId) {

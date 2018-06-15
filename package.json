@@ -33,6 +33,7 @@
     "lodash.debounce": "^4.0.8",
     "multiaddr": "^5.0.0",
     "multihashes": "~0.4.13",
+    "multihashing": "^0.3.2",
     "p-queue": "^2.4.2",
     "peer-id": "~0.10.7",
     "peer-info": "~0.14.1"
