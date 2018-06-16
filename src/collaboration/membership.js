@@ -2,26 +2,50 @@
 
 const EventEmitter = require('events')
 const multihashing = require('multihashing')
+const PeerInfo = require('peer-info')
+const bs58 = require('bs58')
+const Ring = require('../common/ring')
+const DiasSet = require('../common/dias-peer-set')
+const ConnectionManager = rqequire('./connection-manager')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
 
 module.exports = class Membership extends EventEmitter {
-  constructor (ipfs, app, collaborationName) {
+  constructor (ipfs, app, collaborationName, options) {
     super()
 
     this._ipfs = ipfs
     this._app = app
     this._collaborationName = collaborationName
+    this._options = options
 
     this._members = new Set()
-    this._gossipNow = this._gossipNow.bind(this)
-
     this._membershipGossipFrequencyHeuristic = new MembershipGossipFrequencyHeuristic(app, this)
     this._someoneHasMembershipWrong = true
+
+    this._ring = Ring(this._options.preambleByteCount)
+    this._connectionManager = new ConnectionManager(
+      this._ipfs,
+      this._ring,
+      this._collaborationName,
+      this._options)
+
+    this._gossipNow = this._gossipNow.bind(this)
   }
 
   start () {
     this._membershipGossipFrequencyHeuristic.on('gossip now', this._gossipNow)
     this._membershipGossipFrequencyHeuristic.start()
+    this._startPeerInfo()
+  }
+
+  _startPeerInfo () {
+    if (this._ipfs._peerInfo) {
+      this._diasSet = DiasSet(
+        this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
+      this._connectionManager.start(this._diasSet)
+    } else {
+      this._ipfs.once('ready', this._startPeerInfo.bind(this))
+    }
   }
 
   stop () {
@@ -50,16 +74,16 @@ module.exports = class Membership extends EventEmitter {
       })
   }
 
-  deliverRemoteMembership (membership) {
+  async deliverRemoteMembership (membership) {
     if ((typeof membership) === 'string') {
       const expectedMembershipHash = this._createMembershipSummaryHash()
       this._someoneHasMembershipWrong = membership !== expectedMembershipHash
     } else if (Array.isArray(membership)) {
-      this._joinMembership(membership)
+      await this._joinMembership(membership)
     }
   }
 
-  async _gossipNow () {
+  _gossipNow () {
     return this._ipfs.id()
       .then((peer) => peer.id)
       .then(async (id) => {
@@ -97,17 +121,25 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _joinMembership (remoteMembershipArray) {
-    let hasChanges = false
-    remoteMembershipArray.forEach((member) => {
-      if (!this._members.has(member)) {
-        hasChanges = true
-        this._members.add(member)
-      }
-    })
+    return this._ipfs.id()
+      .then((peer) => peer.id)
+      .then((id) => {
+        let hasChanges = false
+        remoteMembershipArray.forEach((member) => {
+          if (!this._members.has(member)) {
+            hasChanges = true
+            this._members.add(member)
+            if (member !== id) {
+              this.emit('peer joined', member)
+              this._ring.add(new PeerInfo(new PeerId(bs58.decode(member))))
+            }
+          }
+        })
 
-    if (hasChanges) {
-      this.emit('changed')
-    }
+        if (hasChanges) {
+          this.emit('changed')
+        }
+      })
   }
 
   _membershipTopic () {

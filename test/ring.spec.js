@@ -5,7 +5,7 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const Ring = require('../src/transport/ring')
+const Ring = require('../src/common/ring')
 
 describe('ring', () => {
   let r

@@ -3,6 +3,11 @@
 const EventEmitter = require('events')
 const Membership = require('./membership')
 
+const defaultOptions = {
+  preambleByteCount: 2,
+  peerIdByteCount: 32
+}
+
 module.exports = (app, collaborationName, options) =>
   new Collaboration(app, collaborationName, options)
 
@@ -12,8 +17,9 @@ class Collaboration extends EventEmitter {
     this._ipfs = ipfs
     this._app = app
     this.name = name
+    this._options = Object.assign({}, defaultOptions, options)
 
-    this._membership = new Membership(ipfs, app, name)
+    this._membership = new Membership(ipfs, app, name, this._options)
     this._membership.on('changed', () => {
       this.emit('membership changed', this._membership.peers())
     })
@@ -33,6 +39,6 @@ class Collaboration extends EventEmitter {
   }
 
   deliverRemoteMembership (membership) {
-    this._membership.deliverRemoteMembership(membership)
+    return this._membership.deliverRemoteMembership(membership)
   }
 }

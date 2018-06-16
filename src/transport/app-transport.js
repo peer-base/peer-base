@@ -1,19 +1,17 @@
 'use strict'
 
 const debug = require('debug')('peer-star:app-transport')
-const Ring = require('./ring')
 const EventEmitter = require('events')
-const Gossip = require('./gossip')
-const DiasSet = require('./dias-peer-set')
-const PeerSet = require('./peer-set')
-const Discovery = require('./discovery')
+const Ring = require('../common/ring')
+const DiasSet = require('../common/dias-peer-set')
+const PeerSet = require('../common/peer-set')
 const ConnectionManager = require('./connection-manager')
-
-const PEER_ID_BYTE_COUNT = 32
-const PREAMBLE_BYTE_COUNT = 2
+const Gossip = require('./gossip')
+const Discovery = require('./discovery')
 
 const defaultOptions = {
-  // TODO
+  peerIdByteCount: 32,
+  preambleByteCount: 2
 }
 
 module.exports = (...args) => new AppTransport(...args)
@@ -27,7 +25,7 @@ class AppTransport extends EventEmitter {
     this._app = app
     this._options = Object.assign({}, defaultOptions, options)
 
-    this._ring = Ring()
+    this._ring = Ring(this._options.preambleByteCount)
 
     this._outboundConnections = new PeerSet()
     this._inboundConnections = new PeerSet()
@@ -103,7 +101,7 @@ class AppTransport extends EventEmitter {
 
   _startPeerId () {
     if (this._ipfs._peerInfo) {
-      this._diasSet = DiasSet(PEER_ID_BYTE_COUNT, this._ipfs._peerInfo, PREAMBLE_BYTE_COUNT)
+      this._diasSet = DiasSet(this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
     } else {
       this._ipfs.once('ready', this._startPeerId.bind(this))
     }

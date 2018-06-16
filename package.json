@@ -34,8 +34,9 @@
     "multiaddr": "^5.0.0",
     "multihashing": "~0.3.2",
     "p-queue": "^2.4.2",
-    "peer-id": "~0.10.7",
-    "peer-info": "~0.14.1"
+    "peer-id": "^0.10.7",
+    "peer-info": "~0.14.1",
+    "pull-stream": "^3.6.8"
   },
   "devDependencies": {
     "aegir": "^14.0.0",

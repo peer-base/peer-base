@@ -5,8 +5,8 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const Ring = require('../src/transport/ring')
-const DiasSet = require('../src/transport/dias-peer-set')
+const Ring = require('../src/common/ring')
+const DiasSet = require('../src/common/dias-peer-set')
 
 describe('dias set', () => {
   const id = [0, 0]

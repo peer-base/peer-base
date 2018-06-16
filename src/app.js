@@ -56,7 +56,7 @@ class App extends EventEmitter {
     return this._peerCountGuess.guess()
   }
 
-  _onGossipMessage (message) {
+  async _onGossipMessage (message) {
     this.emit('gossip', message)
     let collaborationName, membership
     try {
@@ -68,7 +68,7 @@ class App extends EventEmitter {
 
     if (this._collaborations.has(collaborationName)) {
       const collaboration = this._collaborations.get(collaborationName)
-      collaboration.deliverRemoteMembership(membership)
+      await collaboration.deliverRemoteMembership(membership)
     }
   }
 

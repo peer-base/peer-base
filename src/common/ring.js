@@ -1,6 +1,7 @@
 'use strict'
 
 const EventEmitter = require('events')
+const PeerInfo = require('peer-info')
 
 exports = module.exports = (...args) => new Ring(...args)
 
@@ -18,10 +19,6 @@ class Ring extends EventEmitter {
   }
 
   add (peerInfo) {
-    if (Buffer.isBuffer(peerInfo) || Array.isArray(peerInfo)) {
-      throw new Error('should only add peerInfos')
-    }
-
     const point = this._peerIdFromPeerInfo(peerInfo)
     if (!this.has(point)) {
       this._points.push(point)
