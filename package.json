@@ -36,6 +36,7 @@
     "p-queue": "^2.4.2",
     "peer-id": "^0.10.7",
     "peer-info": "~0.14.1",
+    "pull-pushable": "^2.2.0",
     "pull-stream": "^3.6.8"
   },
   "devDependencies": {

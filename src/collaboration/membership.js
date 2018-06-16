@@ -2,20 +2,21 @@
 
 const EventEmitter = require('events')
 const multihashing = require('multihashing')
+const PeerId = require('peer-id')
 const PeerInfo = require('peer-info')
 const bs58 = require('bs58')
 const Ring = require('../common/ring')
 const DiasSet = require('../common/dias-peer-set')
-const ConnectionManager = rqequire('./connection-manager')
+const ConnectionManager = require('./connection-manager')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
 
 module.exports = class Membership extends EventEmitter {
-  constructor (ipfs, app, collaborationName, options) {
+  constructor (ipfs, app, collaboration, options) {
     super()
 
     this._ipfs = ipfs
     this._app = app
-    this._collaborationName = collaborationName
+    this._collaboration = collaboration
     this._options = options
 
     this._members = new Set()
@@ -26,7 +27,7 @@ module.exports = class Membership extends EventEmitter {
     this._connectionManager = new ConnectionManager(
       this._ipfs,
       this._ring,
-      this._collaborationName,
+      this._collaboration,
       this._options)
 
     this._gossipNow = this._gossipNow.bind(this)
@@ -39,7 +40,9 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _startPeerInfo () {
+    console.log('_startPeerInfo')
     if (this._ipfs._peerInfo) {
+      console.log('_startPeerInfo 2')
       this._diasSet = DiasSet(
         this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
       this._connectionManager.start(this._diasSet)
@@ -121,18 +124,18 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _joinMembership (remoteMembershipArray) {
+    console.log('remote membership:', remoteMembershipArray)
     return this._ipfs.id()
       .then((peer) => peer.id)
       .then((id) => {
         let hasChanges = false
         remoteMembershipArray.forEach((member) => {
-          if (!this._members.has(member)) {
+          if (!this._members.has(member) && member !== id) {
+            console.log('new peer:', member)
             hasChanges = true
             this._members.add(member)
-            if (member !== id) {
-              this.emit('peer joined', member)
-              this._ring.add(new PeerInfo(new PeerId(bs58.decode(member))))
-            }
+            this.emit('peer joined', member)
+            this._ring.add(new PeerInfo(new PeerId(bs58.decode(member))))
           }
         })
 
@@ -143,6 +146,6 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _membershipTopic () {
-    return this._collaborationName
+    return this._collaboration.name
   }
 }

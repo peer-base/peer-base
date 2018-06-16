@@ -56,7 +56,7 @@ class App extends EventEmitter {
     return this._peerCountGuess.guess()
   }
 
-  async _onGossipMessage (message) {
+  _onGossipMessage (message) {
     this.emit('gossip', message)
     let collaborationName, membership
     try {
@@ -68,7 +68,10 @@ class App extends EventEmitter {
 
     if (this._collaborations.has(collaborationName)) {
       const collaboration = this._collaborations.get(collaborationName)
-      await collaboration.deliverRemoteMembership(membership)
+      collaboration.deliverRemoteMembership(membership)
+        .catch((err) => {
+          console.error('error delivering remote membership:', err)
+        })
     }
   }
 

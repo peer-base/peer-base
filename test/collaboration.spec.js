@@ -13,7 +13,7 @@ const A_BIT = 10000
 describe('app swarm', function () {
   this.timeout(20000)
 
-  const peerCount = 10
+  const peerCount = 2 //10
 
   let rendezvous
   let swarm = []

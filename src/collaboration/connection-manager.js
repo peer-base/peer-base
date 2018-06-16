@@ -1,11 +1,12 @@
 'use strict'
 
 const debug = require('debug')('peer-star:collaboration-connection-manager')
+const debounce = require('lodash.debounce')
 const PeerSet = require('../common/peer-set')
 const Protocol = require('./protocol')
 
 module.exports = class ConnectionManager {
-  constructor (ipfs, ring, collaborationName, options) {
+  constructor (ipfs, ring, collaboration, options) {
     this._ipfs = ipfs
     this._options = options
 
@@ -13,13 +14,18 @@ module.exports = class ConnectionManager {
     this._newPeers = []
 
     this._ring = ring
-    this._ring.on('change', this._onRingChange.bind(this))
+    this._ring.on('changed', this._onRingChange.bind(this))
 
-    this._protocol = Protocol(this._ipfs)
+    this._inboundConnections = new PeerSet()
+    this._outboundConnections = new PeerSet()
+
+    this._protocol = Protocol(collaboration)
+
     this._protocol.on('inbound connection', (peerInfo) => {
       this._inboundConnections.add(peerInfo)
       this._ring.add(peerInfo)
     })
+
     this._protocol.on('inbound connection closed', (peerInfo) => {
       this._inboundConnections.delete(peerInfo)
       if (!this._outboundConnections.has(peerInfo)) {
@@ -37,9 +43,6 @@ module.exports = class ConnectionManager {
         this._ring.remove(peerInfo)
       }
     })
-
-    this._inboundConnections = new PeerSet()
-    this._outboundConnections = new PeerSet()
 
     this._debouncedResetConnections = debounce(
       this._resetConnections.bind(this), this._options.debounceResetConnectionsMS)
@@ -64,10 +67,11 @@ module.exports = class ConnectionManager {
   _resetConnections () {
     const diasSet = this._diasSet(this._ring)
 
+    console.log('dias set has %d peers', diasSet.size)
+
     // make sure we're connected to every peer of the Dias Peer Set
     for (let peerInfo of diasSet.values()) {
       if (!this._outboundConnections.has(peerInfo)) {
-        this._outboundConnections.add(peerInfo)
         this._ipfs._libp2pNode.dialProtocol(
           peerInfo, this._protocol.name(), this._protocol.dialerFor(peerInfo))
       }
