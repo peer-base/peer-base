@@ -43,7 +43,7 @@ class Collaboration extends EventEmitter {
     return this._membership.deliverRemoteMembership(membership)
   }
 
-  presentation () {
+  presentationFor (peerInfo) {
     return Promise.resolve('hello!') // TODO: do a proper presentation from a collab store
   }
 }

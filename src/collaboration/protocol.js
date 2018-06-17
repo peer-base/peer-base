@@ -32,7 +32,7 @@ class Protocol extends EventEmitter {
 
       pull(
         conn,
-        this._wireProtocol(peerInfo),
+        this._pullProtocol(peerInfo),
         conn,
         pull.onEnd((err) => {
           if (err) {
@@ -55,7 +55,7 @@ class Protocol extends EventEmitter {
 
       pull(
         conn,
-        this._wireProtocol(peerInfo),
+        this._pushProtocol(peerInfo),
         conn,
         pull.onEnd((err) => {
           if (err) {
@@ -68,7 +68,7 @@ class Protocol extends EventEmitter {
     }
   }
 
-  _wireProtocol (peerInfo) {
+  _pullProtocol (peerInfo) {
     const onData = (data) => {
       console.log('got data:', data.toString())
     }
@@ -79,10 +79,51 @@ class Protocol extends EventEmitter {
     const input = pull.drain(onData, onEnd)
     const output = pushable(true)
 
-    this._collaboration.presentation()
-      .then((presentation) => output.push(presentation))
+    this._collaboration.presentationFor(peerInfo)
+      .then((presentation) => output.push(encode(presentation)))
       .catch(onEnd)
 
     return { sink: input, source: output.source }
   }
+
+  _pushProtocol (peerInfo) {
+    const gotPresentation = (message) => {
+      console.log('got presentation', message)
+    }
+
+    let dataHandler = gotPresentation
+    const onData = (data) => {
+      let message
+      console.log('got data:', data.toString())
+      try {
+        message = decode(data)
+      } catch (err) {
+        console.log(err)
+        onEnd(err)
+      }
+
+      dataHandler(message)
+    }
+
+    const onEnd = (err) => {
+      output.end(err)
+    }
+    const input = pull.drain(onData, onEnd)
+    const output = pushable(true)
+
+    this._collaboration.presentationFor(peerInfo)
+      .then((presentation) => output.push(presentation))
+      .catch(onEnd)
+
+    return { sink: input, source: output.source }
+
+  }
+}
+
+function decode (data) {
+  return JSON.parse(data.toString())
+}
+
+function encode (data) {
+  return Buffer.from(JSON.stringify(data))
 }
