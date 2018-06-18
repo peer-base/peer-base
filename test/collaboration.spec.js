@@ -8,12 +8,12 @@ const expect = chai.expect
 const App = require('./utils/create-app')
 const Rendezvous = require('./utils/rendezvous')
 
-const A_BIT = 10000
+const A_BIT = 15000
 
 describe('app swarm', function () {
   this.timeout(20000)
 
-  const peerCount = 2 // 10
+  const peerCount = 10 // 10
 
   let rendezvous
   let swarm = []

@@ -68,8 +68,6 @@ module.exports = class ConnectionManager {
     return new Promise(async (resolve, reject) => {
       const diasSet = this._diasSet(this._ring)
 
-      console.log('dias set has %d peers', diasSet.size)
-
       // make sure we're connected to every peer of the Dias Peer Set
       for (let peerInfo of diasSet.values()) {
         if (!this._outboundConnections.has(peerInfo)) {

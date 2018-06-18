@@ -22,7 +22,6 @@ class Protocol extends EventEmitter {
   }
 
   handler (protocol, conn) {
-    console.log('handler')
     conn.getPeerInfo((err, peerInfo) => {
       if (err) {
         console.error('error getting peer info:', peerInfo)
@@ -64,24 +63,33 @@ class Protocol extends EventEmitter {
   }
 
   _pullProtocol (peerInfo) {
+    let ended = false
     const onData = (data) => {
       console.log('got data:', data.toString())
     }
 
     const onEnd = (err) => {
-      output.end(err)
+      if (!ended) {
+        if (err) {
+          console.error(err.message)
+          debug(err)
+        }
+        ended = true
+        output.end(err)
+      }
     }
     const input = pull.drain(onData, onEnd)
-    const output = pushable(true)
+    const output = pushable()
 
     this._store.getLatestVectorClock()
-      .then((vectorClock) => output.push(encode(vectorClock)))
+      .then((vectorClock) => output.push(encode(vectorClock || {})))
       .catch(onEnd)
 
-    return { sink: input, source: output.source }
+    return { sink: input, source: output }
   }
 
   _pushProtocol (peerInfo) {
+    let ended = false
     const gotPresentation = (message) => {
       console.log('got presentation', message)
     }
@@ -101,12 +109,19 @@ class Protocol extends EventEmitter {
     }
 
     const onEnd = (err) => {
-      output.end(err)
+      if (!ended) {
+        if (err) {
+          console.error(err.message)
+          debug(err)
+        }
+        ended = true
+        output.end(err)
+      }
     }
     const input = pull.drain(onData, onEnd)
-    const output = pushable(true)
+    const output = pushable()
 
-    return { sink: input, source: output.source }
+    return { sink: input, source: output }
   }
 }
 

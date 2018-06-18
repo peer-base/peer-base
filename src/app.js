@@ -52,10 +52,7 @@ class App extends EventEmitter {
 
   gossip (message) {
     if (this._gossip) {
-      console.log('gossiping', message.toString())
       this._gossip.broadcast(message)
-    } else {
-      console.log('NO GOSSIP')
     }
   }
 

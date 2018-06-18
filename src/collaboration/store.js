@@ -1,6 +1,7 @@
 'use strict'
 
-const NamespaceStore = require('datastore-core/src/namespace')
+const NamespaceStore = require('datastore-core').NamespaceDatastore
+const Key = require('interface-datastore').Key
 
 module.exports = class CollaborationStore {
   constructor (ipfs, collaboration) {
@@ -17,10 +18,8 @@ module.exports = class CollaborationStore {
   }
 
   getLatestVectorClock () {
-    console.log('getLatestVectorClock')
     return new Promise((resolve, reject) => {
       this._store.get('clock', parsingResult((err, clock) => {
-        console.log('getLatestVectorClock result:', err, clock)
         if (err) {
           return reject(err)
         }
@@ -38,14 +37,17 @@ function datastore (ipfs, collaboration) {
         datastore(ipfs, collaboration).then(resolve).catch(reject)
       })
     }
-    resolve(new NamespaceStore(ds, `peer-star-collab-${collaboration.name}`))
+    // resolve(ds)
+    resolve(new NamespaceStore(ds, new Key(`peer-star-collab-${collaboration.name}`)))
   })
 }
 
 function parsingResult (callback) {
   return (err, result) => {
-    console.log('RESULT:', err, result)
     if (err) {
+      if (err.message.indexOf('Key not found') >= 0) {
+        return callback(null, undefined)
+      }
       return callback(err)
     }
     let parsed

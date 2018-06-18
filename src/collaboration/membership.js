@@ -41,9 +41,7 @@ module.exports = class Membership extends EventEmitter {
   }
 
   async _startPeerInfo () {
-    console.log('_startPeerInfo')
     if (this._ipfs._peerInfo) {
-      console.log('_startPeerInfo 2')
       this._diasSet = DiasSet(
         this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
       return this._connectionManager.start(this._diasSet)
@@ -129,14 +127,12 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _joinMembership (remoteMembershipArray) {
-    console.log('remote membership:', remoteMembershipArray)
     return this._ipfs.id()
       .then((peer) => peer.id)
       .then((id) => {
         let hasChanges = false
         remoteMembershipArray.forEach((member) => {
           if (!this._members.has(member) && member !== id) {
-            console.log('new peer:', member)
             hasChanges = true
             this._members.add(member)
             this.emit('peer joined', member)

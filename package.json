@@ -29,6 +29,7 @@
     "datastore-core": "~0.4.0",
     "debug": "^3.1.0",
     "delay": "^3.0.0",
+    "interface-datastore": "^0.4.2",
     "ipfs": "~0.29.2",
     "libp2p-websocket-star": "~0.8.0",
     "lodash.debounce": "^4.0.8",
