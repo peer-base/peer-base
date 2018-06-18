@@ -11,7 +11,7 @@ const ConnectionManager = require('./connection-manager')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
 
 module.exports = class Membership extends EventEmitter {
-  constructor (ipfs, app, collaboration, store, options) {
+  constructor (ipfs, globalConnectionManager, app, collaboration, store, options) {
     super()
 
     this._ipfs = ipfs
@@ -25,7 +25,7 @@ module.exports = class Membership extends EventEmitter {
 
     this._ring = Ring(this._options.preambleByteCount)
     this._connectionManager = new ConnectionManager(
-      this._ipfs,
+      globalConnectionManager,
       this._ring,
       this._collaboration,
       store,

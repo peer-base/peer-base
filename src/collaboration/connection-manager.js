@@ -6,8 +6,8 @@ const PeerSet = require('../common/peer-set')
 const Protocol = require('./protocol')
 
 module.exports = class ConnectionManager {
-  constructor (ipfs, ring, collaboration, store, options) {
-    this._ipfs = ipfs
+  constructor (globalConnectionManager, ring, collaboration, store, options) {
+    this._globalConnectionManager = globalConnectionManager
     this._options = options
 
     this._stopped = true
@@ -52,12 +52,12 @@ module.exports = class ConnectionManager {
     this._stopped = false
     this._diasSet = diasSet
 
-    this._ipfs._libp2pNode.handle(this._protocol.name(), this._protocol.handler)
+    this._globalConnectionManager.handle(this._protocol.name(), this._protocol.handler)
   }
 
   stop () {
     this._stopped = true
-    this._ipfs._libp2pNode.unhandle(this._protocol.name())
+    this._globalConnectionManager.unhandle(this._protocol.name())
   }
 
   _onRingChange () {
@@ -65,27 +65,36 @@ module.exports = class ConnectionManager {
   }
 
   _resetConnections () {
-    const diasSet = this._diasSet(this._ring)
+    return new Promise(async (resolve, reject) => {
+      const diasSet = this._diasSet(this._ring)
 
-    console.log('dias set has %d peers', diasSet.size)
+      console.log('dias set has %d peers', diasSet.size)
 
-    // make sure we're connected to every peer of the Dias Peer Set
-    for (let peerInfo of diasSet.values()) {
-      if (!this._outboundConnections.has(peerInfo)) {
-        this._ipfs._libp2pNode.dialProtocol(
-          peerInfo, this._protocol.name(), this._protocol.dialerFor(peerInfo))
-      }
-    }
-
-    // make sure we disconnect from peers not in the Dias Peer Set
-    for (let peerInfo of this._outboundConnections.values()) {
-      if (!diasSet.has(peerInfo)) {
-        try {
-          this._protocol.hangup(peerInfo)
-        } catch (err) {
-          debug('error hanging up:', err)
+      // make sure we're connected to every peer of the Dias Peer Set
+      for (let peerInfo of diasSet.values()) {
+        if (!this._outboundConnections.has(peerInfo)) {
+          try {
+            const connection = await this._globalConnectionManager.connect(
+              peerInfo, this._protocol.name())
+            this._protocol.dialerFor(peerInfo, connection)
+          } catch (err) {
+            console.log('error connecting:', err.message)
+            debug('error connecting:', err)
+          }
         }
       }
-    }
+
+      // make sure we disconnect from peers not in the Dias Peer Set
+      for (let peerInfo of this._outboundConnections.values()) {
+        if (!diasSet.has(peerInfo)) {
+          try {
+            this._globalConnectionManager.disconnect(peerInfo, this._protocol.name())
+          } catch (err) {
+            debug('error hanging up:', err)
+          }
+        }
+      }
+
+    })
   }
 }

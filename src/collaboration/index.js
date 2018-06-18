@@ -14,27 +14,26 @@ module.exports = (app, collaborationName, options) =>
   new Collaboration(app, collaborationName, options)
 
 class Collaboration extends EventEmitter {
-  constructor (ipfs, app, name, options) {
+  constructor (ipfs, globalConnectionManager, app, name, options) {
     super()
-    this._ipfs = ipfs
     this._app = app
     this.name = name
     this._options = Object.assign({}, defaultOptions, options)
 
-    this._store = new Store(ipfs, this)
-    this._membership = new Membership(ipfs, app, this, this._store, this._options)
+    // this._store = new Store(ipfs, this)
+    this._membership = new Membership(ipfs, globalConnectionManager, app, this, this._store, this._options)
     this._membership.on('changed', () => {
       this.emit('membership changed', this._membership.peers())
     })
   }
 
   start () {
-    return Promise.all([this._membership.start(), this._store.start()])
+    return Promise.all([this._membership.start()/*, this._store.start()*/])
   }
 
   stop () {
     this.emit('stopped')
-    return Promise.all([this._membership.stop(), this._store.stop()])
+    return Promise.all([this._membership.stop(),/* this._store.stop()*/])
   }
 
   peers () {

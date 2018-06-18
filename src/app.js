@@ -33,7 +33,15 @@ class App extends EventEmitter {
   async collaborate (name, options) {
     let collaboration = this._collaborations.get(name)
     if (!collaboration) {
-      collaboration = Collaboration(this.ipfs, this, name, options)
+      if (!this._globalConnectionManager) {
+        // wait until we have a global connection manager
+        return new Promise((resolve, reject) => {
+          this.once('global connection manager', () => {
+            collaborate(name, options).then(resolve).catch(reject)
+          })
+        })
+      }
+      collaboration = Collaboration(this.ipfs, this._globalConnectionManager, this, name, options)
       this._collaborations.set(name, collaboration)
       collaboration.once('stop', () => this._collaborations.delete(name))
       await collaboration.start()
@@ -50,6 +58,11 @@ class App extends EventEmitter {
   setGossip (gossip) {
     this._gossip = gossip
     gossip.on('message', this._onGossipMessage)
+  }
+
+  setGlobalConnectionManager (globalConnectionManager) {
+    this._globalConnectionManager = globalConnectionManager
+    this.emit('global connection manager')
   }
 
   peerCountGuess () {

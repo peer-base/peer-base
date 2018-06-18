@@ -25,7 +25,8 @@ describe('app-transport', function () {
   before(() => {
     app = {
       name: 'peer-star test app name',
-      setGossip: fake()
+      setGossip: fake(),
+      setGlobalConnectionManager: fake()
     }
 
     ipfs = {

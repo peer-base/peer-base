@@ -8,6 +8,7 @@ const PeerSet = require('../common/peer-set')
 const ConnectionManager = require('./connection-manager')
 const Gossip = require('./gossip')
 const Discovery = require('./discovery')
+const GlobalConnectionManager = require('./global-connection-manager')
 
 const defaultOptions = {
   peerIdByteCount: 32,
@@ -45,8 +46,10 @@ class AppTransport extends EventEmitter {
 
     this.discovery.on('start', () => this._maybeStart())
 
+    this._globalConnectionManager = new GlobalConnectionManager(this._ipfs, this)
+
     this._connectionManager = new ConnectionManager(
-      this._ipfs,
+      this._globalConnectionManager,
       this._ring,
       this._outboundConnections,
       this._inboundConnections,
@@ -59,6 +62,8 @@ class AppTransport extends EventEmitter {
     this._gossip = Gossip(app.name, ipfs)
     this._gossip.on('error', (err) => this.emit('error', err))
     this._app.setGossip(this._gossip)
+
+    this._app.setGlobalConnectionManager(this._globalConnectionManager)
   }
 
   dial (ma, options, callback) {
@@ -75,6 +80,7 @@ class AppTransport extends EventEmitter {
 
   close (callback) {
     this._connectionManager.stop()
+    this._globalConnectionManager.stop()
     this._ipfs._libp2pNode.removeListener('peer:disconnect', this._onPeerDisconnect)
     this._gossip.stop((err) => {
       if (err) {
@@ -82,6 +88,10 @@ class AppTransport extends EventEmitter {
       }
       this._transport.close(callback)
     })
+  }
+
+  isOutbound (peerInfo) {
+    return this._outboundConnections.has(peerInfo)
   }
 
   _maybeStart () {
@@ -95,6 +105,7 @@ class AppTransport extends EventEmitter {
     this._startPeerId()
     this._gossip.start()
     this._connectionManager.start(this._diasSet)
+    this._globalConnectionManager.start()
     this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
     this._ipfs._libp2pNode.on('peer:connect', this._onPeerConnect)
   }

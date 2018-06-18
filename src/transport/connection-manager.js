@@ -9,11 +9,11 @@ const defaultOptions = {
 }
 
 module.exports = class ConnectionManager extends EventEmitter {
-  constructor (ipfs, ring, inboundConnections, outboundConnections, options) {
+  constructor (globalConnectionManager, ring, inboundConnections, outboundConnections, options) {
     super()
 
     this._stopped = true
-    this._ipfs = ipfs
+    this._globalConnectionManager = globalConnectionManager
     this._ring = ring
     this._inboundConnections = inboundConnections
     this._outboundConnections = outboundConnections
@@ -76,15 +76,7 @@ module.exports = class ConnectionManager extends EventEmitter {
     // make sure we disconnect from peers not in the Dias Peer Set
     for (let peerInfo of this._outboundConnections.values()) {
       if (!diasSet.has(peerInfo)) {
-        try {
-          this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
-            if (err) {
-              debug('error hanging up:', err)
-            }
-          })
-        } catch (err) {
-          debug('error hanging up:', err)
-        }
+        this._globalConnectionManager.maybeHangUp(peerInfo)
       }
     }
 

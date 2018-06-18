@@ -46,27 +46,21 @@ class Protocol extends EventEmitter {
     })
   }
 
-  dialerFor (peerInfo) {
-    return (err, conn) => {
-      if (err) {
-        console.error(err)
-        return
-      }
-      this.emit('outbound connection', peerInfo)
+  dialerFor (peerInfo, conn) {
+    this.emit('outbound connection', peerInfo)
 
-      pull(
-        conn,
-        this._pushProtocol(peerInfo),
-        conn,
-        pull.onEnd((err) => {
-          if (err) {
-            console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
-            debug(err)
-          }
-          this.emit('outbound connection closed', peerInfo)
-        })
-      )
-    }
+    pull(
+      conn,
+      this._pushProtocol(peerInfo),
+      conn,
+      pull.onEnd((err) => {
+        if (err) {
+          console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
+          debug(err)
+        }
+        this.emit('outbound connection closed', peerInfo)
+      })
+    )
   }
 
   _pullProtocol (peerInfo) {
