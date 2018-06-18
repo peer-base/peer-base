@@ -32,15 +32,19 @@ class Protocol extends EventEmitter {
 
       pull(
         conn,
+        pull.map((d) => {
+          console.log('-----> ', d.toString())
+          return d
+        }),
         this._pullProtocol(peerInfo),
-        conn,
-        pull.onEnd((err) => {
+        passthrough((err) => {
           if (err) {
             console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
             debug(err)
           }
           this.emit('inbound connection closed', peerInfo)
-        })
+        }),
+        conn
       )
     })
   }
@@ -62,10 +66,13 @@ class Protocol extends EventEmitter {
     )
   }
 
+  /* ---- 1: pull protocol */
+
   _pullProtocol (peerInfo) {
     let ended = false
     const onData = (data) => {
-      console.log('got data:', data.toString())
+      console.log('pull got data:', data.toString())
+      return true // keep the stream alive
     }
 
     const onEnd = (err) => {
@@ -82,11 +89,16 @@ class Protocol extends EventEmitter {
     const output = pushable()
 
     this._store.getLatestVectorClock()
-      .then((vectorClock) => output.push(encode(vectorClock || {})))
+      .then((vectorClock) => {
+        console.log('got vector clock', vectorClock)
+        output.push(encode(vectorClock || {}))
+      })
       .catch(onEnd)
 
     return { sink: input, source: output }
   }
+
+  /* ---- 2: push protocol */
 
   _pushProtocol (peerInfo) {
     let ended = false
@@ -97,7 +109,7 @@ class Protocol extends EventEmitter {
     let dataHandler = gotPresentation
     const onData = (data) => {
       let message
-      console.log('got data:', data.toString())
+      console.log('push got data:', data.toString())
       try {
         message = decode(data)
       } catch (err) {
@@ -106,6 +118,7 @@ class Protocol extends EventEmitter {
       }
 
       dataHandler(message)
+      return true // keep the stream alive
     }
 
     const onEnd = (err) => {
@@ -131,4 +144,10 @@ function decode (data) {
 
 function encode (data) {
   return Buffer.from(JSON.stringify(data))
+}
+
+function passthrough (onEnd) {
+  return pull.through(
+    null,
+    onEnd)
 }

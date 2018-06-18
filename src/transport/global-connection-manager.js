@@ -2,7 +2,6 @@
 
 const debug = require('debug')('peer-star:global-connection-manager')
 const pull = require('pull-stream')
-const through = require('pull-through')
 const PeerSet = require('../common/peer-set')
 
 module.exports = class GlobalConnectionManager {
@@ -34,7 +33,6 @@ module.exports = class GlobalConnectionManager {
     return new Promise((resolve, reject) => {
       this._outbound.add(peerInfo)
       const peerId = peerInfo.id.toB58String()
-      console.log('connect', peerId, protocol)
       debug('connect', peerId, protocol)
       if (!this._peerCollaborations.has(peerId)) {
         this._peerCollaborations.set(peerId, new Set([protocol]))
@@ -46,22 +44,21 @@ module.exports = class GlobalConnectionManager {
         if (err) {
           return reject(err)
         }
-        // TODO: catch close and maybe GC peer conn
 
-        resolve(
-          {
-            sink: conn.sink,
-            source: pull(
-              conn,
-              passthrough((err) => {
-                if (err) {
-                  console.error('connection to %s ended with error', peerId, err.message)
-                  debug('connection to %s ended with error', peerId, err)
-                }
-                this._peerCollaborations.get(peerId).delete(protocol)
-                this.maybeHangUp(peerInfo)
-              }))
-          })
+        resolve({
+          sink: conn.sink,
+          source: pull(
+            conn.source,
+            pull.through(null, (err) => {
+              if (err) {
+                console.error('connection to %s ended with error', peerId, err.message)
+                debug('connection to %s ended with error', peerId, err)
+              }
+              this._peerCollaborations.get(peerId).delete(protocol)
+              this.maybeHangUp(peerInfo)
+            })
+          )
+        })
       })
     })
   }
@@ -125,12 +122,4 @@ module.exports = class GlobalConnectionManager {
       })
     }
   }
-}
-
-function passthrough (onEnd) {
-  return through(
-    function (d) {
-      this.queue(d)
-    },
-    onEnd)
 }
