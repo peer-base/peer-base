@@ -10,9 +10,10 @@ module.exports = (...args) => {
 }
 
 class Protocol extends EventEmitter {
-  constructor (collaboration) {
+  constructor (collaboration, store) {
     super()
     this._collaboration = collaboration
+    this._store = store
     this.handler = this.handler.bind(this)
   }
 
@@ -79,9 +80,9 @@ class Protocol extends EventEmitter {
     const input = pull.drain(onData, onEnd)
     const output = pushable(true)
 
-    this._collaboration.presentationFor(peerInfo)
-      .then((presentation) => output.push(encode(presentation)))
-      .catch(onEnd)
+    // this._store.getLatestVectorClock()
+    //   .then((vectorClock) => output.push(vectorClock))
+    //   .catch(onEnd)
 
     return { sink: input, source: output.source }
   }
@@ -110,10 +111,6 @@ class Protocol extends EventEmitter {
     }
     const input = pull.drain(onData, onEnd)
     const output = pushable(true)
-
-    this._collaboration.presentationFor(peerInfo)
-      .then((presentation) => output.push(presentation))
-      .catch(onEnd)
 
     return { sink: input, source: output.source }
 

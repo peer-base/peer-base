@@ -6,7 +6,7 @@ const PeerSet = require('../common/peer-set')
 const Protocol = require('./protocol')
 
 module.exports = class ConnectionManager {
-  constructor (ipfs, ring, collaboration, options) {
+  constructor (ipfs, ring, collaboration, store, options) {
     this._ipfs = ipfs
     this._options = options
 
@@ -19,7 +19,7 @@ module.exports = class ConnectionManager {
     this._inboundConnections = new PeerSet()
     this._outboundConnections = new PeerSet()
 
-    this._protocol = Protocol(collaboration)
+    this._protocol = Protocol(collaboration, store)
 
     this._protocol.on('inbound connection', (peerInfo) => {
       this._inboundConnections.add(peerInfo)

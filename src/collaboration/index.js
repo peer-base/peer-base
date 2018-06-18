@@ -2,6 +2,7 @@
 
 const EventEmitter = require('events')
 const Membership = require('./membership')
+const Store = require('./store')
 
 const defaultOptions = {
   preambleByteCount: 2,
@@ -20,19 +21,20 @@ class Collaboration extends EventEmitter {
     this.name = name
     this._options = Object.assign({}, defaultOptions, options)
 
-    this._membership = new Membership(ipfs, app, this, this._options)
+    this._store = new Store(ipfs, this)
+    this._membership = new Membership(ipfs, app, this, this._store, this._options)
     this._membership.on('changed', () => {
       this.emit('membership changed', this._membership.peers())
     })
   }
 
   start () {
-    return this._membership.start()
+    return Promise.all([this._membership.start(), this._store.start()])
   }
 
   stop () {
     this.emit('stopped')
-    return this._membership.stop()
+    return Promise.all([this._membership.stop(), this._store.stop()])
   }
 
   peers () {
@@ -41,9 +43,5 @@ class Collaboration extends EventEmitter {
 
   deliverRemoteMembership (membership) {
     return this._membership.deliverRemoteMembership(membership)
-  }
-
-  presentationFor (peerInfo) {
-    return Promise.resolve('hello!') // TODO: do a proper presentation from a collab store
   }
 }

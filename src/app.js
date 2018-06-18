@@ -30,13 +30,13 @@ class App extends EventEmitter {
     }).then(() => this._peerCountGuess.start())
   }
 
-  collaborate (name, options) {
+  async collaborate (name, options) {
     let collaboration = this._collaborations.get(name)
     if (!collaboration) {
       collaboration = Collaboration(this.ipfs, this, name, options)
       this._collaborations.set(name, collaboration)
       collaboration.once('stop', () => this._collaborations.delete(name))
-      collaboration.start()
+      await collaboration.start()
     }
     return collaboration
   }

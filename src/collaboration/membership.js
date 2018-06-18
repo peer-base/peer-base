@@ -11,7 +11,7 @@ const ConnectionManager = require('./connection-manager')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
 
 module.exports = class Membership extends EventEmitter {
-  constructor (ipfs, app, collaboration, options) {
+  constructor (ipfs, app, collaboration, store, options) {
     super()
 
     this._ipfs = ipfs
@@ -28,26 +28,31 @@ module.exports = class Membership extends EventEmitter {
       this._ipfs,
       this._ring,
       this._collaboration,
+      store,
       this._options)
 
     this._gossipNow = this._gossipNow.bind(this)
   }
 
-  start () {
+  async start () {
     this._membershipGossipFrequencyHeuristic.on('gossip now', this._gossipNow)
     this._membershipGossipFrequencyHeuristic.start()
-    this._startPeerInfo()
+    await this._startPeerInfo()
   }
 
-  _startPeerInfo () {
+  async _startPeerInfo () {
     console.log('_startPeerInfo')
     if (this._ipfs._peerInfo) {
       console.log('_startPeerInfo 2')
       this._diasSet = DiasSet(
         this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
-      this._connectionManager.start(this._diasSet)
+      return this._connectionManager.start(this._diasSet)
     } else {
-      this._ipfs.once('ready', this._startPeerInfo.bind(this))
+      return new Promise((resolve, reject) => {
+        this._ipfs.once('ready', () => {
+          this._startPeerInfo().then(resolve).catch(reject)
+        })
+      })
     }
   }
 

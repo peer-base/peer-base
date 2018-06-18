@@ -43,8 +43,8 @@ describe('app swarm', function () {
     setTimeout(done, A_BIT)
   })
 
-  it('can be created', () => {
-    collaborations = swarm.map((peer) => peer.app.collaborate('test collaboration'))
+  it('can be created', async () => {
+    collaborations = await Promise.all(swarm.map((peer) => peer.app.collaborate('test collaboration')))
     expect(collaborations.length).to.equal(peerCount)
   })
 
@@ -61,12 +61,12 @@ describe('app swarm', function () {
     })
   })
 
-  it('adding another peer', () => {
+  it('adding another peer', async () => {
     const peer = App({ maxThrottleDelayMS: 1000 })
-    const collaboration = peer.app.collaborate('test collaboration')
+    const collaboration = await peer.app.collaborate('test collaboration')
     swarm.push(peer)
     collaborations.push(collaboration)
-    return peer.app.start()
+    await peer.app.start()
   })
 
   it('waits a bit for membership to propagate', (done) => {
@@ -85,4 +85,8 @@ describe('app swarm', function () {
   it('closes peer', () => {
     return swarm[swarm.length - 1].app.stop()
   })
+})
+
+process.on('unhandledRejection', (err) => {
+  console.log('unhandeld rejection', err)
 })
