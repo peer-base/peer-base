@@ -74,9 +74,9 @@ class Protocol extends EventEmitter {
     const input = pull.drain(onData, onEnd)
     const output = pushable(true)
 
-    // this._store.getLatestVectorClock()
-    //   .then((vectorClock) => output.push(vectorClock))
-    //   .catch(onEnd)
+    this._store.getLatestVectorClock()
+      .then((vectorClock) => output.push(encode(vectorClock)))
+      .catch(onEnd)
 
     return { sink: input, source: output.source }
   }
@@ -107,7 +107,6 @@ class Protocol extends EventEmitter {
     const output = pushable(true)
 
     return { sink: input, source: output.source }
-
   }
 }
 

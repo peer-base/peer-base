@@ -1,7 +1,6 @@
 'use strict'
 
 const EventEmitter = require('events')
-const PeerInfo = require('peer-info')
 
 exports = module.exports = (...args) => new Ring(...args)
 

@@ -48,11 +48,11 @@ module.exports = class ConnectionManager {
       this._resetConnections.bind(this), this._options.debounceResetConnectionsMS)
   }
 
-  start (diasSet) {
+  async start (diasSet) {
     this._stopped = false
     this._diasSet = diasSet
 
-    this._globalConnectionManager.handle(this._protocol.name(), this._protocol.handler)
+    await this._globalConnectionManager.handle(this._protocol.name(), this._protocol.handler)
   }
 
   stop () {
@@ -94,7 +94,6 @@ module.exports = class ConnectionManager {
           }
         }
       }
-
     })
   }
 }

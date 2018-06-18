@@ -31,13 +31,14 @@ class App extends EventEmitter {
   }
 
   async collaborate (name, options) {
+    console.log('CCC collaboration name:', name)
     let collaboration = this._collaborations.get(name)
     if (!collaboration) {
       if (!this._globalConnectionManager) {
         // wait until we have a global connection manager
         return new Promise((resolve, reject) => {
           this.once('global connection manager', () => {
-            collaborate(name, options).then(resolve).catch(reject)
+            this.collaborate(name, options).then(resolve).catch(reject)
           })
         })
       }
@@ -51,7 +52,10 @@ class App extends EventEmitter {
 
   gossip (message) {
     if (this._gossip) {
+      console.log('gossiping', message.toString())
       this._gossip.broadcast(message)
+    } else {
+      console.log('NO GOSSIP')
     }
   }
 

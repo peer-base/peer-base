@@ -1,6 +1,5 @@
 'use strict'
 
-const debug = require('debug')('peer-star:connection-manager')
 const EventEmitter = require('events')
 const debounce = require('lodash.debounce')
 

@@ -46,7 +46,7 @@ class AppTransport extends EventEmitter {
 
     this.discovery.on('start', () => this._maybeStart())
 
-    this._globalConnectionManager = new GlobalConnectionManager(this._ipfs, this)
+    this._globalConnectionManager = new GlobalConnectionManager(ipfs, this)
 
     this._connectionManager = new ConnectionManager(
       this._globalConnectionManager,

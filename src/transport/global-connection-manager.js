@@ -34,6 +34,8 @@ module.exports = class GlobalConnectionManager {
     return new Promise((resolve, reject) => {
       this._outbound.add(peerInfo)
       const peerId = peerInfo.id.toB58String()
+      console.log('connect', peerId, protocol)
+      debug('connect', peerId, protocol)
       if (!this._peerCollaborations.has(peerId)) {
         this._peerCollaborations.set(peerId, new Set([protocol]))
       } else {
@@ -47,12 +49,19 @@ module.exports = class GlobalConnectionManager {
         // TODO: catch close and maybe GC peer conn
 
         resolve(
-          pull(
-            conn,
-            passthrough((err) => {
-              this._peerCollaborations.get(peerId).delete(protocol)
-              this.maybeHangUp(peerInfo)
-            })))
+          {
+            sink: conn.sink,
+            source: pull(
+              conn,
+              passthrough((err) => {
+                if (err) {
+                  console.error('connection to %s ended with error', peerId, err.message)
+                  debug('connection to %s ended with error', peerId, err)
+                }
+                this._peerCollaborations.get(peerId).delete(protocol)
+                this.maybeHangUp(peerInfo)
+              }))
+          })
       })
     })
   }
@@ -66,7 +75,17 @@ module.exports = class GlobalConnectionManager {
   }
 
   handle (protocol, handler) {
-    return this._ipfs._libp2pNode.handle(protocol, handler)
+    return new Promise((resolve, reject) => {
+      if (!this._ipfs._libp2pNode) {
+        this._ipfs.once('ready', () => {
+          this._ipfs._libp2pNode.handle(protocol, handler)
+          resolve()
+        })
+        return
+      }
+      this._ipfs._libp2pNode.handle(protocol, handler)
+      resolve()
+    })
   }
 
   unhandle (protocol) {
@@ -110,7 +129,7 @@ module.exports = class GlobalConnectionManager {
 
 function passthrough (onEnd) {
   return through(
-    function(d) {
+    function (d) {
       this.queue(d)
     },
     onEnd)
