@@ -4,6 +4,7 @@ const debug = require('debug')('peer-star:collab-protocol')
 const EventEmitter = require('events')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
+const vectorclock = require('vectorclock')
 
 module.exports = (...args) => {
   return new Protocol(...args)
@@ -91,7 +92,7 @@ class Protocol extends EventEmitter {
     this._store.getLatestVectorClock()
       .then((vectorClock) => {
         console.log('got vector clock', vectorClock)
-        output.push(encode(vectorClock || {}))
+        output.push(encode([vectorClock || {}]))
       })
       .catch(onEnd)
 
@@ -102,23 +103,30 @@ class Protocol extends EventEmitter {
 
   _pushProtocol (peerInfo) {
     let ended = false
+    let vc = {}
+
     const gotPresentation = (message) => {
-      console.log('got presentation', message)
+      const [remoteVectorClock] = message
+      console.log('remote vector clock:', remoteVectorClock)
+      vc = vectorclock.merge(vc, remoteVectorClock)
+      console.log('merged vc:', vc)
     }
 
-    let dataHandler = gotPresentation
-    const onData = (data) => {
-      let message
-      console.log('push got data:', data.toString())
-      try {
-        message = decode(data)
-      } catch (err) {
-        console.log(err)
-        onEnd(err)
-      }
+    let messageHandler = gotPresentation
 
-      dataHandler(message)
-      return true // keep the stream alive
+    const onMessage = (err, message) => {
+      if (err) {
+        console.error('error parsing message:', err.message)
+        debug('error parsing message:', err)
+        onEnd(err)
+      } else {
+        try {
+          messageHandler(message)
+        } catch (err) {
+          console.error('error handling message:', err)
+          onEnd(err)
+        }
+      }
     }
 
     const onEnd = (err) => {
@@ -131,10 +139,24 @@ class Protocol extends EventEmitter {
         output.end(err)
       }
     }
-    const input = pull.drain(onData, onEnd)
+    const input = pull.drain(handlingData(onMessage), onEnd)
     const output = pushable()
 
     return { sink: input, source: output }
+  }
+}
+
+function handlingData (dataHandler) {
+  return (data) => {
+    let message
+    try {
+      message = decode(data)
+    } catch (err) {
+      dataHandler(err)
+    }
+
+    dataHandler(null, message)
+    return true
   }
 }
 
