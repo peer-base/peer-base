@@ -1,12 +1,17 @@
 'use strict'
 
+const EventEmitter = require('events')
 const NamespaceStore = require('datastore-core').NamespaceDatastore
 const Key = require('interface-datastore').Key
+const Queue = require('p-queue')
+const vectorclock = require('vectorclock')
 
-module.exports = class CollaborationStore {
+module.exports = class CollaborationStore extends EventEmitter {
   constructor (ipfs, collaboration) {
+    super()
     this._ipfs = ipfs
     this._collaboration = collaboration
+    this._queue = new Queue({ concurrency: 1 })
   }
 
   async start () {
@@ -25,6 +30,42 @@ module.exports = class CollaborationStore {
         }
         resolve(clock)
       }))
+    })
+  }
+
+  pushOperation (op) {
+    return this._queue.add(async () => {
+      const latest = await this.getLatestVector()
+      const id = (await this._ipfs.id()).id
+      const newClock = vectorclock.increment(latest, id)
+      await this._saveOperation(newClock, op)
+      await this._setLatestVectorClock(newClock)
+      this.emit('op', { op, clock: newClock })
+      return newClock
+    })
+  }
+
+  _saveOperation (clock, op) {
+    return new Promise((resolve, reject) => {
+      this._store.put(JSON.stringify(clock), JSON.stringify(op), (err) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve()
+        }
+      })
+    })
+  }
+
+  _setLatestVectorClock (clock) {
+    return new Promise((resolve, reject) => {
+      this._store.put('clock', JSON.stringify(clock), (err) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve()
+        }
+      })
     })
   }
 }

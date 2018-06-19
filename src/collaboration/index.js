@@ -21,6 +21,10 @@ class Collaboration extends EventEmitter {
     this._options = Object.assign({}, defaultOptions, options)
 
     this._store = new Store(ipfs, this)
+    this._store.on('op', (op) => {
+      this.emit('op', op)
+    })
+
     this._membership = new Membership(ipfs, globalConnectionManager, app, this, this._store, this._options)
     this._membership.on('changed', () => {
       this.emit('membership changed', this._membership.peers())
@@ -42,5 +46,9 @@ class Collaboration extends EventEmitter {
 
   deliverRemoteMembership (membership) {
     return this._membership.deliverRemoteMembership(membership)
+  }
+
+  pushOperation (op) {
+    return this._store.pushOperation(op)
   }
 }

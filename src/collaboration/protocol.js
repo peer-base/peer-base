@@ -105,6 +105,14 @@ class Protocol extends EventEmitter {
     let ended = false
     let vc = {}
 
+    const newOpHandler = (op) => {
+      if (!ended) {
+        output.push(JSON.stringify(op))
+      }
+    }
+
+    this._store.on('op', newOpHandler)
+
     const gotPresentation = (message) => {
       const [remoteVectorClock] = message
       console.log('remote vector clock:', remoteVectorClock)
@@ -136,6 +144,7 @@ class Protocol extends EventEmitter {
           debug(err)
         }
         ended = true
+        this._store.on('op', newOpHandler)
         output.end(err)
       }
     }
@@ -145,6 +154,8 @@ class Protocol extends EventEmitter {
     return { sink: input, source: output }
   }
 }
+
+/* --------------------*/
 
 function handlingData (dataHandler) {
   return (data) => {

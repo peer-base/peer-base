@@ -82,6 +82,16 @@ describe('app swarm', function () {
     })
   })
 
+  it('can push operation', async () => {
+    const collaboration = await swarm[0].app.collaborate('test collaboration')
+    await collaboration.pushOperation('op1')
+    const collaborations = Promise.all(
+      swarm.map(async (peer) => peer.app.collaborate('test collaboration')))
+    collaborations.once('op', (op) => {
+      console.log('op:', op)
+    })
+  })
+
   it('closes peer', () => {
     return swarm[swarm.length - 1].app.stop()
   })
