@@ -5,6 +5,7 @@ const EventEmitter = require('events')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const vectorclock = require('vectorclock')
+const Queue = require('p-queue')
 
 module.exports = (...args) => {
   return new Protocol(...args)
@@ -67,9 +68,9 @@ class Protocol extends EventEmitter {
 
   _pullProtocol (peerInfo) {
     let ended = false
+    const queue = new Queue({ concurrency: 1 })
 
     const onNewState = ([clock]) => {
-      console.log('pull new state', clock)
       output.push(encode([clock]))
     }
     this._store.on('state changed', onNewState)
@@ -78,14 +79,21 @@ class Protocol extends EventEmitter {
       if (err) {
         console.error('error in parsing remote data:', err.message)
         debug('error in parsing remote data:', err)
+        return
       }
-      const [clock, state] = data
-      if (clock && state) {
-        this._store.saveState([clock, state])
-          .catch((err) => {
-            this.emit('error', err)
-          })
-      }
+
+      queue.add(async () => {
+        const [clock, state] = data
+        if (clock && state) {
+          if (await this._store.contains(clock)) {
+            // we already have this state
+            // send a "prune" message
+            output.push(encode([null, true]))
+          } else {
+            await this._store.saveState([clock, state])
+          }
+        }
+      })
 
       return true // keep the stream alive
     }
@@ -129,7 +137,6 @@ class Protocol extends EventEmitter {
             && !vectorclock.isIdentical(newVC, pushedVC)) {
           pushedVC = vectorclock.merge(pushedVC, newVC)
           if (pushing) {
-            console.log('sending new state', newState)
             output.push(encode([newVC, state]))
           } else {
             output.push(encode([newVC]))
@@ -141,8 +148,20 @@ class Protocol extends EventEmitter {
     this._store.on('state changed', onNewState)
 
     const gotPresentation = (message) => {
-      const [remoteClock] = message
-      vc = vectorclock.merge(vc, remoteClock)
+      const [remoteClock, stop, start] = message
+      if (remoteClock) {
+        vc = vectorclock.merge(vc, remoteClock)
+      }
+
+      if (stop) {
+        console.log('STOPPED')
+        pushing = false
+      }
+
+      if (start) {
+        console.log('STARTED')
+        pushing = true
+      }
     }
 
     let messageHandler = gotPresentation

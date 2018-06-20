@@ -43,6 +43,8 @@ module.exports = class CollaborationStore extends EventEmitter {
       if (!clock) {
         const id = (await this._ipfs.id()).id
         clock = vectorclock.increment(latest, id)
+      } else {
+
       }
 
       await this._save('state', state)
@@ -62,6 +64,12 @@ module.exports = class CollaborationStore extends EventEmitter {
         }
       }))
     })
+  }
+
+  async contains (clock) {
+    const currentClock = await this.getLatestClock()
+    return (vectorclock.isIdentical(clock, currentClock)
+            || vectorclock.compare(clock, currentClock) < 0)
   }
 
   _save (key, value) {
