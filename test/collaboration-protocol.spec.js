@@ -74,10 +74,6 @@ describe('collaboration protocol', function () {
     return pusher.store.saveState([undefined, 'state 1'])
   })
 
-  it('waits a sec', (done) => {
-    setTimeout(done, 1000)
-  })
-
   it('puller got new state', () => {
     return puller.store.getState().then((state) => {
       expect(state).to.equal('state 1')
