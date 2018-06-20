@@ -79,9 +79,9 @@ class Protocol extends EventEmitter {
         console.error('error in parsing remote data:', err.message)
         debug('error in parsing remote data:', err)
       }
-      const [state] = data
-      if (state) {
-        this._store.saveState(state)
+      const [clock, state] = data
+      if (clock && state) {
+        this._store.saveState([clock, state])
           .catch((err) => {
             this.emit('error', err)
           })
@@ -122,14 +122,18 @@ class Protocol extends EventEmitter {
     let pushedVC = {}
 
     const onNewState = (newState) => {
-      if (!ended && pushing) {
+      if (!ended) {
         const [newVC, state] = newState
         if (vectorclock.compare(newVC, vc) >= 0
             && !vectorclock.isIdentical(newVC, vc)
             && !vectorclock.isIdentical(newVC, pushedVC)) {
-          console.log('sending new state', newState)
           pushedVC = vectorclock.merge(pushedVC, newVC)
-          output.push(encode([newState]))
+          if (pushing) {
+            console.log('sending new state', newState)
+            output.push(encode([newVC, state]))
+          } else {
+            output.push(encode([newVC]))
+          }
         }
       }
     }
