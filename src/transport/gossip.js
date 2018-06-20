@@ -1,6 +1,7 @@
 'use strict'
 
 const EventEmitter = require('events')
+const debug = require('debug')('peer-star:gossip')
 
 module.exports = (...args) => new Gossip(...args)
 
@@ -33,6 +34,7 @@ class Gossip extends EventEmitter {
   }
 
   broadcast (message) {
+    debug('%s: broadcast', this._ipfs._peerInfo.id.toB58String(), message.toString())
     this._ipfs.pubsub.publish(this._appName, message)
   }
 

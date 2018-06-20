@@ -8,7 +8,7 @@ const expect = chai.expect
 const App = require('./utils/create-app')
 const Rendezvous = require('./utils/rendezvous')
 
-const A_BIT = 15000
+const A_BIT = 19000
 
 describe('app swarm', function () {
   this.timeout(20000)
@@ -97,7 +97,6 @@ describe('app swarm', function () {
 
     await Promise.all(collaborations.map(async (collab) => {
       const state = await collab.getState()
-      console.log('STATE:', state)
       expect(state).to.equal('state 1')
     }))
   })

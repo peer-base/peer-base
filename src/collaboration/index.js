@@ -16,14 +16,12 @@ class Collaboration extends EventEmitter {
   constructor (ipfs, globalConnectionManager, app, name, options) {
     super()
     this._app = app
-    console.log('collaboration name:', name)
     this.name = name
     this._options = Object.assign({}, defaultOptions, options)
 
     this._store = new Store(ipfs, this)
     this._store.on('state changed', ([clock, state]) => {
       this.emit('state changed', state)
-      ipfs.id().then((id) => console.log('state changed in %s: ', id.id, state))
     })
 
     this._membership = new Membership(ipfs, globalConnectionManager, app, this, this._store, this._options)

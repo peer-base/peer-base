@@ -31,7 +31,6 @@ class App extends EventEmitter {
   }
 
   async collaborate (name, options) {
-    console.log('CCC collaboration name:', name)
     let collaboration = this._collaborations.get(name)
     if (!collaboration) {
       if (!this._globalConnectionManager) {

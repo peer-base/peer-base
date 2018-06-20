@@ -34,17 +34,18 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   saveState ([clock, state]) {
+    // TODO: include parent vector clock
+    // to be able to decide whether to ignore this state or not
     return this._queue.add(async () => {
-      if (state === undefined) {
-        state = clock
-        clock = undefined
-      }
       const latest = await this.getLatestClock()
       if (!clock) {
         const id = (await this._ipfs.id()).id
         clock = vectorclock.increment(latest, id)
       } else {
-
+        if (await this.contains(clock)) {
+          // we have already seen this state change, so discard it
+          return
+        }
       }
 
       await this._save('state', state)
