@@ -132,9 +132,9 @@ class Protocol extends EventEmitter {
     const onNewState = (newState) => {
       if (!ended) {
         const [newVC, state] = newState
-        if (vectorclock.compare(newVC, vc) >= 0
-            && !vectorclock.isIdentical(newVC, vc)
-            && !vectorclock.isIdentical(newVC, pushedVC)) {
+        if (vectorclock.compare(newVC, vc) >= 0 &&
+            !vectorclock.isIdentical(newVC, vc) &&
+            !vectorclock.isIdentical(newVC, pushedVC)) {
           pushedVC = vectorclock.merge(pushedVC, newVC)
           if (pushing) {
             output.push(encode([newVC, state]))
@@ -199,7 +199,7 @@ class Protocol extends EventEmitter {
   }
 }
 
-/* --------------------*/
+/* -------------------- */
 
 function handlingData (dataHandler) {
   return (data) => {

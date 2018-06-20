@@ -56,7 +56,7 @@ describe('collaboration protocol', function () {
     const pullerStream = {
       source: p1.source,
       sink: p2.sink,
-      getPeerInfo(cb) {
+      getPeerInfo (cb) {
         setImmediate(() => cb(null, 'pusher'))
       }
     }

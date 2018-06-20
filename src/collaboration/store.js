@@ -69,8 +69,8 @@ module.exports = class CollaborationStore extends EventEmitter {
 
   async contains (clock) {
     const currentClock = await this.getLatestClock()
-    return (vectorclock.isIdentical(clock, currentClock)
-            || vectorclock.compare(clock, currentClock) < 0)
+    return (vectorclock.isIdentical(clock, currentClock) ||
+            vectorclock.compare(clock, currentClock) < 0)
   }
 
   _save (key, value) {
