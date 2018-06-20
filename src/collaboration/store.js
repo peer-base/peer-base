@@ -22,44 +22,51 @@ module.exports = class CollaborationStore extends EventEmitter {
     // TO DO
   }
 
-  getLatestVectorClock () {
+  getLatestClock () {
     return new Promise((resolve, reject) => {
       this._store.get('clock', parsingResult((err, clock) => {
         if (err) {
           return reject(err)
         }
-        resolve(clock)
+        resolve(clock || {})
       }))
     })
   }
 
-  pushOperation (op) {
+  saveState ([clock, state]) {
     return this._queue.add(async () => {
-      const latest = await this.getLatestVector()
-      const id = (await this._ipfs.id()).id
-      const newClock = vectorclock.increment(latest, id)
-      await this._saveOperation(newClock, op)
-      await this._setLatestVectorClock(newClock)
-      this.emit('op', { op, clock: newClock })
-      return newClock
+      if (state === undefined) {
+        state = clock
+        clock = undefined
+      }
+      const latest = await this.getLatestClock()
+      if (!clock) {
+        const id = (await this._ipfs.id()).id
+        clock = vectorclock.increment(latest, id)
+      }
+
+      await this._save('state', state)
+      await this._save('clock', clock)
+      this.emit('state changed', [clock, state])
+      return clock
     })
   }
 
-  _saveOperation (clock, op) {
+  getState () {
     return new Promise((resolve, reject) => {
-      this._store.put(JSON.stringify(clock), JSON.stringify(op), (err) => {
+      this._store.get('state', parsingResult((err, state) => {
         if (err) {
           reject(err)
         } else {
-          resolve()
+          resolve(state)
         }
-      })
+      }))
     })
   }
 
-  _setLatestVectorClock (clock) {
+  _save (key, value) {
     return new Promise((resolve, reject) => {
-      this._store.put('clock', JSON.stringify(clock), (err) => {
+      this._store.put(key, Buffer.from(JSON.stringify(value)), (err) => {
         if (err) {
           reject(err)
         } else {
@@ -86,7 +93,7 @@ function datastore (ipfs, collaboration) {
 function parsingResult (callback) {
   return (err, result) => {
     if (err) {
-      if (err.message.indexOf('Key not found') >= 0) {
+      if (isNotFoundError(err)) {
         return callback(null, undefined)
       }
       return callback(err)
@@ -100,4 +107,8 @@ function parsingResult (callback) {
     }
     callback(null, parsed)
   }
+}
+
+function isNotFoundError (err) {
+  return (err.message.indexOf('Key not found') >= 0 || err.message.indexOf('No value') >= 0)
 }

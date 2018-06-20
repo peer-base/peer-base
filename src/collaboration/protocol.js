@@ -33,10 +33,6 @@ class Protocol extends EventEmitter {
 
       pull(
         conn,
-        pull.map((d) => {
-          console.log('-----> ', d.toString())
-          return d
-        }),
         this._pullProtocol(peerInfo),
         passthrough((err) => {
           if (err) {
@@ -71,8 +67,26 @@ class Protocol extends EventEmitter {
 
   _pullProtocol (peerInfo) {
     let ended = false
-    const onData = (data) => {
-      console.log('pull got data:', data.toString())
+
+    const onNewState = ([clock]) => {
+      console.log('pull new state', clock)
+      output.push(encode([clock]))
+    }
+    this._store.on('state changed', onNewState)
+
+    const onData = (err, data) => {
+      if (err) {
+        console.error('error in parsing remote data:', err.message)
+        debug('error in parsing remote data:', err)
+      }
+      const [state] = data
+      if (state) {
+        this._store.saveState(state)
+          .catch((err) => {
+            this.emit('error', err)
+          })
+      }
+
       return true // keep the stream alive
     }
 
@@ -83,16 +97,16 @@ class Protocol extends EventEmitter {
           debug(err)
         }
         ended = true
+        this._store.removeListener('state changed', onNewState)
         output.end(err)
       }
     }
-    const input = pull.drain(onData, onEnd)
+    const input = pull.drain(handlingData(onData), onEnd)
     const output = pushable()
 
-    this._store.getLatestVectorClock()
+    this._store.getLatestClock()
       .then((vectorClock) => {
-        console.log('got vector clock', vectorClock)
-        output.push(encode([vectorClock || {}]))
+        output.push(encode([vectorClock]))
       })
       .catch(onEnd)
 
@@ -103,21 +117,28 @@ class Protocol extends EventEmitter {
 
   _pushProtocol (peerInfo) {
     let ended = false
+    let pushing = true
     let vc = {}
+    let pushedVC = {}
 
-    const newOpHandler = (op) => {
-      if (!ended) {
-        output.push(JSON.stringify(op))
+    const onNewState = (newState) => {
+      if (!ended && pushing) {
+        const [newVC, state] = newState
+        if (vectorclock.compare(newVC, vc) >= 0
+            && !vectorclock.isIdentical(newVC, vc)
+            && !vectorclock.isIdentical(newVC, pushedVC)) {
+          console.log('sending new state', newState)
+          pushedVC = vectorclock.merge(pushedVC, newVC)
+          output.push(encode([newState]))
+        }
       }
     }
 
-    this._store.on('op', newOpHandler)
+    this._store.on('state changed', onNewState)
 
     const gotPresentation = (message) => {
-      const [remoteVectorClock] = message
-      console.log('remote vector clock:', remoteVectorClock)
-      vc = vectorclock.merge(vc, remoteVectorClock)
-      console.log('merged vc:', vc)
+      const [remoteClock] = message
+      vc = vectorclock.merge(vc, remoteClock)
     }
 
     let messageHandler = gotPresentation
@@ -144,7 +165,7 @@ class Protocol extends EventEmitter {
           debug(err)
         }
         ended = true
-        this._store.on('op', newOpHandler)
+        this._store.removeListener('state changed', onNewState)
         output.end(err)
       }
     }

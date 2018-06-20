@@ -84,12 +84,22 @@ describe('app swarm', function () {
 
   it('can push operation', async () => {
     const collaboration = await swarm[0].app.collaborate('test collaboration')
-    await collaboration.pushOperation('op1')
-    const collaborations = Promise.all(
+    await collaboration.saveState('state 1')
+  })
+
+  it('waits a bit', (done) => {
+    setTimeout(done, 2000)
+  })
+
+  it('all replicas in sync', async () => {
+    const collaborations = await Promise.all(
       swarm.map(async (peer) => peer.app.collaborate('test collaboration')))
-    collaborations.once('op', (op) => {
-      console.log('op:', op)
-    })
+
+    await Promise.all(collaborations.map(async (collab) => {
+      const state = await collab.getState()
+      console.log('STATE:', state)
+      expect(state).to.equal('state 1')
+    }))
   })
 
   it('closes peer', () => {

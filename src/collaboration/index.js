@@ -21,8 +21,9 @@ class Collaboration extends EventEmitter {
     this._options = Object.assign({}, defaultOptions, options)
 
     this._store = new Store(ipfs, this)
-    this._store.on('op', (op) => {
-      this.emit('op', op)
+    this._store.on('state changed', ([clock, state]) => {
+      this.emit('state changed', state)
+      ipfs.id().then((id) => console.log('state changed in %s: ', id.id, state))
     })
 
     this._membership = new Membership(ipfs, globalConnectionManager, app, this, this._store, this._options)
@@ -48,7 +49,11 @@ class Collaboration extends EventEmitter {
     return this._membership.deliverRemoteMembership(membership)
   }
 
-  pushOperation (op) {
-    return this._store.pushOperation(op)
+  saveState (state) {
+    return this._store.saveState([undefined, state])
+  }
+
+  getState () {
+    return this._store.getState()
   }
 }
