@@ -55,14 +55,14 @@ class Protocol extends EventEmitter {
     pull(
       conn,
       this._pushProtocol(peerInfo),
-      conn,
-      pull.onEnd((err) => {
+      passthrough((err) => {
         if (err) {
           console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
         }
         this.emit('outbound connection closed', peerInfo)
-      })
+      }),
+      conn
     )
   }
 
@@ -120,6 +120,7 @@ class Protocol extends EventEmitter {
 
     this._store.getLatestClock()
       .then((vectorClock) => {
+        debug('%s: sending latest vector clock to %s:', this._peerId(), peerInfo.id.toB58String(), vectorClock)
         output.push(encode([vectorClock]))
       })
       .catch(onEnd)
@@ -133,13 +134,12 @@ class Protocol extends EventEmitter {
     debug('%s: push protocol to %s', this._peerId(), peerInfo.id.toB58String())
     let ended = false
     let pushing = true
-    let vc = {}
+    let vc = null
     let pushedVC = {}
 
     const onNewState = (newState) => {
-      console.log('new state')
-      console.log('%s: new state', this._peerId(), newState)
-      if (!ended) {
+      debug('%s: new state', this._peerId(), newState)
+      if (!ended && vc) {
         const [newVC, state] = newState
         if (vectorclock.compare(newVC, vc) >= 0 &&
             !vectorclock.isIdentical(newVC, vc) &&
@@ -161,15 +161,21 @@ class Protocol extends EventEmitter {
       debug('%s: got presentation message from %s:', this._peerId(), peerInfo.id.toB58String(), message.toString())
       const [remoteClock, startLazy, startEager] = message
       if (remoteClock) {
-        vc = vectorclock.merge(vc, remoteClock)
+        vc = vectorclock.merge(vc || {}, remoteClock)
+       this._store.getClockAndState()
+          .then(onNewState)
+          .catch((err) => {
+            console.error('%s: error getting latest clock and state: ', this._peerId(), err.message)
+            debug('%s: error getting latest clock and state: ', this._peerId(), err)
+          })
       }
 
-      if (stop) {
+      if (startLazy) {
         debug('%s: push connection to %s now in lazy mode', this._peerId(), peerInfo.id.toB58String())
         pushing = false
       }
 
-      if (start) {
+      if (startEager) {
         debug('%s: push connection to %s now in eager mode', this._peerId(), peerInfo.id.toB58String())
         pushing = true
       }
@@ -183,6 +189,7 @@ class Protocol extends EventEmitter {
         debug('error parsing message:', err)
         onEnd(err)
       } else {
+        debug('%s: got message:', this._peerId(), message.toString())
         try {
           messageHandler(message)
         } catch (err) {
@@ -210,7 +217,10 @@ class Protocol extends EventEmitter {
   }
 
   _peerId () {
-    return this._ipfs._peerInfo.id.toB58String()
+    if (!this._cachedPeerId) {
+      this._cachedPeerId = this._ipfs._peerInfo.id.toB58String()
+    }
+    return this._cachedPeerId
   }
 }
 

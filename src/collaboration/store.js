@@ -34,6 +34,11 @@ module.exports = class CollaborationStore extends EventEmitter {
     })
   }
 
+  getClockAndState () {
+    return this._queue.add(() => Promise.all(
+      [this.getLatestClock(), this.getState()]))
+  }
+
   saveState ([clock, state]) {
     debug('save state', [clock, state])
     // TODO: include parent vector clock
