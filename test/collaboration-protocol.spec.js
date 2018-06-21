@@ -16,9 +16,11 @@ const Protocol = require('../src/collaboration/protocol')
 // })
 
 describe('collaboration protocol', function () {
-  let pusher = {}
-  let puller = {}
-  let pusher2 = {}
+  const pusher = {}
+  const puller = {}
+  const pusher2 = {}
+  const pusher3 = {}
+  const puller2 = {}
 
   it('pusher can be created', () => {
     const ipfs = {
@@ -77,6 +79,8 @@ describe('collaboration protocol', function () {
     return pusher.store.saveState([undefined, 'state 1'])
   })
 
+  it('waits a bit', (done) => setTimeout(done, 500))
+
   it('puller got new state', () => {
     return puller.store.getState().then((state) => {
       expect(state).to.equal('state 1')
@@ -116,7 +120,7 @@ describe('collaboration protocol', function () {
       sink: p1.sink
     }
 
-    pusher2.protocol.dialerFor(fakePeerInfoFor('puller 2'), pusherStream)
+    pusher2.protocol.dialerFor(fakePeerInfoFor('puller'), pusherStream)
     puller.protocol.handler(null, pullerStream)
   })
 
@@ -124,11 +128,83 @@ describe('collaboration protocol', function () {
     return pusher2.store.saveState([undefined, 'state 2'])
   })
 
-  it('waits a bit', (done) => setTimeout(done, 1000))
+  it('waits a bit', (done) => setTimeout(done, 500))
 
   it('puller got new state', () => {
     return puller.store.getState().then((state) => {
       expect(state).to.equal('state 2')
+    })
+  })
+
+  it('pusher1 can save state again', () => {
+    return pusher.store.saveState([undefined, 'state 3'])
+  })
+
+  it('waits a bit', (done) => setTimeout(done, 500))
+
+  it('puller got new state', () => {
+    return puller.store.getState().then((state) => {
+      expect(state).to.equal('state 3')
+    })
+  })
+
+  it('can create pusher from puller store', () => {
+    const ipfs = {
+      id () {
+        return { id: 'pusher from puller' }
+      },
+      _peerInfo: fakePeerInfoFor('pusher from puller'),
+      _repo: {
+        datastore: new MemoryDatastore()
+      }
+    }
+    const collaboration = { name: 'collaboration protocol test' }
+    pusher3.store = puller.store // same store as puller
+    pusher3.protocol = Protocol(ipfs, collaboration, pusher3.store)
+  })
+
+  it('can create a fresh new puller', () => {
+    const ipfs = {
+      id () {
+        return { id: 'puller 2' }
+      },
+      _peerInfo: fakePeerInfoFor('puller 2'),
+      _repo: {
+        datastore: new MemoryDatastore()
+      }
+    }
+    const collaboration = { name: 'collaboration protocol test' }
+    puller2.store = new Store(ipfs, collaboration)
+    puller2.protocol = Protocol(ipfs, collaboration, puller2.store)
+    return puller2.store.start()
+  })
+
+  it('connects last two', () => {
+    const p1 = pair()
+    const p2 = pair()
+
+    const pullerStream = {
+      source: p1.source,
+      sink: p2.sink,
+      getPeerInfo (cb) {
+        setImmediate(() => cb(null, fakePeerInfoFor('pusher from puller')))
+      }
+    }
+
+    const pusherStream = {
+      source: p2.source,
+      sink: p1.sink
+    }
+
+    pusher3.protocol.dialerFor(fakePeerInfoFor('puller 2'), pusherStream)
+    puller2.protocol.handler(null, pullerStream)
+  })
+
+  it('waits a bit', (done) => setTimeout(done, 500))
+
+  it('newest puller got new state', () => {
+    return puller2.store.getState().then((state) => {
+      expect(state).to.equal('state 3')
     })
   })
 })
