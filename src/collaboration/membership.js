@@ -25,6 +25,7 @@ module.exports = class Membership extends EventEmitter {
 
     this._ring = Ring(this._options.preambleByteCount)
     this._connectionManager = new ConnectionManager(
+      ipfs,
       globalConnectionManager,
       this._ring,
       this._collaboration,

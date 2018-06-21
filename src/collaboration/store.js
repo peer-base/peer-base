@@ -1,5 +1,6 @@
 'use strict'
 
+const debug = require('debug')('peer-star:collaboration:store')
 const EventEmitter = require('events')
 const NamespaceStore = require('datastore-core').NamespaceDatastore
 const Key = require('interface-datastore').Key
@@ -34,13 +35,16 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   saveState ([clock, state]) {
+    debug('save state', [clock, state])
     // TODO: include parent vector clock
     // to be able to decide whether to ignore this state or not
     return this._queue.add(async () => {
       const latest = await this.getLatestClock()
+      debug('latest vector clock:', latest)
       if (!clock) {
         const id = (await this._ipfs.id()).id
         clock = vectorclock.increment(latest, id)
+        debug('new vector clock is:', clock)
       } else {
         if (await this.contains(clock)) {
           // we have already seen this state change, so discard it
@@ -50,7 +54,9 @@ module.exports = class CollaborationStore extends EventEmitter {
 
       await this._save('state', state)
       await this._save('clock', clock)
+      debug('saved state and vector clock')
       this.emit('state changed', [clock, state])
+      debug('emitted state changed event')
       return clock
     })
   }

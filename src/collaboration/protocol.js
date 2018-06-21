@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('peer-star:collab-protocol')
+const debug = require('debug')('peer-star:collaboration:protocol')
 const EventEmitter = require('events')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
@@ -12,8 +12,9 @@ module.exports = (...args) => {
 }
 
 class Protocol extends EventEmitter {
-  constructor (collaboration, store) {
+  constructor (ipfs, collaboration, store) {
     super()
+    this._ipfs = ipfs
     this._collaboration = collaboration
     this._store = store
     this.handler = this.handler.bind(this)
@@ -26,7 +27,8 @@ class Protocol extends EventEmitter {
   handler (protocol, conn) {
     conn.getPeerInfo((err, peerInfo) => {
       if (err) {
-        console.error('error getting peer info:', peerInfo)
+        console.error('%s: error getting peer info:', this._peerId(), err.message)
+        debug('%s: error getting peer info:', this._peerId(), this.err)
         return this.emit('error', err)
       }
 
@@ -38,7 +40,7 @@ class Protocol extends EventEmitter {
         passthrough((err) => {
           if (err) {
             console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
-            debug(err)
+            debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           }
           this.emit('inbound connection closed', peerInfo)
         }),
@@ -57,7 +59,7 @@ class Protocol extends EventEmitter {
       pull.onEnd((err) => {
         if (err) {
           console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
-          debug(err)
+          debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
         }
         this.emit('outbound connection closed', peerInfo)
       })
@@ -67,20 +69,24 @@ class Protocol extends EventEmitter {
   /* ---- 1: pull protocol */
 
   _pullProtocol (peerInfo) {
+    debug('%s: pull protocol to %s', this._peerId(), peerInfo.id.toB58String())
     let ended = false
     const queue = new Queue({ concurrency: 1 })
 
     const onNewState = ([clock]) => {
+      debug('%s got new clock from state:', this._peerId(), clock)
       output.push(encode([clock]))
     }
     this._store.on('state changed', onNewState)
 
     const onData = (err, data) => {
       if (err) {
-        console.error('error in parsing remote data:', err.message)
-        debug('error in parsing remote data:', err)
+        debug('%s: error in parsing remote data:', this._peerId(), err.message)
+        debug('%s: error in parsing remote data:', this._peerId(), err)
         return
       }
+
+      debug('%s got new data from %s :', this._peerId(), peerInfo.id.toB58String(), data.toString())
 
       queue.add(async () => {
         const [clock, state] = data
@@ -101,8 +107,8 @@ class Protocol extends EventEmitter {
     const onEnd = (err) => {
       if (!ended) {
         if (err) {
-          console.error(err.message)
-          debug(err)
+          console.error('%s: pull conn to %s ended with error', this._peerId(), peerInfo.id.toB58String(), err.message)
+          debug('%s: conn to %s ended with error', this._peerId(), peerInfo.id.toB58String(), err)
         }
         ended = true
         this._store.removeListener('state changed', onNewState)
@@ -124,12 +130,15 @@ class Protocol extends EventEmitter {
   /* ---- 2: push protocol */
 
   _pushProtocol (peerInfo) {
+    debug('%s: push protocol to %s', this._peerId(), peerInfo.id.toB58String())
     let ended = false
     let pushing = true
     let vc = {}
     let pushedVC = {}
 
     const onNewState = (newState) => {
+      console.log('new state')
+      console.log('%s: new state', this._peerId(), newState)
       if (!ended) {
         const [newVC, state] = newState
         if (vectorclock.compare(newVC, vc) >= 0 &&
@@ -146,20 +155,22 @@ class Protocol extends EventEmitter {
     }
 
     this._store.on('state changed', onNewState)
+    debug('%s: registered state change handler', this._peerId())
 
     const gotPresentation = (message) => {
-      const [remoteClock, stop, start] = message
+      debug('%s: got presentation message from %s:', this._peerId(), peerInfo.id.toB58String(), message.toString())
+      const [remoteClock, startLazy, startEager] = message
       if (remoteClock) {
         vc = vectorclock.merge(vc, remoteClock)
       }
 
       if (stop) {
-        console.log('STOPPED')
+        debug('%s: push connection to %s now in lazy mode', this._peerId(), peerInfo.id.toB58String())
         pushing = false
       }
 
       if (start) {
-        console.log('STARTED')
+        debug('%s: push connection to %s now in eager mode', this._peerId(), peerInfo.id.toB58String())
         pushing = true
       }
     }
@@ -197,6 +208,10 @@ class Protocol extends EventEmitter {
 
     return { sink: input, source: output }
   }
+
+  _peerId () {
+    return this._ipfs._peerInfo.id.toB58String()
+  }
 }
 
 /* -------------------- */
@@ -223,7 +238,16 @@ function encode (data) {
   return Buffer.from(JSON.stringify(data))
 }
 
-function passthrough (onEnd) {
+function passthrough (_onEnd) {
+  const onEnd = (err) => {
+    try {
+      _onEnd(err)
+    } catch (err2) {
+      if (err2) {
+        console.error('error in onEnd handler:', err2)
+      }
+    }
+  }
   return pull.through(
     null,
     onEnd)
