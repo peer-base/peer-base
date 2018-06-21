@@ -11,9 +11,9 @@ const MemoryDatastore = require('interface-datastore').MemoryDatastore
 const Store = require('../src/collaboration/store')
 const Protocol = require('../src/collaboration/protocol')
 
-// process.on('unhandledRejection', (err) => {
-//   console.log(err)
-// })
+process.on('unhandledRejection', (err) => {
+  console.log(err)
+})
 
 describe('collaboration protocol', function () {
   const pusher = {}
