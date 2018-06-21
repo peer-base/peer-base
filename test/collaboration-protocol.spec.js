@@ -212,7 +212,7 @@ describe('collaboration protocol', function () {
 function fakePeerInfoFor (id) {
   return {
     id: {
-      toB58String() {
+      toB58String () {
         return id
       }
     }

@@ -162,7 +162,7 @@ class Protocol extends EventEmitter {
       const [remoteClock, startLazy, startEager] = message
       if (remoteClock) {
         vc = vectorclock.merge(vc || {}, remoteClock)
-       this._store.getClockAndState()
+        this._store.getClockAndState()
           .then(onNewState)
           .catch((err) => {
             console.error('%s: error getting latest clock and state: ', this._peerId(), err.message)
