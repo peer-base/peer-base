@@ -8,9 +8,10 @@ const handlingData = require('../common/handling-data')
 const encode = require('../common/encode')
 
 module.exports = class PushProtocol {
-  constructor (ipfs, store) {
+  constructor (ipfs, store, options) {
     this._ipfs = ipfs
     this._store = store
+    this._options = options
   }
 
   forPeer (peerInfo) {
@@ -24,11 +25,13 @@ module.exports = class PushProtocol {
       debug('%s: new state', this._peerId(), newState)
       if (!ended && vc) {
         const [newVC, state] = newState
+        debug('%s: comparing local VC %j to remote VC %j', this._peerId(), newVC, vc)
         if (vectorclock.compare(newVC, vc) >= 0 &&
             !vectorclock.isIdentical(newVC, vc) &&
             !vectorclock.isIdentical(newVC, pushedVC)) {
-          pushedVC = vectorclock.merge(pushedVC, newVC)
+          debug('%s: going to send to %s data for clock %j', this._peerId(), peerInfo.id.toB58String(), newVC)
           if (pushing) {
+            pushedVC = vectorclock.merge(pushedVC, newVC)
             output.push(encode([newVC, state]))
           } else {
             output.push(encode([newVC]))
@@ -41,17 +44,8 @@ module.exports = class PushProtocol {
     debug('%s: registered state change handler', this._peerId())
 
     const gotPresentation = (message) => {
-      debug('%s: got presentation message from %s:', this._peerId(), peerInfo.id.toB58String(), message.toString())
+      debug('%s: got presentation message from %s:', this._peerId(), peerInfo.id.toB58String(), message)
       const [remoteClock, startLazy, startEager] = message
-      if (remoteClock) {
-        vc = vectorclock.merge(vc || {}, remoteClock)
-        this._store.getClockAndState()
-          .then(onNewState)
-          .catch((err) => {
-            console.error('%s: error getting latest clock and state: ', this._peerId(), err.message)
-            debug('%s: error getting latest clock and state: ', this._peerId(), err)
-          })
-      }
 
       if (startLazy) {
         debug('%s: push connection to %s now in lazy mode', this._peerId(), peerInfo.id.toB58String())
@@ -61,6 +55,18 @@ module.exports = class PushProtocol {
       if (startEager) {
         debug('%s: push connection to %s now in eager mode', this._peerId(), peerInfo.id.toB58String())
         pushing = true
+      }
+
+      if (remoteClock || startEager) {
+        if (remoteClock) {
+          vc = vectorclock.merge(vc || {}, remoteClock)
+        }
+        this._store.getClockAndState()
+          .then(onNewState)
+          .catch((err) => {
+            console.error('%s: error getting latest clock and state: ', this._peerId(), err.message)
+            debug('%s: error getting latest clock and state: ', this._peerId(), err)
+          })
       }
     }
 
@@ -72,7 +78,7 @@ module.exports = class PushProtocol {
         debug('error parsing message:', err)
         onEnd(err)
       } else {
-        debug('%s: got message:', this._peerId(), message.toString())
+        debug('%s: got message:', this._peerId(), message)
         try {
           messageHandler(message)
         } catch (err) {

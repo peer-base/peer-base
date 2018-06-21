@@ -7,6 +7,7 @@ const expect = chai.expect
 
 const pair = require('pull-pair')
 const MemoryDatastore = require('interface-datastore').MemoryDatastore
+const vectorclock = require('vectorclock')
 
 const Store = require('../src/collaboration/store')
 const Protocol = require('../src/collaboration/protocol')
@@ -50,7 +51,9 @@ describe('collaboration protocol', function () {
     }
     const collaboration = { name: 'collaboration protocol test' }
     puller.store = new Store(ipfs, collaboration)
-    puller.protocol = Protocol(ipfs, collaboration, puller.store)
+    puller.protocol = Protocol(ipfs, collaboration, puller.store, {
+      receiveTimeout: 500
+    })
     return puller.store.start()
   })
 
@@ -205,6 +208,49 @@ describe('collaboration protocol', function () {
   it('newest puller got new state', () => {
     return puller2.store.getState().then((state) => {
       expect(state).to.equal('state 3')
+    })
+  })
+
+  it('can add duplicate data to pusher 1 and 2', async () => {
+    // all connections are on an eager mode
+    // force one to go to lazy mode by sending duplicate data
+    let latestClock = vectorclock.merge(
+      await pusher.store.getLatestClock(),
+      await pusher2.store.getLatestClock())
+
+    latestClock = vectorclock.increment(latestClock, 'some other node id')
+    await Promise.all([
+      pusher.store.saveState([latestClock, 'state 4']),
+      pusher2.store.saveState([latestClock, 'state 4'])])
+  })
+
+  it('waits a bit', (done) => setTimeout(done, 500))
+
+  it('newest puller got new state', () => {
+    return puller2.store.getState().then((state) => {
+      expect(state).to.equal('state 4')
+    })
+  })
+
+  it('new data happens in lazy mode connection', () => {
+    // Now that we have the connection from pusher 2 to puller in lazy mode,
+    // let's add some data to pusher 2 to see if it eventually reaches puller
+    return pusher2.store.saveState([null, 'state 5'])
+  })
+
+  it('puller in lazy mode connection does not still have this state', () => {
+    return puller.store.getState().then((state) => {
+      expect(state).to.equal('state 4')
+    })
+  })
+
+  it('waits a bit', function (done) {
+    setTimeout(done, 1900)
+  })
+
+  it('puller eventually got the new state', () => {
+    return puller.store.getState().then((state) => {
+      expect(state).to.equal('state 5')
     })
   })
 })

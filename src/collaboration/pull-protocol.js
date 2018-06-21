@@ -9,9 +9,10 @@ const handlingData = require('../common/handling-data')
 const encode = require('../common/encode')
 
 module.exports = class PullProtocol {
-  constructor (ipfs, store) {
+  constructor (ipfs, store, options) {
     this._ipfs = ipfs
     this._store = store
+    this._options = options
   }
 
   forPeer (peerInfo) {
@@ -23,6 +24,7 @@ module.exports = class PullProtocol {
 
     const onNewState = ([clock]) => {
       debug('%s got new clock from state:', this._peerId(), clock)
+      // TODO: only send difference from previous clock
       output.push(encode([clock]))
     }
     this._store.on('state changed', onNewState)
@@ -34,16 +36,15 @@ module.exports = class PullProtocol {
         return
       }
 
-      debug('%s got new data from %s :', this._peerId(), peerInfo.id.toB58String(), data.toString())
+      debug('%s got new data from %s :', this._peerId(), peerInfo.id.toB58String(), data)
 
       queue.add(async () => {
         const [clock, state] = data
         if (clock) {
           if (state) {
-            console.log('waitingForClock:', waitingForClock)
             if (waitingForClock &&
                 (vectorclock.isIdentical(waitingForClock, clock) ||
-                vectorclock.compare(waitingForClock, clock) < 0)) {
+                 vectorclock.compare(waitingForClock, clock) < 0)) {
               waitingForClock = null
               if (timeout) {
                 clearTimeout(timeout)
@@ -52,9 +53,17 @@ module.exports = class PullProtocol {
             if (await this._store.contains(clock)) {
               // we already have this state
               // send a "prune" message
+              debug('%s: setting %s to lazy mode', this._peerId(), peerInfo.id.toB58String())
               output.push(encode([null, true]))
             } else {
-              await this._store.saveState([clock, state])
+              const saved = await this._store.saveState([clock, state])
+              if (!saved) {
+                debug('%s: did not save', this._peerId())
+                debug('%s: setting %s to lazy mode', this._peerId(), peerInfo.id.toB58String())
+                output.push(encode([null, true]))
+              } else {
+                debug('%s: saved with new clock %j', this._peerId(), saved)
+              }
             }
           } else {
             // Only got the vector clock, which means that this connection
@@ -69,8 +78,10 @@ module.exports = class PullProtocol {
             timeout = setTimeout(() => {
               timeout = null
               // are we still waiting for this clock?
-              if (vectorclock.isIdentical(waitingForClock, clock) ||
-                  vectorclock.compare(waitingForClock, clock) < 0) {
+              if (waitingForClock &&
+                  (vectorclock.isIdentical(waitingForClock, clock) ||
+                  vectorclock.compare(waitingForClock, clock) < 0)) {
+                debug('%s: timeout happened for clock', this._peerId(), waitingForClock)
                 output.push(encode([null, false, true]))
               }
             }, this._options.receiveTimeout)

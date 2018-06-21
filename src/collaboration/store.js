@@ -51,10 +51,11 @@ module.exports = class CollaborationStore extends EventEmitter {
         clock = vectorclock.increment(latest, id)
         debug('new vector clock is:', clock)
       } else {
-        if (await this.contains(clock)) {
+        if (await this._contains(clock)) {
           // we have already seen this state change, so discard it
           return
         }
+        clock = vectorclock.merge(latest, clock)
       }
 
       await this._save('state', state)
@@ -78,10 +79,16 @@ module.exports = class CollaborationStore extends EventEmitter {
     })
   }
 
-  async contains (clock) {
+  contains (clock) {
+    return this._queue.add(() => this._contains(clock))
+  }
+
+  async _contains (clock) {
     const currentClock = await this.getLatestClock()
-    return (vectorclock.isIdentical(clock, currentClock) ||
-            vectorclock.compare(clock, currentClock) < 0)
+    const contains = (vectorclock.isIdentical(clock, currentClock) ||
+      vectorclock.compare(clock, currentClock) < 0)
+    debug('%j contains %j ?: %j', currentClock, clock, contains)
+    return contains
   }
 
   _save (key, value) {

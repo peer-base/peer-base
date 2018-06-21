@@ -22,8 +22,8 @@ class Protocol extends EventEmitter {
     this._collaboration = collaboration
     this._store = store
     this._options = Object.assign({}, defaultOptions, options)
-    this._pushProtocol = new PushProtocol(ipfs, store)
-    this._pullProtocol = new PullProtocol(ipfs, store)
+    this._pushProtocol = new PushProtocol(ipfs, store, this._options)
+    this._pullProtocol = new PullProtocol(ipfs, store, this._options)
 
     this.handler = this.handler.bind(this)
   }
