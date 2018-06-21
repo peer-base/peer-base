@@ -57,10 +57,10 @@ module.exports = class PushProtocol {
         pushing = true
       }
 
+      if (remoteClock) {
+        vc = vectorclock.merge(vc || {}, remoteClock)
+      }
       if (remoteClock || startEager) {
-        if (remoteClock) {
-          vc = vectorclock.merge(vc || {}, remoteClock)
-        }
         this._store.getClockAndState()
           .then(onNewState)
           .catch((err) => {
