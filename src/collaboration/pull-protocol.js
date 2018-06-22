@@ -32,8 +32,7 @@ module.exports = class PullProtocol {
 
     const onData = (err, data) => {
       if (err) {
-        debug('%s: error in parsing remote data:', this._peerId(), err.message)
-        debug('%s: error in parsing remote data:', this._peerId(), err)
+        onEnd(err)
         return
       }
 
@@ -91,10 +90,7 @@ module.exports = class PullProtocol {
             // timeout and maybe turn into eager mode?
           }
         }
-      }).catch((err) => {
-        console.error('%s (pull): error handling data from %s:', this._peerId(), remotePeerId, err.message)
-        debug('%s (pull): error handling data from %s:', this._peerId(), remotePeerId, err)
-      })
+      }).catch(onEnd)
 
       return true // keep the stream alive
     }
