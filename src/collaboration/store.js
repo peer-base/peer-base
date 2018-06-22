@@ -9,11 +9,19 @@ const vectorclock = require('vectorclock')
 const leftpad = require('leftpad')
 const pull = require('pull-stream')
 
+const decode = require('../common/decode')
+
 module.exports = class CollaborationStore extends EventEmitter {
-  constructor (ipfs, collaboration) {
+  constructor (ipfs, collaboration, merge) {
     super()
     this._ipfs = ipfs
     this._collaboration = collaboration
+
+    if (typeof merge !== 'function') {
+      throw new Error('need a merge function')
+    }
+    this._merge = merge
+
     this._queue = new Queue({ concurrency: 1 })
   }
 
@@ -27,11 +35,11 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   async getSequence () {
-    return (await this._get('seq')) || 0
+    return (await this._get('/seq')) || 0
   }
 
   async getLatestClock () {
-    return (await this._get('clock')) || {}
+    return (await this._get('/clock')) || {}
   }
 
   _get (key) {
@@ -46,12 +54,12 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   getClockAndState () {
-    return this._queue.add(() => Promise.all(
-      [this.getLatestClock(), this.getState()]))
+    return Promise.all(
+      [this.getLatestClock(), this.getState()])
   }
 
-  saveDelta ([clock, delta, state]) {
-    debug('save delta', [clock, state])
+  saveDelta ([clock, delta]) {
+    debug('save delta', [clock, delta])
 
     return this._queue.add(async () => {
       const latest = await this.getLatestClock()
@@ -65,17 +73,29 @@ module.exports = class CollaborationStore extends EventEmitter {
           // we have already seen this state change, so discard it
           return
         }
+        // merge both clocks
         clock = vectorclock.merge(latest, clock)
       }
 
       const seq = this._seq + 1
-      const deltaKey = 'd/' + leftpad(seq.toString(16), 20)
+      const deltaKey = '/d:' + leftpad(seq.toString(16), 20)
+
+      // merge both states
+      const state = await this.getState()
+      let newState
+      if (state !== undefined) {
+        newState = this._merge(state, delta)
+      } else {
+        newState = delta
+      }
+
+      console.log('saving delta', deltaKey, clock, delta)
 
       await Promise.all([
         this._save(deltaKey, [clock, delta]),
-        this._save('state', state),
-        this._save('clock', clock),
-        this._save('seq', seq)
+        this._save('/state', newState),
+        this._save('/clock', clock),
+        this._save('/seq', seq)
       ])
 
       debug('saved delta and vector clock')
@@ -106,37 +126,44 @@ module.exports = class CollaborationStore extends EventEmitter {
         clock = vectorclock.merge(latest, clock)
       }
 
-      await this._save('state', state)
-      await this._save('clock', clock)
+      const previousState = await this.getState()
+      let newState
+
+      if (previousState !== undefined) {
+        newState = this._merge(previousState, state)
+      } else {
+        newState = state
+      }
+
+      await Promise.all([this._save('/state', newState), this._save('/clock', clock)])
       debug('saved state and vector clock')
       this.emit('clock changed', clock)
-      this.emit('state changed', state)
+      this.emit('state changed', newState)
       debug('emitted state changed event')
       return clock
     })
   }
 
   async getState () {
-    return this._get('state')
+    return this._get('/state')
   }
 
   deltaStream (since) {
+    console.log('deltaStream since', since)
     return pull(
       this._store.query({
-        prefix: 'd/'
+        prefix: '/d:'
       }),
+      pull.map((d) => decode(d.value)),
       pull.asyncMap(([clock, delta], callback) => {
+        console.log('CLOCK, DELTA = ', clock, delta)
         const comparison = vectorclock.compare(clock, since)
+        console.log('comparison:', comparison)
         if (comparison === -1) {
           // this delta's clock is before since
           // ignore it
           callback(null, null)
-        } else if (comparison === 1) {
-          // this delta's clock is after
-          // end stream
-          callback()
         } else {
-          // values are either identical or concurrent
           since = clock
           callback(null, [clock, delta])
         }

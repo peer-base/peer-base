@@ -8,6 +8,7 @@ const expect = chai.expect
 const pair = require('pull-pair')
 const MemoryDatastore = require('interface-datastore').MemoryDatastore
 const vectorclock = require('vectorclock')
+const uniq = require('lodash.uniq')
 
 const Store = require('../src/collaboration/store')
 const Protocol = require('../src/collaboration/protocol')
@@ -15,6 +16,16 @@ const Protocol = require('../src/collaboration/protocol')
 process.on('unhandledRejection', (err) => {
   console.log(err)
 })
+
+function merge (s1, s2) {
+  if (typeof s1 !== 'string') {
+    throw new Error('need string!')
+  }
+  console.log('merging %j and %j', s1, s2)
+  const result = uniq((s1 + s2).split('')).sort().join('')
+  console.log('result:', result)
+  return result
+}
 
 describe('collaboration protocol', function () {
   const pusher = {}
@@ -34,7 +45,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    pusher.store = new Store(ipfs, collaboration)
+    pusher.store = new Store(ipfs, collaboration, merge)
     pusher.protocol = Protocol(ipfs, collaboration, pusher.store)
     return pusher.store.start()
   })
@@ -50,7 +61,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    puller.store = new Store(ipfs, collaboration)
+    puller.store = new Store(ipfs, collaboration, merge)
     puller.protocol = Protocol(ipfs, collaboration, puller.store, {
       receiveTimeout: 500
     })
@@ -79,14 +90,14 @@ describe('collaboration protocol', function () {
   })
 
   it('can save state locally', () => {
-    return pusher.store.saveState([undefined, 'state 1'])
+    return pusher.store.saveState([undefined, 'a'])
   })
 
   it('waits a bit', (done) => setTimeout(done, 500))
 
   it('puller got new state', () => {
     return puller.store.getState().then((state) => {
-      expect(state).to.equal('state 1')
+      expect(state).to.equal('a')
     })
   })
 
@@ -101,7 +112,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    pusher2.store = new Store(ipfs, collaboration)
+    pusher2.store = new Store(ipfs, collaboration, merge)
     pusher2.protocol = Protocol(ipfs, collaboration, pusher2.store)
     return pusher2.store.start()
   })
@@ -128,26 +139,26 @@ describe('collaboration protocol', function () {
   })
 
   it('pusher2 can save state locally', () => {
-    return pusher2.store.saveState([undefined, 'state 2'])
+    return pusher2.store.saveState([undefined, 'b'])
   })
 
   it('waits a bit', (done) => setTimeout(done, 500))
 
   it('puller got new state', () => {
     return puller.store.getState().then((state) => {
-      expect(state).to.equal('state 2')
+      expect(state).to.equal('ab')
     })
   })
 
   it('pusher1 can save state again', () => {
-    return pusher.store.saveState([undefined, 'state 3'])
+    return pusher.store.saveState([undefined, 'c'])
   })
 
   it('waits a bit', (done) => setTimeout(done, 500))
 
   it('puller got new state', () => {
     return puller.store.getState().then((state) => {
-      expect(state).to.equal('state 3')
+      expect(state).to.equal('abc')
     })
   })
 
@@ -177,7 +188,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    puller2.store = new Store(ipfs, collaboration)
+    puller2.store = new Store(ipfs, collaboration, merge)
     puller2.protocol = Protocol(ipfs, collaboration, puller2.store)
     return puller2.store.start()
   })
@@ -207,7 +218,7 @@ describe('collaboration protocol', function () {
 
   it('newest puller got new state', () => {
     return puller2.store.getState().then((state) => {
-      expect(state).to.equal('state 3')
+      expect(state).to.equal('abc')
     })
   })
 
@@ -220,27 +231,27 @@ describe('collaboration protocol', function () {
 
     latestClock = vectorclock.increment(latestClock, 'some other node id')
     await Promise.all([
-      pusher.store.saveState([latestClock, 'state 4']),
-      pusher2.store.saveState([latestClock, 'state 4'])])
+      pusher.store.saveState([latestClock, 'd']),
+      pusher2.store.saveState([latestClock, 'd'])])
   })
 
   it('waits a bit', (done) => setTimeout(done, 500))
 
   it('newest puller got new state', () => {
     return puller2.store.getState().then((state) => {
-      expect(state).to.equal('state 4')
+      expect(state).to.equal('abcd')
     })
   })
 
   it('new data happens in lazy mode connection', () => {
     // Now that we have the connection from pusher 2 to puller in lazy mode,
     // let's add some data to pusher 2 to see if it eventually reaches puller
-    return pusher2.store.saveState([null, 'state 5'])
+    return pusher2.store.saveState([null, 'e'])
   })
 
   it('puller in lazy mode connection does not still have this state', () => {
     return puller.store.getState().then((state) => {
-      expect(state).to.equal('state 4')
+      expect(state).to.equal('abcd')
     })
   })
 
@@ -250,7 +261,27 @@ describe('collaboration protocol', function () {
 
   it('puller eventually got the new state', () => {
     return puller.store.getState().then((state) => {
-      expect(state).to.equal('state 5')
+      expect(state).to.equal('abcde')
+    })
+  })
+
+  it('can store a delta', () => {
+    return pusher2.store.saveDelta([null, 'f'])
+  })
+
+  it('waits a bit', function (done) {
+    setTimeout(done, 1900)
+  })
+
+  it('puller got the new delta', () => {
+    return puller.store.getState().then((state) => {
+      expect(state).to.equal('abcdef')
+    })
+  })
+
+  it('puller 2 got the new delta', () => {
+    return puller2.store.getState().then((state) => {
+      expect(state).to.equal('abcdef')
     })
   })
 })

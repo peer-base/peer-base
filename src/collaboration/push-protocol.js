@@ -16,7 +16,8 @@ module.exports = class PushProtocol {
   }
 
   forPeer (peerInfo) {
-    debug('%s: push protocol to %s', this._peerId(), peerInfo.id.toB58String())
+    const remotePeerId = peerInfo.id.toB58String()
+    debug('%s: push protocol to %s', this._peerId(), remotePeerId)
     const queue = new Queue({ concurrency: 1 })
     let ended = false
     let pushing = true
@@ -25,16 +26,19 @@ module.exports = class PushProtocol {
     let pushedClock = null
 
     const pushDeltas = () => {
+      debug('%s: pushing deltas to %s', this._peerId(), remotePeerId)
       return new Promise((resolve, reject) => {
         pull(
           this._store.deltaStream(remoteClock),
           pull.map(([clock, delta]) => {
+            debug('%s: delta:', this._peerId(), delta)
             if (pushing) {
               pushedClock = clock
-              output.push([clock, delta])
+              output.push(encode([clock, delta]))
             }
           }),
           pull.onEnd((err) => {
+            debug('%s: delta stream ended', this._peerId(), err)
             if (err) {
               reject(err)
             } else {
@@ -48,12 +52,20 @@ module.exports = class PushProtocol {
       if (pushing) {
         // Let's try to see if we have deltas to deliver
         await pushDeltas()
+        console.log('pushed deltas')
         if (remoteNeedsUpdate()) {
+          console.log('remote needs update')
           if (pushing) {
+            console.log('pushing')
             // remote still needs update
             const clockAndState = await this._store.getClockAndState()
-            pushedClock = clockAndState[0]
-            output.push(encode(clockAndState))
+            console.log('clock and state', clockAndState)
+            const [clock, state] = clockAndState
+            if (Object.keys(clock).length) {
+              pushedClock = clock
+              debug('%s: sending clock and state to %s:', this._peerId(), remotePeerId, clockAndState)
+              output.push(encode(clockAndState))
+            }
           } else {
             // send only clock
             output.push(encode([localClock]))
@@ -89,16 +101,16 @@ module.exports = class PushProtocol {
     debug('%s: registered state change handler', this._peerId())
 
     const gotPresentation = (message) => {
-      debug('%s: got presentation message from %s:', this._peerId(), peerInfo.id.toB58String(), message)
+      debug('%s: got presentation message from %s:', this._peerId(), remotePeerId, message)
       const [newRemoteClock, startLazy, startEager] = message
 
       if (startLazy) {
-        debug('%s: push connection to %s now in lazy mode', this._peerId(), peerInfo.id.toB58String())
+        debug('%s: push connection to %s now in lazy mode', this._peerId(), remotePeerId)
         pushing = false
       }
 
       if (startEager) {
-        debug('%s: push connection to %s now in eager mode', this._peerId(), peerInfo.id.toB58String())
+        debug('%s: push connection to %s now in eager mode', this._peerId(), remotePeerId)
         pushing = true
       }
 
