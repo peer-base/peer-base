@@ -4,6 +4,7 @@ const debug = require('debug')('peer-star:collaboration:push-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const vectorclock = require('vectorclock')
+const Queue = require('p-queue')
 const handlingData = require('../common/handling-data')
 const encode = require('../common/encode')
 
@@ -16,48 +17,75 @@ module.exports = class PushProtocol {
 
   forPeer (peerInfo) {
     debug('%s: push protocol to %s', this._peerId(), peerInfo.id.toB58String())
+    const queue = new Queue({ concurrency: 1 })
     let ended = false
     let pushing = true
     let remoteClock = null
     let localClock = null
     let pushedClock = null
 
-    const remoteNeedsUpdate = () => {
+    const pushDeltas = () => {
+      return new Promise((resolve, reject) => {
+        pull(
+          this._store.deltaStream(remoteClock),
+          pull.map(([clock, delta]) => {
+            if (pushing) {
+              pushedClock = clock
+              output.push([clock, delta])
+            }
+          }),
+          pull.onEnd((err) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve()
+            }
+          }))
+      })
+    }
+
+    const updateRemote = async () => {
       if (pushing) {
-        this._store.getClockAndState()
-          .then(([clock, state]) => {
-            pushedClock = clock
-            output.push(encode([clock, state]))
-          })
-          .catch(onEnd)
+        // Let's try to see if we have deltas to deliver
+        await pushDeltas()
+        if (remoteNeedsUpdate()) {
+          if (pushing) {
+            // remote still needs update
+            const clockAndState = await this._store.getClockAndState()
+            pushedClock = clockAndState[0]
+            output.push(encode(clockAndState))
+          } else {
+            // send only clock
+            output.push(encode([localClock]))
+          }
+        }
       } else {
-        this._store.getLatestClock()
-          .then((clock) => {
-            // on lazy mode, only send clock
-            output.push(encode([clock]))
-          })
-          .catch(onEnd)
+        const clock = await this._store.getLatestClock()
+        output.push(encode([clock]))
       }
     }
 
-    const reduceEntropy = (newClock) => {
-      if (!newClock) {
-        this._store.getLatestClock().then(reduceEntropy).catch(onEnd)
-        return
-      }
-      localClock = newClock
-
-      debug('%s: comparing local clock %j to remote clock %j', this._peerId(), newClock, remoteClock)
-      if (localClock &&
+    const remoteNeedsUpdate = () => {
+      debug('%s: comparing local clock %j to remote clock %j', this._peerId(), localClock, remoteClock)
+      return localClock &&
           (!remoteClock || !pushedClock ||
-            (vectorclock.compare(newClock, remoteClock) >= 0 &&
-            !vectorclock.isIdentical(newClock, remoteClock) &&
-            !vectorclock.isIdentical(newClock, pushedClock)))) {
-        remoteNeedsUpdate()
+            (vectorclock.compare(localClock, remoteClock) >= 0 &&
+            !vectorclock.isIdentical(localClock, remoteClock) &&
+            !vectorclock.isIdentical(localClock, pushedClock)))
+    }
+
+    const reduceEntropy = () => {
+      if (remoteNeedsUpdate()) {
+        return updateRemote()
       }
     }
 
-    this._store.on('clock changed', reduceEntropy)
+    const onClockChanged = (newClock) => {
+      localClock = newClock
+      queue.add(reduceEntropy).catch(onEnd)
+    }
+
+    this._store.on('clock changed', onClockChanged)
     debug('%s: registered state change handler', this._peerId())
 
     const gotPresentation = (message) => {
@@ -78,7 +106,13 @@ module.exports = class PushProtocol {
         remoteClock = vectorclock.merge(remoteClock || {}, newRemoteClock)
       }
       if (newRemoteClock || startEager) {
-        reduceEntropy(localClock)
+        queue.add(() => {
+          this._store.getLatestClock()
+            .then((latestClock) => {
+              localClock = latestClock
+              return reduceEntropy()
+            })
+        }).catch(onEnd)
       }
     }
 
@@ -106,7 +140,7 @@ module.exports = class PushProtocol {
           debug(err)
         }
         ended = true
-        this._store.removeListener('clock changed', reduceEntropy)
+        this._store.removeListener('clock changed', onClockChanged)
         output.end(err)
       }
     }

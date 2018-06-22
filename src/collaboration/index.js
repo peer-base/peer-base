@@ -20,7 +20,7 @@ class Collaboration extends EventEmitter {
     this._options = Object.assign({}, defaultOptions, options)
 
     this._store = new Store(ipfs, this)
-    this._store.on('state changed', ([clock, state]) => {
+    this._store.on('state changed', (state) => {
       this.emit('state changed', state)
     })
 

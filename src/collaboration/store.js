@@ -6,6 +6,8 @@ const NamespaceStore = require('datastore-core').NamespaceDatastore
 const Key = require('interface-datastore').Key
 const Queue = require('p-queue')
 const vectorclock = require('vectorclock')
+const leftpad = require('leftpad')
+const pull = require('pull-stream')
 
 module.exports = class CollaborationStore extends EventEmitter {
   constructor (ipfs, collaboration) {
@@ -17,19 +19,28 @@ module.exports = class CollaborationStore extends EventEmitter {
 
   async start () {
     this._store = await datastore(this._ipfs, this._collaboration)
+    this._seq = await this.getSequence()
   }
 
   stop () {
     // TO DO
   }
 
-  getLatestClock () {
+  async getSequence () {
+    return (await this._get('seq')) || 0
+  }
+
+  async getLatestClock () {
+    return (await this._get('clock')) || {}
+  }
+
+  _get (key) {
     return new Promise((resolve, reject) => {
-      this._store.get('clock', parsingResult((err, clock) => {
+      this._store.get(key, parsingResult((err, value) => {
         if (err) {
           return reject(err)
         }
-        resolve(clock || {})
+        resolve(value)
       }))
     })
   }
@@ -37,6 +48,43 @@ module.exports = class CollaborationStore extends EventEmitter {
   getClockAndState () {
     return this._queue.add(() => Promise.all(
       [this.getLatestClock(), this.getState()]))
+  }
+
+  saveDelta ([clock, delta, state]) {
+    debug('save delta', [clock, state])
+
+    return this._queue.add(async () => {
+      const latest = await this.getLatestClock()
+      debug('latest vector clock:', latest)
+      if (!clock) {
+        const id = (await this._ipfs.id()).id
+        clock = vectorclock.increment(latest, id)
+        debug('new vector clock is:', clock)
+      } else {
+        if (await this._contains(clock)) {
+          // we have already seen this state change, so discard it
+          return
+        }
+        clock = vectorclock.merge(latest, clock)
+      }
+
+      const seq = this._seq + 1
+      const deltaKey = 'd/' + leftpad(seq.toString(16), 20)
+
+      await Promise.all([
+        this._save(deltaKey, [clock, delta]),
+        this._save('state', state),
+        this._save('clock', clock),
+        this._save('seq', seq)
+      ])
+
+      debug('saved delta and vector clock')
+      this.emit('delta', clock)
+      this.emit('clock changed', clock)
+      this.emit('state changed', state)
+      debug('emitted state changed event')
+      return clock
+    })
   }
 
   saveState ([clock, state]) {
@@ -68,16 +116,33 @@ module.exports = class CollaborationStore extends EventEmitter {
     })
   }
 
-  getState () {
-    return new Promise((resolve, reject) => {
-      this._store.get('state', parsingResult((err, state) => {
-        if (err) {
-          reject(err)
+  async getState () {
+    return this._get('state')
+  }
+
+  deltaStream (since) {
+    return pull(
+      this._store.query({
+        prefix: 'd/'
+      }),
+      pull.asyncMap(([clock, delta], callback) => {
+        const comparison = vectorclock.compare(clock, since)
+        if (comparison === -1) {
+          // this delta's clock is before since
+          // ignore it
+          callback(null, null)
+        } else if (comparison === 1) {
+          // this delta's clock is after
+          // end stream
+          callback()
         } else {
-          resolve(state)
+          // values are either identical or concurrent
+          since = clock
+          callback(null, [clock, delta])
         }
-      }))
-    })
+      }),
+      pull.filter(Boolean) // only allow non-null values
+    )
   }
 
   contains (clock) {
