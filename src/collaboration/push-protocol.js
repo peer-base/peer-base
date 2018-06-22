@@ -18,34 +18,51 @@ module.exports = class PushProtocol {
     debug('%s: push protocol to %s', this._peerId(), peerInfo.id.toB58String())
     let ended = false
     let pushing = true
-    let vc = null
-    let pushedVC = {}
+    let remoteClock = null
+    let localClock = null
+    let pushedClock = null
 
-    const onNewState = (newState) => {
-      debug('%s: new state', this._peerId(), newState)
-      if (!ended && vc) {
-        const [newVC, state] = newState
-        debug('%s: comparing local VC %j to remote VC %j', this._peerId(), newVC, vc)
-        if (vectorclock.compare(newVC, vc) >= 0 &&
-            !vectorclock.isIdentical(newVC, vc) &&
-            !vectorclock.isIdentical(newVC, pushedVC)) {
-          debug('%s: going to send to %s data for clock %j', this._peerId(), peerInfo.id.toB58String(), newVC)
-          if (pushing) {
-            pushedVC = vectorclock.merge(pushedVC, newVC)
-            output.push(encode([newVC, state]))
-          } else {
-            output.push(encode([newVC]))
-          }
-        }
+    const remoteNeedsUpdate = () => {
+      if (pushing) {
+        this._store.getClockAndState()
+          .then(([clock, state]) => {
+            pushedClock = clock
+            output.push(encode([clock, state]))
+          })
+          .catch(onEnd)
+      } else {
+        this._store.getLatestClock()
+          .then((clock) => {
+            // on lazy mode, only send clock
+            output.push(encode([clock]))
+          })
+          .catch(onEnd)
       }
     }
 
-    this._store.on('state changed', onNewState)
+    const reduceEntropy = (newClock) => {
+      if (!newClock) {
+        this._store.getLatestClock().then(reduceEntropy).catch(onEnd)
+        return
+      }
+      localClock = newClock
+
+      debug('%s: comparing local clock %j to remote clock %j', this._peerId(), newClock, remoteClock)
+      if (localClock &&
+          (!remoteClock || !pushedClock ||
+            (vectorclock.compare(newClock, remoteClock) >= 0 &&
+            !vectorclock.isIdentical(newClock, remoteClock) &&
+            !vectorclock.isIdentical(newClock, pushedClock)))) {
+        remoteNeedsUpdate()
+      }
+    }
+
+    this._store.on('clock changed', reduceEntropy)
     debug('%s: registered state change handler', this._peerId())
 
     const gotPresentation = (message) => {
       debug('%s: got presentation message from %s:', this._peerId(), peerInfo.id.toB58String(), message)
-      const [remoteClock, startLazy, startEager] = message
+      const [newRemoteClock, startLazy, startEager] = message
 
       if (startLazy) {
         debug('%s: push connection to %s now in lazy mode', this._peerId(), peerInfo.id.toB58String())
@@ -57,16 +74,11 @@ module.exports = class PushProtocol {
         pushing = true
       }
 
-      if (remoteClock) {
-        vc = vectorclock.merge(vc || {}, remoteClock)
+      if (newRemoteClock) {
+        remoteClock = vectorclock.merge(remoteClock || {}, newRemoteClock)
       }
-      if (remoteClock || startEager) {
-        this._store.getClockAndState()
-          .then(onNewState)
-          .catch((err) => {
-            console.error('%s: error getting latest clock and state: ', this._peerId(), err.message)
-            debug('%s: error getting latest clock and state: ', this._peerId(), err)
-          })
+      if (newRemoteClock || startEager) {
+        reduceEntropy(localClock)
       }
     }
 
@@ -82,7 +94,6 @@ module.exports = class PushProtocol {
         try {
           messageHandler(message)
         } catch (err) {
-          console.error('error handling message:', err)
           onEnd(err)
         }
       }
@@ -95,7 +106,7 @@ module.exports = class PushProtocol {
           debug(err)
         }
         ended = true
-        this._store.removeListener('state changed', onNewState)
+        this._store.removeListener('clock changed', reduceEntropy)
         output.end(err)
       }
     }

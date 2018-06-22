@@ -16,18 +16,19 @@ module.exports = class PullProtocol {
   }
 
   forPeer (peerInfo) {
-    debug('%s: pull protocol to %s', this._peerId(), peerInfo.id.toB58String())
+    const remotePeerId = peerInfo.id.toB58String()
+    debug('%s: pull protocol to %s', this._peerId(), remotePeerId)
     const queue = new Queue({ concurrency: 1 })
     let ended = false
     let waitingForClock = null
     let timeout
 
-    const onNewState = ([clock]) => {
+    const onNewClock = (clock) => {
       debug('%s got new clock from state:', this._peerId(), clock)
       // TODO: only send difference from previous clock
       output.push(encode([clock]))
     }
-    this._store.on('state changed', onNewState)
+    this._store.on('clock changed', onNewClock)
 
     const onData = (err, data) => {
       if (err) {
@@ -36,7 +37,7 @@ module.exports = class PullProtocol {
         return
       }
 
-      debug('%s got new data from %s :', this._peerId(), peerInfo.id.toB58String(), data)
+      debug('%s got new data from %s :', this._peerId(), remotePeerId, data)
 
       queue.add(async () => {
         const [clock, state] = data
@@ -45,6 +46,7 @@ module.exports = class PullProtocol {
             if (waitingForClock &&
                 (vectorclock.isIdentical(waitingForClock, clock) ||
                  vectorclock.compare(waitingForClock, clock) < 0)) {
+              // We received what we were waiting for, so we can clear the timeout
               waitingForClock = null
               if (timeout) {
                 clearTimeout(timeout)
@@ -53,13 +55,13 @@ module.exports = class PullProtocol {
             if (await this._store.contains(clock)) {
               // we already have this state
               // send a "prune" message
-              debug('%s: setting %s to lazy mode', this._peerId(), peerInfo.id.toB58String())
+              debug('%s: setting %s to lazy mode', this._peerId(), remotePeerId)
               output.push(encode([null, true]))
             } else {
               const saved = await this._store.saveState([clock, state])
               if (!saved) {
                 debug('%s: did not save', this._peerId())
-                debug('%s: setting %s to lazy mode', this._peerId(), peerInfo.id.toB58String())
+                debug('%s: setting %s to lazy mode', this._peerId(), remotePeerId)
                 output.push(encode([null, true]))
               } else {
                 debug('%s: saved with new clock %j', this._peerId(), saved)
@@ -74,6 +76,7 @@ module.exports = class PullProtocol {
             waitingForClock = vectorclock.merge(waitingForClock || {}, clock)
             if (timeout) {
               clearTimeout(timeout)
+              timeout = null
             }
             timeout = setTimeout(() => {
               timeout = null
@@ -88,6 +91,9 @@ module.exports = class PullProtocol {
             // timeout and maybe turn into eager mode?
           }
         }
+      }).catch((err) => {
+        console.error('%s (pull): error handling data from %s:', this._peerId(), remotePeerId, err.message)
+        debug('%s (pull): error handling data from %s:', this._peerId(), remotePeerId, err)
       })
 
       return true // keep the stream alive
@@ -96,11 +102,11 @@ module.exports = class PullProtocol {
     const onEnd = (err) => {
       if (!ended) {
         if (err) {
-          console.error('%s: pull conn to %s ended with error', this._peerId(), peerInfo.id.toB58String(), err.message)
-          debug('%s: conn to %s ended with error', this._peerId(), peerInfo.id.toB58String(), err)
+          console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.message)
+          debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)
         }
         ended = true
-        this._store.removeListener('state changed', onNewState)
+        this._store.removeListener('clock changed', onNewClock)
         output.end(err)
       }
     }
@@ -109,7 +115,7 @@ module.exports = class PullProtocol {
 
     this._store.getLatestClock()
       .then((vectorClock) => {
-        debug('%s: sending latest vector clock to %s:', this._peerId(), peerInfo.id.toB58String(), vectorClock)
+        debug('%s: sending latest vector clock to %s:', this._peerId(), remotePeerId, vectorClock)
         output.push(encode([vectorClock]))
       })
       .catch(onEnd)

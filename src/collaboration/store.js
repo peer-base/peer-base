@@ -61,7 +61,8 @@ module.exports = class CollaborationStore extends EventEmitter {
       await this._save('state', state)
       await this._save('clock', clock)
       debug('saved state and vector clock')
-      this.emit('state changed', [clock, state])
+      this.emit('clock changed', clock)
+      this.emit('state changed', state)
       debug('emitted state changed event')
       return clock
     })
