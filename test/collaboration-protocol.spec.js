@@ -21,9 +21,7 @@ function merge (s1, s2) {
   if (typeof s1 !== 'string') {
     throw new Error('need string!')
   }
-  console.log('merging %j and %j', s1, s2)
   const result = uniq((s1 + s2).split('')).sort().join('')
-  console.log('result:', result)
   return result
 }
 

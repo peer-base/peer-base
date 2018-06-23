@@ -5,7 +5,7 @@ const EventEmitter = require('events')
 const NamespaceStore = require('datastore-core').NamespaceDatastore
 const Key = require('interface-datastore').Key
 const Queue = require('p-queue')
-const vectorclock = require('vectorclock')
+const vectorclock = require('../common/vectorclock')
 const leftpad = require('leftpad')
 const pull = require('pull-stream')
 
@@ -65,14 +65,14 @@ module.exports = class CollaborationStore extends EventEmitter {
       const latest = await this.getLatestClock()
       debug('latest vector clock:', latest)
       if (!previousClock) {
-        previousClock = Object.assign({}, latest)
+        previousClock = latest
         author = (await this._ipfs.id()).id
       } else if (!vectorclock.isIdentical(latest, previousClock)) {
         // disregard delta if it's not causally consistent
         return
       }
 
-      const nextClock = vectorclock.increment(Object.assign({}, previousClock), author)
+      const nextClock = vectorclock.increment(previousClock, author)
       debug('next clock is', nextClock)
 
       // check if parent vector clock is contained

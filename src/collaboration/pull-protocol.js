@@ -3,10 +3,10 @@
 const debug = require('debug')('peer-star:collaboration:pull-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
-const vectorclock = require('vectorclock')
 const Queue = require('p-queue')
 const handlingData = require('../common/handling-data')
 const encode = require('../common/encode')
+const vectorclock = require('../common/vectorclock')
 
 module.exports = class PullProtocol {
   constructor (ipfs, store, options) {
@@ -46,7 +46,7 @@ module.exports = class PullProtocol {
         if (deltaRecord) {
           const [previousClock, author] = deltaRecord
           delta = deltaRecord[2]
-          clock = vectorclock.increment(Object.assign({}, previousClock), author)
+          clock = vectorclock.increment(previousClock, author)
         } else if (newState) {
           [clock, state] = newState
         }

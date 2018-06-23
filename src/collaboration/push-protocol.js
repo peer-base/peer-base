@@ -3,10 +3,10 @@
 const debug = require('debug')('peer-star:collaboration:push-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
-const vectorclock = require('vectorclock')
 const Queue = require('p-queue')
 const handlingData = require('../common/handling-data')
 const encode = require('../common/encode')
+const vectorclock = require('../common/vectorclock')
 
 module.exports = class PushProtocol {
   constructor (ipfs, store, options) {
@@ -33,7 +33,7 @@ module.exports = class PushProtocol {
           pull.map(([previousClock, author, delta]) => {
             debug('%s: delta:', this._peerId(), delta)
             if (pushing) {
-              pushedClock = vectorclock.increment(Object.assign({}, previousClock), author)
+              pushedClock = vectorclock.increment(previousClock, author)
               output.push(encode([[previousClock, author, delta]]))
             }
           }),
