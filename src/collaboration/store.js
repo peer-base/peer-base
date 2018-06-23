@@ -58,23 +58,38 @@ module.exports = class CollaborationStore extends EventEmitter {
       [this.getLatestClock(), this.getState()])
   }
 
-  saveDelta ([clock, delta]) {
-    debug('save delta', [clock, delta])
+  saveDelta ([previousClock, author, delta]) {
+    debug('save delta', [previousClock, author, delta])
 
     return this._queue.add(async () => {
       const latest = await this.getLatestClock()
       debug('latest vector clock:', latest)
-      if (!clock) {
-        const id = (await this._ipfs.id()).id
-        clock = vectorclock.increment(latest, id)
-        debug('new vector clock is:', clock)
-      } else {
-        if (await this._contains(clock)) {
-          // we have already seen this state change, so discard it
-          return
-        }
-        // merge both clocks
-        clock = vectorclock.merge(latest, clock)
+      if (!previousClock) {
+        previousClock = Object.assign({}, latest)
+        author = (await this._ipfs.id()).id
+      } else if (!vectorclock.isIdentical(latest, previousClock)) {
+        // disregard delta if it's not causally consistent
+        return
+      }
+
+      const nextClock = vectorclock.increment(Object.assign({}, previousClock), author)
+      debug('next clock is', nextClock)
+
+      // check if parent vector clock is contained
+      // and that new vector clock is not contained
+      const previousClockComparison = vectorclock.compare(previousClock, latest)
+      debug('previous clock comparison result:', previousClockComparison)
+      if (previousClockComparison >= 0 && !vectorclock.isIdentical(previousClock, latest)) {
+        debug('previous and latest are not identical', previousClock, latest)
+        return
+      }
+
+      const nextClockComparison = vectorclock.compare(nextClock, latest)
+      debug('next clock comparison result:', nextClockComparison)
+      debug('latest is', latest)
+      if (nextClockComparison < 0 || vectorclock.isIdentical(nextClock, latest)) {
+        debug('is identical', nextClock, latest)
+        return
       }
 
       const seq = this._seq + 1
@@ -89,21 +104,21 @@ module.exports = class CollaborationStore extends EventEmitter {
         newState = delta
       }
 
-      console.log('saving delta', deltaKey, clock, delta)
+      const deltaRecord = [previousClock, author, delta]
 
       await Promise.all([
-        this._save(deltaKey, [clock, delta]),
+        this._save(deltaKey, deltaRecord),
         this._save('/state', newState),
-        this._save('/clock', clock),
+        this._save('/clock', nextClock),
         this._save('/seq', seq)
       ])
 
       debug('saved delta and vector clock')
-      this.emit('delta', clock)
-      this.emit('clock changed', clock)
-      this.emit('state changed', state)
+      this.emit('delta', deltaRecord)
+      this.emit('clock changed', nextClock)
+      this.emit('state changed', newState)
       debug('emitted state changed event')
-      return clock
+      return nextClock
     })
   }
 
@@ -149,23 +164,17 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   deltaStream (since) {
-    console.log('deltaStream since', since)
     return pull(
       this._store.query({
         prefix: '/d:'
       }),
       pull.map((d) => decode(d.value)),
-      pull.asyncMap(([clock, delta], callback) => {
-        console.log('CLOCK, DELTA = ', clock, delta)
-        const comparison = vectorclock.compare(clock, since)
-        console.log('comparison:', comparison)
-        if (comparison === -1) {
-          // this delta's clock is before since
-          // ignore it
-          callback(null, null)
+      pull.asyncMap(([previousClock, author, delta], callback) => {
+        if (vectorclock.isIdentical(previousClock, since)) {
+          since = vectorclock.increment(since, author)
+          callback(null, [previousClock, author, delta])
         } else {
-          since = clock
-          callback(null, [clock, delta])
+          callback(null, null)
         }
       }),
       pull.filter(Boolean) // only allow non-null values

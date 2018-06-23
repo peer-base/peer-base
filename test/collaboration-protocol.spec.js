@@ -265,8 +265,10 @@ describe('collaboration protocol', function () {
     })
   })
 
-  it('can store a delta', () => {
-    return pusher2.store.saveDelta([null, 'f'])
+  it('can store a few deltas', () => {
+    return Promise.all([
+      pusher2.store.saveDelta([null, null, 'f']),
+      pusher2.store.saveDelta([null, null, 'g'])])
   })
 
   it('waits a bit', function (done) {
@@ -275,13 +277,13 @@ describe('collaboration protocol', function () {
 
   it('puller got the new delta', () => {
     return puller.store.getState().then((state) => {
-      expect(state).to.equal('abcdef')
+      expect(state).to.equal('abcdefg')
     })
   })
 
   it('puller 2 got the new delta', () => {
     return puller2.store.getState().then((state) => {
-      expect(state).to.equal('abcdef')
+      expect(state).to.equal('abcdefg')
     })
   })
 })

@@ -30,11 +30,11 @@ module.exports = class PushProtocol {
       return new Promise((resolve, reject) => {
         pull(
           this._store.deltaStream(remoteClock),
-          pull.map(([clock, delta]) => {
+          pull.map(([previousClock, author, delta]) => {
             debug('%s: delta:', this._peerId(), delta)
             if (pushing) {
-              pushedClock = clock
-              output.push(encode([clock, delta]))
+              pushedClock = vectorclock.increment(Object.assign({}, previousClock), author)
+              output.push(encode([[previousClock, author, delta]]))
             }
           }),
           pull.onEnd((err) => {
@@ -52,28 +52,24 @@ module.exports = class PushProtocol {
       if (pushing) {
         // Let's try to see if we have deltas to deliver
         await pushDeltas()
-        console.log('pushed deltas')
         if (remoteNeedsUpdate()) {
-          console.log('remote needs update')
           if (pushing) {
-            console.log('pushing')
             // remote still needs update
             const clockAndState = await this._store.getClockAndState()
-            console.log('clock and state', clockAndState)
-            const [clock, state] = clockAndState
+            const [clock] = clockAndState
             if (Object.keys(clock).length) {
               pushedClock = clock
               debug('%s: sending clock and state to %s:', this._peerId(), remotePeerId, clockAndState)
-              output.push(encode(clockAndState))
+              output.push(encode([null, clockAndState]))
             }
           } else {
             // send only clock
-            output.push(encode([localClock]))
+            output.push(encode([null, [localClock]]))
           }
         }
       } else {
         const clock = await this._store.getLatestClock()
-        output.push(encode([clock]))
+        output.push(encode([null, [clock]]))
       }
     }
 

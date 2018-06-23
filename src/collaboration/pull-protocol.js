@@ -39,9 +39,20 @@ module.exports = class PullProtocol {
       debug('%s got new data from %s :', this._peerId(), remotePeerId, data)
 
       queue.add(async () => {
-        const [clock, state] = data
+        const [deltaRecord, newState] = data
+        let clock
+        let state
+        let delta
+        if (deltaRecord) {
+          const [previousClock, author] = deltaRecord
+          delta = deltaRecord[2]
+          clock = vectorclock.increment(Object.assign({}, previousClock), author)
+        } else if (newState) {
+          [clock, state] = newState
+        }
+
         if (clock) {
-          if (state) {
+          if (state || delta) {
             if (waitingForClock &&
                 (vectorclock.isIdentical(waitingForClock, clock) ||
                  vectorclock.compare(waitingForClock, clock) < 0)) {
@@ -57,13 +68,19 @@ module.exports = class PullProtocol {
               debug('%s: setting %s to lazy mode', this._peerId(), remotePeerId)
               output.push(encode([null, true]))
             } else {
-              const saved = await this._store.saveState([clock, state])
+              let saved
+              if (state) {
+                saved = await this._store.saveState([clock, state])
+              } else if (delta) {
+                saved = await this._store.saveDelta(deltaRecord)
+              }
               if (!saved) {
                 debug('%s: did not save', this._peerId())
                 debug('%s: setting %s to lazy mode', this._peerId(), remotePeerId)
                 output.push(encode([null, true]))
               } else {
                 debug('%s: saved with new clock %j', this._peerId(), saved)
+                output.push(encode([clock]))
               }
             }
           } else {
