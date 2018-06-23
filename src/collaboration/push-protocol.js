@@ -34,6 +34,7 @@ module.exports = class PushProtocol {
             debug('%s: delta:', this._peerId(), delta)
             if (pushing) {
               pushedClock = vectorclock.increment(previousClock, author)
+              // TODO: consider sending only clock deltas
               output.push(encode([[previousClock, author, delta]]))
             }
           }),
