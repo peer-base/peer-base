@@ -8,6 +8,7 @@ const expect = chai.expect
 const PeerStar = require('../')
 const Repo = require('./utils/repo')
 const Rendezvous = require('./utils/rendezvous')
+require('./utils/fake-crdt')
 
 describe('app', function () {
   this.timeout(10000)
@@ -41,12 +42,12 @@ describe('app', function () {
   it('can be started', () => app.start())
 
   it('can get collaboration', async () => {
-    collaboration = await app.collaborate('collaboration name')
+    collaboration = await app.collaborate('collaboration name', 'fake')
     expect(collaboration).to.not.be.empty()
   })
 
   it('can reget collaboration', async () => {
-    expect(await app.collaborate('collaboration name')).to.equal(collaboration)
+    expect(await app.collaborate('collaboration name', 'fake')).to.equal(collaboration)
   })
 
   it('can be stopped', () => app.stop())
