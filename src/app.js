@@ -72,6 +72,10 @@ class App extends EventEmitter {
     return this._peerCountGuess.guess()
   }
 
+  peerCountEstimate () {
+    return this.peerCountGuess()
+  }
+
   _onGossipMessage (message) {
     this.emit('gossip', message)
     let collaborationName, membership

@@ -9,7 +9,8 @@ class App extends Component {
     super()
     this.state = {
       count: 0,
-      peers: new Set()
+      peers: new Set(),
+      appPeerCountEstimate: 0
     }
     this.onIncrementClick = this.onIncrementClick.bind(this)
 
@@ -21,6 +22,11 @@ class App extends Component {
     this._app.start()
       .then(() => {
         console.log('app started')
+
+        setInterval(() => {
+          this.setState({ appPeerCountEstimate: this._app.peerCountEstimate() })
+        }, 2000)
+
         this._app.collaborate('peer-star-counter-example', 'gcounter')
           .then((collab) => {
             console.log('collaboration started')
@@ -53,7 +59,8 @@ class App extends Component {
           Grow-only Counter: {this.state.count}
         </p>
         <button onClick={this.onIncrementClick}>+</button>
-        <p>Have {this.state.peers.size} peers</p>
+        <p>Have {this.state.peers.size} peers for this collaboration</p>
+        <p>App-wide peer count estimate: {this.state.appPeerCountEstimate} peers</p>
       </div>
     );
   }
