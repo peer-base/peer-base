@@ -10,6 +10,7 @@ const leftpad = require('leftpad')
 const pull = require('pull-stream')
 
 const decode = require('../common/decode')
+const encode = require('../common/encode')
 
 module.exports = class CollaborationStore extends EventEmitter {
   constructor (ipfs, collaboration) {
@@ -182,7 +183,7 @@ module.exports = class CollaborationStore extends EventEmitter {
 
   _save (key, value) {
     return new Promise((resolve, reject) => {
-      this._store.put(key, Buffer.from(JSON.stringify(value || null)), (err) => {
+      this._store.put(key, encode(value || null), (err) => {
         if (err) {
           reject(err)
         } else {
@@ -216,7 +217,7 @@ function parsingResult (callback) {
     }
     let parsed
     try {
-      parsed = JSON.parse(result.toString())
+      parsed = decode(result)
     } catch (err) {
       callback(err)
       return

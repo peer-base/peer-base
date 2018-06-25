@@ -1,5 +1,11 @@
 'use strict'
 
-module.exports = function encode (data) {
-  return Buffer.from(JSON.stringify(data))
+const msgpack = require('msgpack-lite')
+const codec = require('./codec')
+const options = {
+  codec
+}
+
+module.exports = function encode (value) {
+  return msgpack.encode(value, options)
 }

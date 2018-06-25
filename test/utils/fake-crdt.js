@@ -4,21 +4,15 @@ const CRDT = require('delta-crdts')
 const uniq = require('lodash.uniq')
 
 const fake = module.exports = (id) => ({
-  initial: () => '',
+  initial: () => new Set(),
   join (s1, s2) {
-    if (typeof s1 !== 'string') {
-      throw new Error('need string!: ' + JSON.stringify(s1))
-    }
-    if (typeof s2 !== 'string') {
-      throw new Error('need 2nd string!: ' + JSON.stringify(s2))
-    }
-    const result = uniq((s1 + s2).split('')).sort().join('')
-    return result
+    const all = Array.from(s1).concat(Array.from(s2))
+    return new Set(all)
   },
-  value: (s) => s,
+  value: (s) => Array.from(s).sort().join(''),
   mutators: {
     add: (s, str) => {
-      return str
+      return new Set(str)
     }
   }
 })
