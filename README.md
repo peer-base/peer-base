@@ -37,6 +37,14 @@ const collaboration = await app.collaborate('collaboration name')
 await collaboration.stop()
 ```
 
+### Peer count estimate
+
+Returns estimate of peers in app.
+
+```js
+app.peerCountEstimate()
+```
+
 ### Collaboration
 
 #### Events:
