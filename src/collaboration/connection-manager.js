@@ -93,6 +93,9 @@ module.exports = class ConnectionManager {
           }
         }
       }
+    }).catch((err) => {
+      console.error('error resetting connections:', err.message)
+      debug('error resetting connections:', err)
     })
   }
 }

@@ -33,6 +33,9 @@ module.exports = class Membership extends EventEmitter {
       this._options)
 
     this._gossipNow = this._gossipNow.bind(this)
+    this._ring.on('removed', (peerInfo) => {
+      this._members.delete(peerInfo.id.toB58String())
+    })
   }
 
   async start () {
