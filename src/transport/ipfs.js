@@ -23,7 +23,7 @@ module.exports = (app, options) => {
   return ipfs
 
   function modules (peerInfo) {
-    const appTransport = AppTransport(app, ipfs, new WebSocketStar({ id: peerInfo.id }), options.transport)
+    const appTransport = AppTransport(app, ipfs, new WebSocketStar({ id: peerInfo.id }), options && options.transport)
     appTransport.on('error', (err) => app.emit('error', err))
     appTransport.on('peer connected', (peerInfo) => app.emit('peer connected', peerInfo))
     appTransport.on('outbound peer connected', (peerInfo) => app.emit('outbound peer connected', peerInfo))
