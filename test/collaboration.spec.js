@@ -6,7 +6,6 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const App = require('./utils/create-app')
-const Rendezvous = require('./utils/rendezvous')
 require('./utils/fake-crdt')
 
 const A_BIT = 19000
@@ -16,16 +15,8 @@ describe('collaboration', function () {
 
   const peerCount = 2 // 10
 
-  let rendezvous
   let swarm = []
   let collaborations
-
-  before(() => {
-    rendezvous = Rendezvous()
-    return rendezvous.start()
-  })
-
-  after(() => rendezvous.stop())
 
   for (let i = 0; i < peerCount; i++) {
     ((i) => {

@@ -7,12 +7,10 @@ const expect = chai.expect
 
 const PeerStar = require('../')
 const Repo = require('./utils/repo')
-const Rendezvous = require('./utils/rendezvous')
 require('./utils/fake-crdt')
 
 describe('app', function () {
   this.timeout(10000)
-  let rendezvous
   let repo
   let app
   let collaboration
@@ -22,13 +20,6 @@ describe('app', function () {
   })
 
   after(() => repo.teardown())
-
-  before(() => {
-    rendezvous = Rendezvous()
-    return rendezvous.start()
-  })
-
-  after(() => rendezvous.stop())
 
   it('can be created', () => {
     app = PeerStar('peer star test app', {

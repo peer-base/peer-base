@@ -114,12 +114,17 @@ module.exports = class GlobalConnectionManager {
     const canClose = !dialedProtocols || !dialedProtocols.size
     if (canClose) {
       debug('hanging up %s', peerInfo.id.toB58String())
-      this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
-        if (err) {
-          console.error('error hanging up:', err.message)
-          debug('error hanging up:', err)
-        }
-      })
+      try {
+        this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
+          if (err) {
+            console.error('error hanging up:', err.message)
+            debug('error hanging up:', err)
+          }
+        })
+      } catch (err) {
+        console.error('error hanging up:', err.message)
+        debug('error hanging up:', err)
+      }
     }
   }
 }

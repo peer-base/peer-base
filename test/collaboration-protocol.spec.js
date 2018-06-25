@@ -15,10 +15,6 @@ const Protocol = require('../src/collaboration/protocol')
 
 const Type = require('./utils/fake-crdt')
 
-// process.on('unhandledRejection', (err) => {
-//   console.log(err)
-// })
-
 describe('collaboration protocol', function () {
   const pusher = {}
   const puller = {}

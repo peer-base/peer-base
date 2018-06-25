@@ -6,7 +6,6 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const App = require('./utils/create-app')
-const Rendezvous = require('./utils/rendezvous')
 
 const A_BIT = 19000
 
@@ -15,24 +14,17 @@ describe('app swarm', function () {
 
   const peerCount = 10
 
-  let rendezvous
+  // let rendezvous
   let swarm = []
   const outboundConnectionCounts = []
   const inboundConnectionCounts = []
   let interval
 
   before(() => {
-    rendezvous = Rendezvous()
-    return rendezvous.start()
-  })
-
-  after(() => rendezvous.stop())
-
-  before(() => {
     interval = setInterval(() => {
       console.log('outbound connection counts:', outboundConnectionCounts)
       console.log('inbound connection counts:', inboundConnectionCounts)
-    }, 1000).unref()
+    }, 1000)
   })
 
   after(() => clearInterval(interval))
@@ -87,9 +79,9 @@ describe('app swarm', function () {
     swarm[0].app.gossip(Buffer.from(JSON.stringify('hello world!')))
   })
 
-  it('each node is outbound connected to maximum 7 other nodes', () => {
+  it('each node is outbound connected to maximum 8 other nodes', () => {
     outboundConnectionCounts.forEach((connCount) => {
-      expect(connCount).to.be.most(7)
+      expect(connCount).to.be.most(8)
     })
   })
 })
