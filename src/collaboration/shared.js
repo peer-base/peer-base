@@ -49,6 +49,7 @@ module.exports = async (id, type, store) => {
   const onStoreDelta = (delta, clock) => {
     if (!saving) {
       state = crdt.join(state, delta)
+      shared.emit('state changed')
     }
   }
   store.on('delta', onStoreDelta)
@@ -68,6 +69,7 @@ module.exports = async (id, type, store) => {
   const storeState = await store.getState()
   if (storeState !== undefined) {
     state = crdt.join(state, storeState)
+    setImmediate(() => shared.emit('state changed'))
   }
 
   return shared
