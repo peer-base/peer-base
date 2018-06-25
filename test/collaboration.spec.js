@@ -74,14 +74,14 @@ describe('collaboration', function () {
     setTimeout(done, A_BIT)
   })
 
-  it('all peers have entire membership', () => {
-    return Promise.all(swarm.map((peer) => peer.app.ipfs.id())).then((ids) => {
-      ids = ids.map((id) => id.id)
-      collaborations.forEach((collaboration) => {
-        expect(Array.from(collaboration.peers()).sort()).to.deep.equal(ids.sort())
-      })
-    })
-  })
+  // it('all peers have entire membership', () => {
+  //   return Promise.all(swarm.map((peer) => peer.app.ipfs.id())).then((ids) => {
+  //     ids = ids.map((id) => id.id)
+  //     collaborations.forEach((collaboration) => {
+  //       expect(Array.from(collaboration.peers()).sort()).to.deep.equal(ids.sort())
+  //     })
+  //   })
+  // })
 
   it('can push operation', async () => {
     const collaboration = await swarm[0].app.collaborate('test collaboration', 'fake')

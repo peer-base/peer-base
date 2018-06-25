@@ -23,6 +23,11 @@ module.exports = class CollaborationStore extends EventEmitter {
   async start () {
     this._store = await datastore(this._ipfs, this._collaboration)
     this._seq = await this.getSequence()
+    this._id = (await this._ipfs.id()).id
+  }
+
+  setShared (shared) {
+    this._shared = shared
   }
 
   stop () {
@@ -53,74 +58,63 @@ module.exports = class CollaborationStore extends EventEmitter {
       [this.getLatestClock(), this.getState()])
   }
 
-  saveDelta ([previousClock, author, delta], newState) {
-    debug('save delta', [previousClock, author, delta], newState)
-
+  saveDelta ([previousClock, author, delta]) {
     return this._queue.add(async () => {
-      const latest = await this.getLatestClock()
-      debug('latest vector clock:', latest)
+      debug('%s: save delta: %j', this._id, [previousClock, author, delta])
       if (!previousClock) {
-        previousClock = latest
+        previousClock = await this.getLatestClock()
         author = (await this._ipfs.id()).id
-      } else if (!vectorclock.isIdentical(latest, previousClock)) {
-        // disregard delta if it's not causally consistent
-        return
       }
 
-      const nextClock = vectorclock.increment(previousClock, author)
-      debug('next clock is', nextClock)
-
-      // check if parent vector clock is contained
-      // and that new vector clock is not contained
-      const previousClockComparison = vectorclock.compare(previousClock, latest)
-      debug('previous clock comparison result:', previousClockComparison)
-      if (previousClockComparison >= 0 && !vectorclock.isIdentical(previousClock, latest)) {
-        debug('previous and latest are not identical', previousClock, latest)
-        return
+      if (!await this._contains(previousClock)) {
+        debug('%s: previous vector (%j) clock is not contained in store, bailing out.', this._id, previousClock)
+        return false
       }
 
-      const nextClockComparison = vectorclock.compare(nextClock, latest)
-      debug('next clock comparison result:', nextClockComparison)
-      debug('latest is', latest)
-      if (nextClockComparison < 0 || vectorclock.isIdentical(nextClock, latest)) {
-        debug('is identical', nextClock, latest)
-        return
+      const nextClock = vectorclock.merge(await this.getLatestClock(), vectorclock.increment(previousClock, author))
+      debug('%s: next clock is', this._id, nextClock)
+
+      if (await this._contains(nextClock)) {
+        debug('%s: next clock (%j) is already contained in store, bailing out.', this._id, nextClock)
+        return false
       }
 
-      const seq = this._seq + 1
+      const seq = this._seq = this._seq + 1
       const deltaKey = '/d:' + leftpad(seq.toString(16), 20)
 
       const deltaRecord = [previousClock, author, delta]
 
+      debug('%s: saving delta %j = %j', this._id, deltaKey, deltaRecord)
+
+      const newState = this._shared.apply(delta)
+
       await Promise.all([
         this._save(deltaKey, deltaRecord),
-        newState !== undefined ? this._save('/state', newState) : null,
+        this._save('/state', newState),
         this._save('/clock', nextClock),
         this._save('/seq', seq)
       ].filter(Boolean))
 
-      debug('saved delta and vector clock')
+      debug('%s: saved delta and vector clock', this._id)
       this.emit('delta', delta, nextClock)
       this.emit('clock changed', nextClock)
-      if (newState !== undefined) {
-        this.emit('state changed', newState)
-      }
-      debug('emitted state changed event')
+      this.emit('state changed', newState)
+      debug('%s: emitted state changed event', this._id)
       return nextClock
     })
   }
 
   saveState ([clock, state]) {
-    debug('save state', [clock, state])
+    debug('%s: save state', this._id, [clock, state])
     // TODO: include parent vector clock
     // to be able to decide whether to ignore this state or not
     return this._queue.add(async () => {
       const latest = await this.getLatestClock()
-      debug('latest vector clock:', latest)
+      debug('%s: latest vector clock:', this._id, latest)
       if (!clock) {
         const id = (await this._ipfs.id()).id
         clock = vectorclock.increment(latest, id)
-        debug('new vector clock is:', clock)
+        debug('%s: new vector clock is:', this._id, clock)
       } else {
         if (await this._contains(clock)) {
           // we have already seen this state change, so discard it
@@ -129,14 +123,18 @@ module.exports = class CollaborationStore extends EventEmitter {
         clock = vectorclock.merge(latest, clock)
       }
 
+      const newState = this._shared.apply(state)
+
+      debug('%s: new merged state is %j', this._id, newState)
+
       await Promise.all([
         this._save('/state', state),
         this._save('/clock', clock)])
 
-      debug('saved state and vector clock')
+      debug('%s: saved state and vector clock', this._id)
       this.emit('clock changed', clock)
-      this.emit('state changed', state)
-      debug('emitted state changed event')
+      this.emit('state changed', newState)
+      debug('%s: emitted state changed event', this._id)
       return clock
     })
   }
@@ -146,18 +144,25 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   deltaStream (since) {
+    debug('%s: delta stream since %j', this._id, since)
     return pull(
       this._store.query({
         prefix: '/d:'
       }),
       pull.map((d) => decode(d.value)),
+      pull.map((d) => {
+        debug('%s: delta stream candidate: %j', this._id, d)
+        return d
+      }),
       pull.asyncMap(([previousClock, author, delta], callback) => {
-        if (vectorclock.isIdentical(previousClock, since)) {
-          since = vectorclock.increment(since, author)
-          callback(null, [previousClock, author, delta])
-        } else {
-          callback(null, null)
+        const clock = vectorclock.increment(previousClock, author)
+        if (vectorclock.compare(clock, since) < 0) {
+          debug('%s: candidate rejected because of clock: %j', this._id, clock)
+          return callback(null, null)
         }
+        debug('%s: delta stream entry: %j', this._id, delta)
+        since = clock
+        callback(null, [previousClock, author, delta])
       }),
       pull.filter(Boolean) // only allow non-null values
     )
@@ -169,10 +174,10 @@ module.exports = class CollaborationStore extends EventEmitter {
 
   async _contains (clock) {
     const currentClock = await this.getLatestClock()
-    const contains = (vectorclock.isIdentical(clock, currentClock) ||
+    const result = (vectorclock.isIdentical(clock, currentClock) ||
       vectorclock.compare(clock, currentClock) < 0)
-    debug('%j contains %j ?: %j', currentClock, clock, contains)
-    return contains
+    debug('%s: (%j) contains (%j)? : ', this._id, currentClock, clock, result)
+    return result
   }
 
   _save (key, value) {

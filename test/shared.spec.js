@@ -21,7 +21,7 @@ describe('shared', () => {
 
   it('can be created', async () => {
     const ipfs = {
-      id() {
+      id () {
         return {
           id: 'replica id'
         }
@@ -36,6 +36,7 @@ describe('shared', () => {
     const store = new Store(ipfs, collaboration)
     await store.start()
     shared = await Shared('replica id', CRDT('fake'), store)
+    store.setShared(shared)
   })
 
   it('can endure some actions', () => {

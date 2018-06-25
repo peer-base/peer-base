@@ -48,13 +48,17 @@ module.exports = async (id, type, store) => {
 
   const onStoreDelta = (delta, clock) => {
     if (!saving) {
-      console.log('onStoreDelta', delta)
       state = crdt.join(state, delta)
-      store.saveState([clock, state])
-        .catch((err) => this.emit('error', err))
     }
   }
   store.on('delta', onStoreDelta)
+
+  shared.apply = (s) => {
+    if (!saving) {
+      state = crdt.join(state, s)
+    }
+    return state
+  }
 
   shared.stop = () => {
     store.removeListener('state changed', onStoreStateChanged)

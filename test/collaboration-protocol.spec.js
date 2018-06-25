@@ -41,6 +41,7 @@ describe('collaboration protocol', function () {
     await pusher.store.start()
     pusher.protocol = Protocol(ipfs, collaboration, pusher.store)
     pusher.shared = await Shared('pusher', Type, pusher.store)
+    pusher.store.setShared(pusher.shared)
   })
 
   it('puller can be created', async () => {
@@ -60,6 +61,7 @@ describe('collaboration protocol', function () {
       receiveTimeout: 500
     })
     puller.shared = await Shared('puller', Type, puller.store)
+    puller.store.setShared(puller.shared)
   })
 
   it('can connect pusher and puller', () => {
@@ -108,6 +110,7 @@ describe('collaboration protocol', function () {
     await pusher2.store.start()
     pusher2.protocol = Protocol(ipfs, collaboration, pusher2.store)
     pusher2.shared = await Shared('pusher 2', Type, pusher2.store)
+    pusher2.store.setShared(pusher2.shared)
   })
 
   it('connects new pusher to puller', () => {
@@ -165,10 +168,10 @@ describe('collaboration protocol', function () {
     pusher3.store = puller.store // same store as puller
     pusher3.protocol = Protocol(ipfs, collaboration, pusher3.store)
     pusher3.shared = await Shared('pusher from puller', Type, pusher3.store)
+    pusher3.store.setShared(pusher3.shared)
   })
 
   it('can create a fresh new puller', async () => {
-    console.log('----------\n\n\n')
     const ipfs = {
       id () {
         return { id: 'puller 2' }
@@ -181,8 +184,11 @@ describe('collaboration protocol', function () {
     const collaboration = { name: 'collaboration protocol test' }
     puller2.store = new Store(ipfs, collaboration)
     await puller2.store.start()
-    puller2.protocol = Protocol(ipfs, collaboration, puller2.store)
+    puller2.protocol = Protocol(ipfs, collaboration, puller2.store, {
+      receiveTimeout: 500
+    })
     puller2.shared = await Shared('puller 2', Type, puller2.store)
+    puller2.store.setShared(puller2.shared)
   })
 
   it('connects last two', () => {
@@ -212,42 +218,39 @@ describe('collaboration protocol', function () {
     expect(puller2.shared.value()).to.equal('abc')
   })
 
-  return;
-
-  // TODO REST!
-
   it('can add duplicate data to pusher 1 and 2', async () => {
     // all connections are on an eager mode
     // force one to go to lazy mode by sending duplicate data
-    let latestClock = vectorclock.merge(
+    const latestClock = vectorclock.merge(
       await pusher.store.getLatestClock(),
       await pusher2.store.getLatestClock())
 
-    latestClock = vectorclock.increment(latestClock, 'some other node id')
+    const nextClock = vectorclock.increment(latestClock, 'some other node id')
+
     await Promise.all([
-      pusher.store.saveState([latestClock, 'd']),
-      pusher2.store.saveState([latestClock, 'd'])])
+      pusher.store.saveState([nextClock, 'd']),
+      pusher2.store.saveDelta([nextClock, 'd'])])
   })
 
   it('waits a bit', (done) => setTimeout(done, 500))
 
-  it('newest puller got new state', () => {
+  it('puller got new state', () => {
+    expect(puller.shared.value()).to.equal('abcd')
+  })
 
-    return puller2.store.getState().then((state) => {
-      expect(state).to.equal('abcd')
-    })
+  it('waits another bit', (done) => setTimeout(done, 1000))
+
+  it('newest puller got new state', () => {
+    expect(puller2.shared.value()).to.equal('abcd')
   })
 
   it('new data happens in lazy mode connection', () => {
-    // Now that we have the connection from pusher 2 to puller in lazy mode,
-    // let's add some data to pusher 2 to see if it eventually reaches puller
-    return pusher2.store.saveState([null, 'e'])
+    pusher2.shared.add('e')
+    pusher.shared.add('f')
   })
 
   it('puller in lazy mode connection does not still have this state', () => {
-    return puller.store.getState().then((state) => {
-      expect(state).to.equal('abcd')
-    })
+    expect(puller.shared.value()).to.equal('abcd')
   })
 
   it('waits a bit', function (done) {
@@ -255,31 +258,7 @@ describe('collaboration protocol', function () {
   })
 
   it('puller eventually got the new state', () => {
-    return puller.store.getState().then((state) => {
-      expect(state).to.equal('abcde')
-    })
-  })
-
-  it('can store a few deltas', () => {
-    return Promise.all([
-      pusher2.store.saveDelta([null, null, 'f']),
-      pusher2.store.saveDelta([null, null, 'g'])])
-  })
-
-  it('waits a bit', function (done) {
-    setTimeout(done, 1900)
-  })
-
-  it('puller got the new delta', () => {
-    return puller.store.getState().then((state) => {
-      expect(state).to.equal('abcdefg')
-    })
-  })
-
-  it('puller 2 got the new delta', () => {
-    return puller2.store.getState().then((state) => {
-      expect(state).to.equal('abcdefg')
-    })
+    expect(puller.shared.value()).to.equal('abcdef')
   })
 })
 

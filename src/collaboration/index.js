@@ -46,6 +46,7 @@ class Collaboration extends EventEmitter {
     await this._store.start()
     const id = (await this._ipfs.id()).id
     this.shared = await Shared(id, this._type, this._store)
+    this._store.setShared(this.shared)
   }
 
   async stop () {
