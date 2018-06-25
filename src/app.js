@@ -30,18 +30,21 @@ class App extends EventEmitter {
     }).then(() => this._peerCountGuess.start())
   }
 
-  async collaborate (name, options) {
+  async collaborate (name, type, options) {
+    if (!type) {
+      throw new Error('need collaboration type')
+    }
     let collaboration = this._collaborations.get(name)
     if (!collaboration) {
       if (!this._globalConnectionManager) {
         // wait until we have a global connection manager
         return new Promise((resolve, reject) => {
           this.once('global connection manager', () => {
-            this.collaborate(name, options).then(resolve).catch(reject)
+            this.collaborate(name, type, options).then(resolve).catch(reject)
           })
         })
       }
-      collaboration = Collaboration(this.ipfs, this._globalConnectionManager, this, name, options)
+      collaboration = Collaboration(this.ipfs, this._globalConnectionManager, this, name, type, options)
       this._collaborations.set(name, collaboration)
       collaboration.once('stop', () => this._collaborations.delete(name))
       await collaboration.start()
@@ -88,10 +91,10 @@ class App extends EventEmitter {
     }
   }
 
-  stop () {
-    this._collaborations.forEach((collaboration) => collaboration.stop())
+  async stop () {
+    await Promise.all(Array.from(this._collaborations.values()).map((collaboration) => collaboration.stop()))
     this._collaborations.clear()
-    return this.ipfs.stop()
-      .then(() => this._peerCountGuess.stop())
+    await this.ipfs.stop()
+    this._peerCountGuess.stop()
   }
 }

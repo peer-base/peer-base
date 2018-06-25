@@ -7,10 +7,11 @@ const expect = chai.expect
 
 const App = require('./utils/create-app')
 const Rendezvous = require('./utils/rendezvous')
+require('./utils/fake-crdt')
 
 const A_BIT = 19000
 
-describe('app swarm', function () {
+describe('collaboration', function () {
   this.timeout(20000)
 
   const peerCount = 2 // 10
@@ -44,7 +45,7 @@ describe('app swarm', function () {
   })
 
   it('can be created', async () => {
-    collaborations = await Promise.all(swarm.map((peer) => peer.app.collaborate('test collaboration')))
+    collaborations = await Promise.all(swarm.map((peer) => peer.app.collaborate('test collaboration', 'fake')))
     expect(collaborations.length).to.equal(peerCount)
   })
 
@@ -63,7 +64,7 @@ describe('app swarm', function () {
 
   it('adding another peer', async () => {
     const peer = App({ maxThrottleDelayMS: 1000 })
-    const collaboration = await peer.app.collaborate('test collaboration')
+    const collaboration = await peer.app.collaborate('test collaboration', 'fake')
     swarm.push(peer)
     collaborations.push(collaboration)
     await peer.app.start()
@@ -83,8 +84,8 @@ describe('app swarm', function () {
   })
 
   it('can push operation', async () => {
-    const collaboration = await swarm[0].app.collaborate('test collaboration')
-    await collaboration.saveState('state 1')
+    const collaboration = await swarm[0].app.collaborate('test collaboration', 'fake')
+    await collaboration.shared.add('a')
   })
 
   it('waits a bit', (done) => {
@@ -93,11 +94,10 @@ describe('app swarm', function () {
 
   it('all replicas in sync', async () => {
     const collaborations = await Promise.all(
-      swarm.map(async (peer) => peer.app.collaborate('test collaboration')))
+      swarm.map(async (peer) => peer.app.collaborate('test collaboration', 'fake')))
 
     await Promise.all(collaborations.map(async (collab) => {
-      const state = await collab.getState()
-      expect(state).to.equal('state 1')
+      expect(collab.shared.value()).to.equal('a')
     }))
   })
 

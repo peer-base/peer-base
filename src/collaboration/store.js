@@ -12,15 +12,10 @@ const pull = require('pull-stream')
 const decode = require('../common/decode')
 
 module.exports = class CollaborationStore extends EventEmitter {
-  constructor (ipfs, collaboration, merge) {
+  constructor (ipfs, collaboration) {
     super()
     this._ipfs = ipfs
     this._collaboration = collaboration
-
-    if (typeof merge !== 'function') {
-      throw new Error('need a merge function')
-    }
-    this._merge = merge
 
     this._queue = new Queue({ concurrency: 1 })
   }
@@ -58,8 +53,8 @@ module.exports = class CollaborationStore extends EventEmitter {
       [this.getLatestClock(), this.getState()])
   }
 
-  saveDelta ([previousClock, author, delta]) {
-    debug('save delta', [previousClock, author, delta])
+  saveDelta ([previousClock, author, delta], newState) {
+    debug('save delta', [previousClock, author, delta], newState)
 
     return this._queue.add(async () => {
       const latest = await this.getLatestClock()
@@ -95,28 +90,21 @@ module.exports = class CollaborationStore extends EventEmitter {
       const seq = this._seq + 1
       const deltaKey = '/d:' + leftpad(seq.toString(16), 20)
 
-      // merge both states
-      const state = await this.getState()
-      let newState
-      if (state !== undefined) {
-        newState = this._merge(state, delta)
-      } else {
-        newState = delta
-      }
-
       const deltaRecord = [previousClock, author, delta]
 
       await Promise.all([
         this._save(deltaKey, deltaRecord),
-        this._save('/state', newState),
+        newState !== undefined ? this._save('/state', newState) : null,
         this._save('/clock', nextClock),
         this._save('/seq', seq)
-      ])
+      ].filter(Boolean))
 
       debug('saved delta and vector clock')
-      this.emit('delta', deltaRecord)
+      this.emit('delta', delta, nextClock)
       this.emit('clock changed', nextClock)
-      this.emit('state changed', newState)
+      if (newState !== undefined) {
+        this.emit('state changed', newState)
+      }
       debug('emitted state changed event')
       return nextClock
     })
@@ -141,19 +129,13 @@ module.exports = class CollaborationStore extends EventEmitter {
         clock = vectorclock.merge(latest, clock)
       }
 
-      const previousState = await this.getState()
-      let newState
+      await Promise.all([
+        this._save('/state', state),
+        this._save('/clock', clock)])
 
-      if (previousState !== undefined) {
-        newState = this._merge(previousState, state)
-      } else {
-        newState = state
-      }
-
-      await Promise.all([this._save('/state', newState), this._save('/clock', clock)])
       debug('saved state and vector clock')
       this.emit('clock changed', clock)
-      this.emit('state changed', newState)
+      this.emit('state changed', state)
       debug('emitted state changed event')
       return clock
     })
@@ -195,7 +177,7 @@ module.exports = class CollaborationStore extends EventEmitter {
 
   _save (key, value) {
     return new Promise((resolve, reject) => {
-      this._store.put(key, Buffer.from(JSON.stringify(value)), (err) => {
+      this._store.put(key, Buffer.from(JSON.stringify(value || null)), (err) => {
         if (err) {
           reject(err)
         } else {
