@@ -32,7 +32,7 @@ class ArrayCollaboration extends Collaboration {
     return (
       <div>
         <hr />
-        <h1>G-Counter</h1>
+        <h1>Array</h1>
         <div className="App-intro">
           Value: <pre>{JSON.stringify(this.state.value)}</pre>
         </div>
