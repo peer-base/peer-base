@@ -2,6 +2,9 @@
 
 Peer-Star App support
 
+* [Example app](examples/react-app)
+* [How to run the example app](#run-example-app)
+
 ## Install
 
 ```bash
@@ -126,6 +129,18 @@ Returns the CRDT view value.
 
 Each shared document has document-specific mutators. See [the delta-crdts documentation](https://github.com/ipfs-shipyard/js-delta-crdts#types) for these.
 
+Example:
+
+```js
+collaboration.shared.push('some element')
+```
+
+### Stop collaboration
+
+```js
+await collaboration.stop()
+``
+
 ### Stop app
 
 ```js
@@ -138,6 +153,30 @@ await app.stop()
 app.peerCountGuess() // returns integer Number >= 0
 ```
 
+# Run example app
+
+Clone this repo.
+
+```bash
+$ cd peer-star-app
+$ cd examples/react-app
+$ npm install
+```
+
+In a different window, on the same dir, start the rendezvous server:
+
+```bash
+$ npm run start:rv
+```
+
+In a different window, on the same dir, run the app server:
+
+```bash
+$ npm start
+```
+
+Open [http://localhost:3000](http://localhost:3000) and test the app.
+
 # Tests
 
 Clone this repo and run:
@@ -147,6 +186,18 @@ $ npm install
 $ npm test
 ```
 
-# License
+## Contribute
+
+Peer-star app and the IPFS implementation in JavaScript is a work in progress. As such, there's a few things you can do right now to help out:
+
+  * Check out [existing issues](https://github.com/ipfs-shipyard/peer-star-app/issues). This would be especially useful for modules in active development. Some knowledge of IPFS may be required, as well as the infrastructure behind it - for instance, you may need to read up on p2p and more complex operations like muxing to be able to help technically.
+  * **Perform code reviews**. More eyes will help (a) speed the project along, (b) ensure quality, and (c) reduce possible future bugs.
+  * **Add tests**. There can never be enough tests.
+
+### Want to hack on peer-star-app?
+
+[![](https://cdn.rawgit.com/jbenet/contribute-ipfs-gif/master/img/contribute.gif)](https://github.com/ipfs/community/blob/master/contributing.md)
+
+## License
 
 MIT
