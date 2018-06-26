@@ -16,18 +16,24 @@ class App extends EventEmitter {
     this.ipfs = IPFS(this, options)
     this._peerCountGuess = new PeerCountGuess(this, options && options.peerCountGuess)
     this._collaborations = new Map()
+    this._starting = null
 
     this._onGossipMessage = this._onGossipMessage.bind(this)
   }
 
   start () {
-    return new Promise((resolve, reject) => {
+    if (this._starting) {
+      return this._starting
+    }
+    this._starting = new Promise((resolve, reject) => {
       if (this.ipfs.isOnline()) {
         resolve()
       } else {
         this.ipfs.once('ready', resolve)
       }
     }).then(() => this._peerCountGuess.start())
+
+    return this._starting
   }
 
   async collaborate (name, type, options) {

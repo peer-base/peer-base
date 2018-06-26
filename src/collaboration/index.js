@@ -41,7 +41,16 @@ class Collaboration extends EventEmitter {
     }
   }
 
-  async start () {
+  start () {
+    if (this._starting) {
+      return this._starting
+    }
+
+    this._starting = this._start()
+    return this._starting
+  }
+
+  async _start () {
     await this._membership.start()
     await this._store.start()
     const id = (await this._ipfs.id()).id
