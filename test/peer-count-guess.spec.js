@@ -28,7 +28,7 @@ describe('peer count guess', () => {
   it('can be started', () => guesser.start())
 
   it('gets some gossip', function (done) {
-    this.timeout(11000)
+    this.timeout(20000)
 
     const peers = []
     for (let i = 0; i < peerCount; i++) {
@@ -48,7 +48,7 @@ describe('peer count guess', () => {
       clearInterval(interval)
       expect(guesser.guess()).to.equal(peerCount)
       done()
-    }, 10000)
+    }, 19000)
   })
 
   it('can be stopped', () => guesser.stop())
