@@ -4,7 +4,7 @@ import './App.css';
 
 import PeerStarApp from 'peer-star-app'
 
-import Collaboration from './Collaboration'
+import GCounterCollaboration from './GCounterCollaboration'
 
 class App extends Component {
   constructor () {
@@ -45,7 +45,7 @@ class App extends Component {
           App-wide peer count estimate: {this.state.appPeerCountEstimate} peers
         </p>
 
-        <Collaboration app={this._app} name="peer-star-app-example-counter" type="gcounter" />
+        <GCounterCollaboration app={this._app} name="peer-star-app-example-counter" />
       </div>
     );
   }

@@ -10,7 +10,6 @@ class Collaboration extends Component {
       inboundConnectionCount: 0,
       outboundConnectionCount: 0
     }
-    this.onIncrementClick = this.onIncrementClick.bind(this)
 
     props.app.start().then(() => {
       props.app.collaborate(props.name, props.type)
@@ -37,26 +36,6 @@ class Collaboration extends Component {
           }, 2000)
         })
     })
-  }
-
-  onIncrementClick () {
-    this._collab.shared.inc()
-  }
-
-  render() {
-    return (
-      <div>
-        <hr />
-        <h1>G-Counter</h1>
-        <p className="App-intro">
-          Value: {this.state.value}
-        </p>
-        <button onClick={this.onIncrementClick}>+</button>
-        <p>Have {this.state.peers.size} peers for this collaboration (myself included)</p>
-        <p>Outbound connection count: {this.state.outboundConnectionCount}</p>
-        <p>Inbound connection count: {this.state.inboundConnectionCount}</p>
-      </div>
-    );
   }
 }
 
