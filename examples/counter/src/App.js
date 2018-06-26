@@ -5,6 +5,7 @@ import './App.css';
 import PeerStarApp from 'peer-star-app'
 
 import GCounterCollaboration from './GCounterCollaboration'
+import ArrayCollaboration from './ArrayCollaboration'
 
 class App extends Component {
   constructor () {
@@ -46,6 +47,9 @@ class App extends Component {
         </p>
 
         <GCounterCollaboration app={this._app} name="peer-star-app-example-counter" />
+
+        <ArrayCollaboration app={this._app} name="peer-star-app-example-array" />
+
       </div>
     );
   }
