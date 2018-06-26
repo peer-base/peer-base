@@ -4,15 +4,13 @@ import './App.css';
 
 import PeerStarApp from 'peer-star-app'
 
+import Collaboration from './Collaboration'
+
 class App extends Component {
   constructor () {
     super()
     this.state = {
-      count: 0,
-      peers: new Set(),
-      appPeerCountEstimate: 0,
-      outboundConnectionCount: 0,
-      inboundConnectionCount: 0
+      appPeerCountEstimate: 0
     }
     this.onIncrementClick = this.onIncrementClick.bind(this)
 
@@ -28,30 +26,6 @@ class App extends Component {
         setInterval(() => {
           this.setState({ appPeerCountEstimate: this._app.peerCountEstimate() })
         }, 2000)
-
-        this._app.collaborate('peer-star-counter-example', 'gcounter')
-          .then((collab) => {
-            console.log('collaboration started')
-            this._collab = collab
-
-            this.setState({ count: collab.shared.value() })
-
-            collab.shared.on('state changed', () => {
-              this.setState({ count: collab.shared.value() })
-            })
-
-            collab.on('membership changed', (peers) => {
-              this.setState({ peers })
-              console.log('membership changed:', peers)
-            })
-
-            setInterval(() => {
-              this.setState({
-                inboundConnectionCount: collab.inboundConnectionCount(),
-                outboundConnectionCount: collab.outboundConnectionCount()
-              })
-            }, 2000)
-          })
       })
   }
 
@@ -66,14 +40,12 @@ class App extends Component {
           <img src={logo} className="App-logo" alt="logo" />
           <h1 className="App-title">Welcome to Peer-Star Counter app</h1>
         </header>
+
         <p className="App-intro">
-          Grow-only Counter: {this.state.count}
+          App-wide peer count estimate: {this.state.appPeerCountEstimate} peers
         </p>
-        <button onClick={this.onIncrementClick}>+</button>
-        <p>Have {this.state.peers.size} peers for this collaboration (myself included)</p>
-        <p>App-wide peer count estimate: {this.state.appPeerCountEstimate} peers</p>
-        <p>Outbound connection count: {this.state.outboundConnectionCount}</p>
-        <p>Inbound connection count: {this.state.inboundConnectionCount}</p>
+
+        <Collaboration app={this._app} name="peer-star-app-example-counter" type="gcounter" />
       </div>
     );
   }
