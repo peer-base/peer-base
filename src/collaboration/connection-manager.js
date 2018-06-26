@@ -12,7 +12,6 @@ module.exports = class ConnectionManager {
     this._options = options
 
     this._stopped = true
-    this._newPeers = []
 
     this._ring = ring
     this._ring.on('changed', this._onRingChange.bind(this))
