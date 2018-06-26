@@ -10,7 +10,9 @@ class App extends Component {
     this.state = {
       count: 0,
       peers: new Set(),
-      appPeerCountEstimate: 0
+      appPeerCountEstimate: 0,
+      outboundConnectionCount: 0,
+      inboundConnectionCount: 0
     }
     this.onIncrementClick = this.onIncrementClick.bind(this)
 
@@ -42,6 +44,13 @@ class App extends Component {
               this.setState({ peers })
               console.log('membership changed:', peers)
             })
+
+            setInterval(() => {
+              this.setState({
+                inboundConnectionCount: collab.inboundConnectionCount(),
+                outboundConnectionCount: collab.outboundConnectionCount()
+              })
+            }, 2000)
           })
       })
   }
@@ -61,8 +70,10 @@ class App extends Component {
           Grow-only Counter: {this.state.count}
         </p>
         <button onClick={this.onIncrementClick}>+</button>
-        <p>Have {this.state.peers.size} peers for this collaboration</p>
+        <p>Have {this.state.peers.size} peers for this collaboration (myself included)</p>
         <p>App-wide peer count estimate: {this.state.appPeerCountEstimate} peers</p>
+        <p>Outbound connection count: {this.state.outboundConnectionCount}</p>
+        <p>Inbound connection count: {this.state.inboundConnectionCount}</p>
       </div>
     );
   }
