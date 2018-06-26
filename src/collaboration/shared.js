@@ -22,7 +22,7 @@ module.exports = async (id, type, store) => {
 
       // save
       saving++
-      store.saveDelta([null, null, delta], state)
+      store.saveDelta([null, null, delta])
         .then(() => {
           saving--
         })
