@@ -20,7 +20,7 @@ module.exports = class Membership extends EventEmitter {
     this._options = options
 
     this._members = new Set()
-    this._membershipGossipFrequencyHeuristic = new MembershipGossipFrequencyHeuristic(app, this)
+    this._membershipGossipFrequencyHeuristic = new MembershipGossipFrequencyHeuristic(app, this, options)
     this._someoneHasMembershipWrong = true
 
     this._ring = Ring(this._options.preambleByteCount)

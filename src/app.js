@@ -108,3 +108,5 @@ class App extends EventEmitter {
     this._peerCountGuess.stop()
   }
 }
+
+App.collaborationTypes = require('delta-crdts')

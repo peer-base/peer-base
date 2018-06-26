@@ -33,9 +33,9 @@
     "delay": "^3.0.0",
     "delta-crdts": "~0.2.0",
     "interface-datastore": "~0.4.2",
-    "ipfs": "~0.29.2",
+    "ipfs": "git+https://git@github.com/pgte/js-ipfs.git#feat/libp2p-dynamic-modules",
     "leftpad": "0.0.1",
-    "libp2p-websocket-star": "~0.8.0",
+    "libp2p-websocket-star": "^0.8.1",
     "lodash.debounce": "^4.0.8",
     "msgpack-lite": "~0.1.26",
     "multiaddr": "^5.0.0",
@@ -59,7 +59,7 @@
     "lodash.uniq": "^4.5.0",
     "pull-pair": "^1.1.0",
     "rimraf": "^2.6.2",
-    "sinon": "^5.0.10"
+    "sinon": "^5.1.1"
   },
   "browser": {
     "./test/utils/repo.js": "./test/utils/repo-browser.js"
