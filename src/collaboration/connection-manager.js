@@ -60,6 +60,14 @@ module.exports = class ConnectionManager {
     this._globalConnectionManager.unhandle(this._protocol.name())
   }
 
+  outboundConnectionCount () {
+    return this._outboundConnections.size
+  }
+
+  inboundConnectionCount () {
+    return this._inboundConnections.size
+  }
+
   _onRingChange () {
     this._debouncedResetConnections()
   }

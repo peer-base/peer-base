@@ -59,6 +59,14 @@ class Collaboration extends EventEmitter {
     return this._membership.peers()
   }
 
+  outboundConnectionCount () {
+    return this._membership.outboundConnectionCount()
+  }
+
+  inboundConnectionCount () {
+    return this._membership.inboundConnectionCount()
+  }
+
   deliverRemoteMembership (membership) {
     return this._membership.deliverRemoteMembership(membership)
   }
@@ -69,9 +77,5 @@ class Collaboration extends EventEmitter {
 
   getState () {
     return this._store.getState()
-  }
-
-  async _startShared () {
-
   }
 }

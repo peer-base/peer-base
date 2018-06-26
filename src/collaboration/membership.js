@@ -71,6 +71,14 @@ module.exports = class Membership extends EventEmitter {
     return new Set(this._members)
   }
 
+  outboundConnectionCount () {
+    return this._connectionManager.outboundConnectionCount()
+  }
+
+  inboundConnectionCount () {
+    return this._connectionManager.inboundConnectionCount()
+  }
+
   needsUrgentBroadcast () {
     // needs to broadcast if self id is not included in the member set yet
     if (this._someoneHasMembershipWrong) {
