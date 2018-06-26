@@ -47,8 +47,8 @@ class TextCollaboration extends Collaboration {
   }
 
   restoreCursorPos () {
-    this.refs.collaborativeTextArea.selectionStart = this.cursor.start
-    this.refs.collaborativeTextArea.selectionEnd = this.cursor.end
+    // this.refs.collaborativeTextArea.selectionStart = this.cursor.start
+    // this.refs.collaborativeTextArea.selectionEnd = this.cursor.end
   }
 
   componentDidUpdate () {
