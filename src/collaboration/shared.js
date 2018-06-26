@@ -6,7 +6,6 @@ const EventEmitter = require('events')
 module.exports = async (id, type, store) => {
   const shared = new EventEmitter()
   const crdt = type(id)
-  let saving = 0
   let state = crdt.initial()
 
   // Populate shared methods
@@ -16,18 +15,10 @@ module.exports = async (id, type, store) => {
     const mutator = crdt.mutators[mutatorName]
     shared[mutatorName] = (...args) => {
       const delta = mutator(state, ...args)
-      state = crdt.join(state, delta)
-      debug('new state is', state)
-      shared.emit('state changed')
 
       // save
-      saving++
       store.saveDelta([null, null, delta])
-        .then(() => {
-          saving--
-        })
         .catch((err) => {
-          saving--
           shared.emit('error', err)
         })
     }
@@ -38,38 +29,26 @@ module.exports = async (id, type, store) => {
 
   // hook up store events to crdt
   const onStoreStateChanged = (newState) => {
-    if (!saving) {
-      state = crdt.join(state, newState)
-      debug('new state after join is', state)
-      shared.emit('state changed')
-    }
+    state = crdt.join(state, newState)
+    debug('new state after join is', state)
+    shared.emit('state changed')
   }
   store.on('state changed', onStoreStateChanged)
-
-  const onStoreDelta = (delta, clock) => {
-    if (!saving) {
-      state = crdt.join(state, delta)
-      shared.emit('state changed')
-    }
-  }
-  store.on('delta', onStoreDelta)
+  store.on('delta', onStoreStateChanged)
 
   shared.apply = (s) => {
-    if (!saving) {
-      state = crdt.join(state, s)
-    }
+    state = crdt.join(state, s)
     return state
   }
 
   shared.stop = () => {
     store.removeListener('state changed', onStoreStateChanged)
-    store.removeListener('delta', onStoreDelta)
+    store.removeListener('delta', onStoreStateChanged)
   }
 
   const storeState = await store.getState()
   if (storeState !== undefined) {
     state = crdt.join(state, storeState)
-    setImmediate(() => shared.emit('state changed'))
   }
 
   return shared

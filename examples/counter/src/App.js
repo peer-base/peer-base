@@ -32,13 +32,15 @@ class App extends Component {
             console.log('collaboration started')
             this._collab = collab
 
-            collab.on('membership changed', (peers) => {
-              this.setState({ peers })
-              console.log('membership changed:', peers)
-            })
+            this.setState({ count: collab.shared.value() })
 
             collab.shared.on('state changed', () => {
               this.setState({ count: collab.shared.value() })
+            })
+
+            collab.on('membership changed', (peers) => {
+              this.setState({ peers })
+              console.log('membership changed:', peers)
             })
           })
       })
