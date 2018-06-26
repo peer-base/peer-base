@@ -6,6 +6,7 @@ import PeerStarApp from 'peer-star-app'
 
 import GCounterCollaboration from './GCounterCollaboration'
 import ArrayCollaboration from './ArrayCollaboration'
+import TextCollaboration from './TextCollaboration'
 
 class App extends Component {
   constructor () {
@@ -49,6 +50,8 @@ class App extends Component {
         <GCounterCollaboration app={this._app} name="peer-star-app-example-counter" />
 
         <ArrayCollaboration app={this._app} name="peer-star-app-example-array" />
+
+        <TextCollaboration app={this._app} name="peer-star-app-example-text" />
 
       </div>
     );
