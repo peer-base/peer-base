@@ -19,6 +19,11 @@ $ npm install peer-star-app
 const PeerStar = require('peer-star-app')
 ```
 
+# Documentation
+
+* [Code structure](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/CODE-STRUCTURE.md)
+* [Protocol](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/PROTOCOL.md)
+
 ## API
 
 ### Create app
