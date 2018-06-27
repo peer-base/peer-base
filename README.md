@@ -41,6 +41,14 @@ Options (are not required):
 await app.start()
 ```
 
+### js-IPFS node
+
+A peer-star app comes with an IPFS node. You can access through `app.ipfs`. Example:
+
+```js
+console.log(await app.ipfs.id())
+```
+
 ### Create collaboration
 
 ```js
