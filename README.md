@@ -225,6 +225,16 @@ $ npm install
 $ npm test
 ```
 
+# Debug
+
+You can activate the debugging logs by manipulating the `DEBUG` environment variable. Example:
+
+```bash
+$ DEBUG=peer-star:* npm test
+```
+
+For file-specific `DEBUG` values, see the source code and look for usages of the `debug` package.
+
 ## Contribute
 
 Peer-star app and the IPFS implementation in JavaScript is a work in progress. As such, there's a few things you can do right now to help out:
