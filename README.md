@@ -149,7 +149,7 @@ collaboration.shared.push('some element')
 
 ```js
 await collaboration.stop()
-``
+```
 
 ### Stop app
 
