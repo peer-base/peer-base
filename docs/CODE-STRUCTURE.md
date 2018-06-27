@@ -36,7 +36,7 @@ src/
 
 ## `src/app.js`
 
-[Link](src/app.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/app.js)
 
 Represents the application. Has a name (should be unique in the universe). After instantiated, ot should be started.
 
@@ -48,7 +48,7 @@ Delivers membership gossip messages to each one of the registered collaborations
 
 ## `src/peer-count-guess.js`
 
-[Link](src/peer-count-guess.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/app.js)
 
 Observes overall gossip observed by the application (by listening to the app `gossip` event).
 
@@ -58,7 +58,7 @@ using that, for each gossip message, it extracts the source peer id and adds it 
 
 ### `src/common/ring.js`
 
-[Link](src/common/ring.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/common/ring.js)
 
 A hash ring of peers. Peers can be added, removed, and inquired if they belong.
 
@@ -68,7 +68,7 @@ Does all this by maintaining a sorted list of peers (points in the ring).
 
 ### `src/common/dias-peer-set.js`
 
-[Link](src/common/dias-peer-set.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/common/dias-peer-set.js)
 
 Given a ring and a peer id (the self peer id), it computes the set of peers that are in the following positions:
 
@@ -81,13 +81,19 @@ Given a ring and a peer id (the self peer id), it computes the set of peers that
 
 ### `src/common/peer-set.js`
 
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/common/peer-set.js)
+
 As a Set, but only for `PeerInfo` instances. Uniqueness by peer id. Exposes the JS `Set` API.
 
 ### `src/common/encode.js`
 
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/common/encode.js)
+
 Encodes data to be sent over the wire and stored. Uses msgpack for that.
 
 ### `src/common/decode.js`
+
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/common/decode.js)
 
 Decodes data from the network and storage. Uses msgpack for that.
 
@@ -97,7 +103,7 @@ Everything pertaining to app-wide transport and discovery, interfacing with libp
 
 ### `src/transport/ipfs.js`
 
-[Link](src/transport/ipfs.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/transport/ipfs.js)
 
 Creates the js-IPFS node. When doing that, it instantiates the AppTransport (see later) and defines that as the transport module.
 
@@ -105,7 +111,7 @@ It relays some app-transport events into the app itself.
 
 ### `src/transport/app-transport.js`
 
-[Link](src/transport/app-transport.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/transport/app-transport.js)
 
 Wraps the original libp2p transport. Creates a ring from the discovered nodes. Maintains a list of inbound and outbound connections. Connects all these into the global connection manager (explained later).
 
@@ -114,6 +120,8 @@ Exposes a `discovery` object that libp2p will use.
 Instantiates a connection manager that maintains connections to a subset of nodes.
 
 ### `src/transport/discovery.js`
+
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/transport/discovery.js)
 
 Wraps the native transport discovery and filters discovery events.
 
@@ -127,7 +135,7 @@ If the peer is interested, it's added to the hash ring. Otherwise, the peer is d
 
 ### `src/transport/global-connection-manager.js`
 
-[Link](src/transport/global-connection-manager.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/transport/global-connection-manager.js)
 
 Manages app-wide connections to other peers. It does that by keeping a list of inbound and outbound connections and a lust of collaborations per peer.
 
@@ -139,14 +147,14 @@ Collaboration-specific code.
 
 ### `src/collaboration/index.js`
 
-[Link](src/collaboration/index.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/collaboration/index.js)
 
 Internally instantiated by the app. Exposes the internal Collaboration class. It has a collaboration store, keeps track of the collaboration membership (by delegating collaboration-specific membership messages) and helps defining the CRDT type of the collaboration.
 
 
 ### `src/collaboration/membership.js`
 
-[Link](src/collaboration/membership.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/collaboration/membership.js)
 
 Keeps tracks of collaboration members. Receives gossip messages from the app and incorporates into the membership set. Has an heuristic to define the frequency of the membership gossip.
 
@@ -155,7 +163,7 @@ Creates the DiasSet definition and passes it down to the collaboration-specific 
 
 ### `src/collaboration/connection-manager.js`
 
-[Link](src/collaboration/connection-manager.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/collaboration/connection-manager.js)
 
 Maintains a list of collaboration-specific inbound and outbound connections. Instantiates the protocol (see below). Maintains the ring of known peers passed in from the membership.
 
@@ -163,13 +171,13 @@ When ring changes happen, we debounce that event and then react to it by maintai
 
 ### `src/collaboration/protocol.js`
 
-[Link](src/collaboration/protocol.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/collaboration/protocol.js)
 
 Exposes a protocol handler and a dialer. The protocol handler delegates into the pull protocol (see below). The dialer delegates into the push protocol (see below).
 
 ### `src/collaboration/push-protocol.js`
 
-[Link](src/collaboration/push-protocol.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/collaboration/push-protocol.js)
 
 For any given peer, is able to create a peer connection-handling stream as a pull stream.
 
@@ -183,7 +191,7 @@ In lazy mode, it only pushes the local store vector clock.
 
 ### `src/collaboration/pull-protocol.js`
 
-[Link](src/collaboration/pull-protocol.js)
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/collaboration/pull-protocol.js)
 
 For any given peer, is able to create a peer connection-handling stream as a pull stream.
 
@@ -196,6 +204,8 @@ It's also responsible for:
 
 ### `src/collaboration/store.js`
 
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/collaboration/store.js)
+
 Collaboration store. Wraps the IPFS data store into a collaboration-specific namespace.
 
 Stores the clock, the state and the deltas.
@@ -207,6 +217,8 @@ Incorporates changes in causal order (by processing requests from a queue), reje
 Uses the shared CRDT (see below) to merge states and deltas to form the new state every time there is a change.
 
 ### `src/collaboration/shared.js`
+
+[Link](https://github.com/ipfs-shipyard/peer-star-app/blob/master/src/collaboration/shared.js)
 
 Exposes to the user the `collaboration.shared` API, where you have:
 
