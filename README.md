@@ -1,6 +1,8 @@
 # peer-star-app
 
-Peer-Star App support
+Peer-Star App support for real-time collaborative DApps built on top of IPFS
+
+[![Build Status](https://travis-ci.org/ipfs-shipyard/peer-star-app.svg?branch=master)](https://travis-ci.org/ipfs-shipyard/peer-star-app)
 
 * [Example app](examples/react-app)
 * [How to run the example app](#run-example-app)
