@@ -87,6 +87,35 @@ Returns estimate of peers in app.
 app.peerCountEstimate()
 ```
 
+### App Events
+
+#### `app.emit('error', err)`
+
+#### `app.emit('peer connected', (peerInfo) => {})`
+
+When a peer connects.
+
+#### `app.emit('outbound peer connected', (peerInfo) => {})`
+
+When a push connection is created.
+
+#### `app.emit('inbound peer connected', (peerInfo) => {})`
+
+When a pull connection is created.
+
+#### `app.emit('peer disconnected', (peerInfo) => {})`
+
+When a peer disconnects.
+
+#### `app.emit('outbound peer disconnected', (peerInfo) => {})`
+
+When a push connection ends.
+
+#### `app.emit('inbound peer disconnected', (peerInfo) => {})`
+
+When a pull connection ends.
+
+
 ### Collaboration
 
 #### `collaboration.peers()`
