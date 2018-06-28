@@ -69,7 +69,12 @@ export default (id) => ({
   value (s) {
     const cidMap = new Map()
     const tree = []
-    for (let el of s) {
+    for (let _el of s) {
+      const el = clone(_el)
+      console.log('el:', el)
+      if (cidMap.has(s.cid)) {
+        continue
+      }
       cidMap.set(el.cid, el)
       const parentCid = el.parentCid
       const parent = parentCid && cidMap.get(parentCid)
@@ -82,6 +87,8 @@ export default (id) => ({
         tree.push(el)
       }
     }
+
+    console.log('tree:', tree)
 
     return tree
   },

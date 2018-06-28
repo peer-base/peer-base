@@ -12,10 +12,6 @@ class DiscussionTreeCollaboration extends Collaboration {
     this.onAddClick = this.onAddClick.bind(this)
   }
 
-  onTextChange (event) {
-    this.setState({ text: event.target.value })
-  }
-
   onAddClick () {
     const message = {
       cid: this.refs.cid.value,
@@ -24,10 +20,6 @@ class DiscussionTreeCollaboration extends Collaboration {
       signature: this.refs.signature.value
     }
     this._collab.shared.add(message)
-  }
-
-  onPosChange (event) {
-    this.setState({ pos: Number(event.target.value) })
   }
 
   render() {

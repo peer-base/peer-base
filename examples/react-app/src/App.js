@@ -54,7 +54,7 @@ class App extends Component {
 
         <TextCollaboration app={this._app} name="peer-star-app-example-text" />
 
-        <DiscussionTreeCollaboration app={this._app} name="peer-star-app-example-discussion" />
+        <DiscussionTreeCollaboration app={this._app} name="peer-star-app-example-discussion-2" />
 
       </div>
     );
