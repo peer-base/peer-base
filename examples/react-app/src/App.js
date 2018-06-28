@@ -7,6 +7,7 @@ import PeerStarApp from 'peer-star-app'
 import GCounterCollaboration from './GCounterCollaboration'
 import ArrayCollaboration from './ArrayCollaboration'
 import TextCollaboration from './TextCollaboration'
+import DiscussionTreeCollaboration from './DiscussionTreeCollaboration'
 
 class App extends Component {
   constructor () {
@@ -52,6 +53,8 @@ class App extends Component {
         <ArrayCollaboration app={this._app} name="peer-star-app-example-array" />
 
         <TextCollaboration app={this._app} name="peer-star-app-example-text" />
+
+        <DiscussionTreeCollaboration app={this._app} name="peer-star-app-example-discussion" />
 
       </div>
     );
