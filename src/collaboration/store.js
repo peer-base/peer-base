@@ -144,7 +144,7 @@ module.exports = class CollaborationStore extends EventEmitter {
     return this._get('/state')
   }
 
-  deltaStream (since) {
+  deltaStream (since = {}) {
     debug('%s: delta stream since %j', this._id, since)
     return pull(
       this._store.query({
