@@ -36,7 +36,6 @@ const app = PeerStar('app name', options)
 
 Options (are not required):
 
-* `debounceResetConnectionsMS`: (defaults to `1000`): debounce membership changes before resetting connections.
 * `ipfs`: object with:
   * `repo`: IPFS repo path or repo object
   * `swarm`: ipfs swarm addresses (array of string)
@@ -61,15 +60,19 @@ console.log(await app.ipfs.id())
 ### Create collaboration
 
 ```js
-const collaboration = await app.collaborate(collaborationName, type)
+const collaboration = await app.collaborate(collaborationName, type, options)
 
 // stop collaboration
 await collaboration.stop()
 ```
 
 Arguments:
-* collaborationName: string: should uniquely identify this collaboration in the whole world
-* type: a string, identifying which type of CRDT should be used. Use [this reference table in the delta-crdts package](https://github.com/ipfs-shipyard/js-delta-crdts#types).
+* `collaborationName`: string: should uniquely identify this collaboration in the whole world
+* `type`: a string, identifying which type of CRDT should be used. Use [this reference table in the delta-crdts package](https://github.com/ipfs-shipyard/js-delta-crdts#types).
+* `options`: object, optional. Can contain the keys:
+  * `maxDeltaRetention`: number: maximum number of retained deltas. Defaults to `1000`.
+  * `deltaTrimTimeoutMS`: number: after a delta was added to the store, the time it waits before trying to trim the deltas.
+  * `debounceResetConnectionsMS`: (defaults to `1000`): debounce membership changes before resetting connections.
 
 #### Create your own collaboration type
 
