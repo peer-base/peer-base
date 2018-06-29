@@ -4,6 +4,7 @@ const debug = require('debug')('peer-star:collaboration:protocol')
 const EventEmitter = require('events')
 const pull = require('pull-stream')
 
+const Clocks = require('./clocks')
 const PushProtocol = require('./push-protocol')
 const PullProtocol = require('./pull-protocol')
 
@@ -22,8 +23,10 @@ class Protocol extends EventEmitter {
     this._collaboration = collaboration
     this._store = store
     this._options = Object.assign({}, defaultOptions, options)
-    this._pushProtocol = new PushProtocol(ipfs, store, this._options)
-    this._pullProtocol = new PullProtocol(ipfs, store, this._options)
+    this._streamsFor = new Map()
+    this._clocks = new Clocks()
+    this._pushProtocol = new PushProtocol(ipfs, store, this._clocks, this._options)
+    this._pullProtocol = new PullProtocol(ipfs, store, this._clocks, this._options)
 
     this.handler = this.handler.bind(this)
   }
@@ -40,12 +43,15 @@ class Protocol extends EventEmitter {
         return this.emit('error', err)
       }
 
+      this._incrementStreamsFor(peerInfo)
+
       this.emit('inbound connection', peerInfo)
 
       pull(
         conn,
         this._pullProtocol.forPeer(peerInfo),
         passthrough((err) => {
+          this._decrementStreamsFor(peerInfo)
           if (err) {
             console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
             debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
@@ -60,10 +66,13 @@ class Protocol extends EventEmitter {
   dialerFor (peerInfo, conn) {
     this.emit('outbound connection', peerInfo)
 
+    this._incrementStreamsFor(peerInfo)
+
     pull(
       conn,
       this._pushProtocol.forPeer(peerInfo),
       passthrough((err) => {
+        this._decrementStreamsFor(peerInfo)
         if (err) {
           console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
@@ -79,6 +88,20 @@ class Protocol extends EventEmitter {
       this._cachedPeerId = this._ipfs._peerInfo.id.toB58String()
     }
     return this._cachedPeerId
+  }
+
+  _incrementStreamsFor (peerInfo) {
+    const peerId = peerInfo.id.toB58String()
+    this._streamsFor.set(peerId, (this._streamsFor.get(peerId) || 0) + 1)
+  }
+
+  _decrementStreamsFor (peerInfo) {
+    const peerId = peerInfo.id.toB58String()
+    let count = this._streamsFor.get(peerId) || 0
+    count = Math.max(count - 1, 0)
+    if (!count) {
+      this._clocks.takeDown(peerId)
+    }
   }
 }
 

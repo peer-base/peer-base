@@ -13,10 +13,11 @@ const decode = require('../common/decode')
 const encode = require('../common/encode')
 
 module.exports = class CollaborationStore extends EventEmitter {
-  constructor (ipfs, collaboration) {
+  constructor (ipfs, collaboration, options) {
     super()
     this._ipfs = ipfs
     this._collaboration = collaboration
+    this._options = options
 
     this._queue = new Queue({ concurrency: 1 })
   }
@@ -94,7 +95,9 @@ module.exports = class CollaborationStore extends EventEmitter {
         this._save('/state', newState),
         this._save('/clock', nextClock),
         this._save('/seq', seq)
-      ].filter(Boolean))
+      ])
+
+      this._scheduleDeltaTrim()
 
       debug('%s: saved delta and vector clock', this._id)
       this.emit('delta', delta, nextClock)
@@ -157,7 +160,7 @@ module.exports = class CollaborationStore extends EventEmitter {
       }),
       pull.asyncMap(([previousClock, author, delta], callback) => {
         const clock = vectorclock.increment(previousClock, author)
-        if (vectorclock.compare(clock, since) < 0) {
+        if (vectorclock.compare(clock, since) < 0 || vectorclock.isIdentical(clock, since)) {
           debug('%s: candidate rejected because of clock: %j', this._id, clock)
           return callback(null, null)
         }
@@ -190,6 +193,51 @@ module.exports = class CollaborationStore extends EventEmitter {
           resolve()
         }
       })
+    })
+  }
+
+  _scheduleDeltaTrim () {
+    if (this._deltaTrimTimeout) {
+      clearTimeout(this._deltaTrimTimeout)
+    }
+    this._deltaTrimTimeout = setTimeout(() => {
+      this._deltaTrimTimeout = null
+      if (this._trimmingDeltas) {
+        return
+      }
+      this._trimDeltas()
+    }, this._options.deltaTrimTimeoutMS)
+  }
+
+  _trimDeltas () {
+    this._trimmingDeltas = true
+    return new Promise((resolve, reject) => {
+      const seq = this._seq
+      const first = Math.max(seq - this._options.maxDeltaRetention, 0)
+      pull(
+        this._store.query({
+          prefix: '/d:',
+          keysOnly: true
+        }),
+        pull.map((d) => d.key),
+        pull.asyncMap((key, callback) => {
+          const thisSeq = Number(key.toString().substring(3))
+          if (thisSeq < first) {
+            debug('%s: trimming delta with sequence %s', this._id, thisSeq)
+            this._store.delete(key, callback)
+          } else {
+            callback()
+          }
+        }),
+        pull.onEnd((err) => {
+          this._trimmingDeltas = false
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
+      )
     })
   }
 }

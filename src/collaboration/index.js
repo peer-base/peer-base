@@ -9,7 +9,9 @@ const CRDT = require('./crdt')
 const defaultOptions = {
   preambleByteCount: 2,
   peerIdByteCount: 32,
-  debounceResetConnectionsMS: 1000
+  debounceResetConnectionsMS: 1000,
+  maxDeltaRetention: 1000,
+  deltaTrimTimeoutMS: 1000
 }
 
 module.exports = (...args) => new Collaboration(...args)
@@ -22,7 +24,7 @@ class Collaboration extends EventEmitter {
     this.name = name
     this._options = Object.assign({}, defaultOptions, options)
 
-    this._store = new Store(ipfs, this)
+    this._store = new Store(ipfs, this, this._options)
     this._store.on('state changed', (state) => {
       this.emit('state changed', state)
     })
