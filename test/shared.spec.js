@@ -12,9 +12,10 @@ const Store = require('../src/collaboration/store')
 const CRDT = require('../src/collaboration/crdt')
 require('./utils/fake-crdt')
 
-process.on('unhandledRejection', (err) => {
-  console.log(err)
-})
+const storeOptions = {
+  maxDeltaRetention: 0,
+  deltaTrimTimeoutMS: 0
+}
 
 describe('shared', () => {
   let shared
@@ -33,7 +34,7 @@ describe('shared', () => {
     const collaboration = {
       name: 'shared test collaboration'
     }
-    const store = new Store(ipfs, collaboration)
+    const store = new Store(ipfs, collaboration, storeOptions)
     await store.start()
     shared = await Shared('replica id', CRDT('fake'), store)
     store.setShared(shared)
