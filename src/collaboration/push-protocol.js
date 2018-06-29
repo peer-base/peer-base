@@ -54,7 +54,6 @@ module.exports = class PushProtocol {
         await pushDeltas()
         if (remoteNeedsUpdate()) {
           if (pushing) {
-            console.log('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
             debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
             // remote still needs update
             const clockAndState = await this._store.getClockAndState()
@@ -103,13 +102,11 @@ module.exports = class PushProtocol {
       const [newRemoteClock, startLazy, startEager] = message
 
       if (startLazy) {
-        console.log('%s: push connection to %s now in lazy mode', this._peerId(), remotePeerId)
         debug('%s: push connection to %s now in lazy mode', this._peerId(), remotePeerId)
         pushing = false
       }
 
       if (startEager) {
-        console.log('%s: push connection to %s now in eager mode', this._peerId(), remotePeerId)
         debug('%s: push connection to %s now in eager mode', this._peerId(), remotePeerId)
         pushing = true
       }
