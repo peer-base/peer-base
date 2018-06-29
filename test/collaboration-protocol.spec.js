@@ -15,6 +15,11 @@ const Protocol = require('../src/collaboration/protocol')
 
 const Type = require('./utils/fake-crdt')
 
+const storeOptions = {
+  maxDeltaRetention: 0,
+  deltaTrimTimeoutMS: 0
+}
+
 describe('collaboration protocol', function () {
   const pusher = {}
   const puller = {}
@@ -33,7 +38,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    pusher.store = new Store(ipfs, collaboration)
+    pusher.store = new Store(ipfs, collaboration, storeOptions)
     await pusher.store.start()
     pusher.protocol = Protocol(ipfs, collaboration, pusher.store)
     pusher.shared = await Shared('pusher', Type, pusher.store)
@@ -51,7 +56,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    puller.store = new Store(ipfs, collaboration)
+    puller.store = new Store(ipfs, collaboration, storeOptions)
     await puller.store.start()
     puller.protocol = Protocol(ipfs, collaboration, puller.store, {
       receiveTimeout: 500
@@ -102,7 +107,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    pusher2.store = new Store(ipfs, collaboration)
+    pusher2.store = new Store(ipfs, collaboration, storeOptions)
     await pusher2.store.start()
     pusher2.protocol = Protocol(ipfs, collaboration, pusher2.store)
     pusher2.shared = await Shared('pusher 2', Type, pusher2.store)
@@ -178,7 +183,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    puller2.store = new Store(ipfs, collaboration)
+    puller2.store = new Store(ipfs, collaboration, storeOptions)
     await puller2.store.start()
     puller2.protocol = Protocol(ipfs, collaboration, puller2.store, {
       receiveTimeout: 500
