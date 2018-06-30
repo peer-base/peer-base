@@ -12,9 +12,6 @@ export default (id) => ({
       const el1 = s1[i1]
       const el2 = s2[i2]
 
-      console.log('el1:', el1)
-      console.log('el2:', el2)
-
       if (!el1) {
         s1.push(el2)
         i2++
@@ -71,7 +68,6 @@ export default (id) => ({
     const tree = []
     for (let _el of s) {
       const el = clone(_el)
-      console.log('el:', el)
       if (cidMap.has(s.cid)) {
         continue
       }
@@ -87,8 +83,6 @@ export default (id) => ({
         tree.push(el)
       }
     }
-
-    console.log('tree:', tree)
 
     return tree
   },

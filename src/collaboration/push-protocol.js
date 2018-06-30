@@ -9,9 +9,10 @@ const encode = require('../common/encode')
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PushProtocol {
-  constructor (ipfs, store, options) {
+  constructor (ipfs, store, clocks, options) {
     this._ipfs = ipfs
     this._store = store
+    this._clocks = clocks
     this._options = options
   }
 
@@ -21,19 +22,17 @@ module.exports = class PushProtocol {
     const queue = new Queue({ concurrency: 1 })
     let ended = false
     let pushing = true
-    let remoteClock = null
-    let localClock = null
-    let pushedClock = null
 
     const pushDeltas = () => {
       debug('%s: pushing deltas to %s', this._peerId(), remotePeerId)
       return new Promise((resolve, reject) => {
         pull(
-          this._store.deltaStream(remoteClock),
+          this._store.deltaStream(this._clocks.getFor(remotePeerId)),
           pull.map(([previousClock, author, delta]) => {
             debug('%s: delta:', this._peerId(), delta)
             if (pushing) {
-              pushedClock = vectorclock.increment(previousClock, author)
+              const pushedClock = vectorclock.increment(previousClock, author)
+              this._clocks.setFor(remotePeerId, pushedClock)
               // TODO: consider sending only clock deltas
               output.push(encode([[previousClock, author, delta]]))
             }
@@ -55,32 +54,33 @@ module.exports = class PushProtocol {
         await pushDeltas()
         if (remoteNeedsUpdate()) {
           if (pushing) {
+            debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
             // remote still needs update
             const clockAndState = await this._store.getClockAndState()
             const [clock] = clockAndState
             if (Object.keys(clock).length) {
-              pushedClock = clock
+              this._clocks.setFor(remotePeerId, clock)
               debug('%s: sending clock and state to %s:', this._peerId(), remotePeerId, clockAndState)
               output.push(encode([null, clockAndState]))
             }
           } else {
             // send only clock
-            output.push(encode([null, [localClock]]))
+            const myClock = this._clocks.getFor(this._peerId())
+            output.push(encode([null, [myClock]]))
           }
         }
       } else {
-        const clock = await this._store.getLatestClock()
-        output.push(encode([null, [clock]]))
+        const myClock = this._clocks.getFor(this._peerId())
+        output.push(encode([null, [myClock]]))
       }
     }
 
     const remoteNeedsUpdate = () => {
-      debug('%s: comparing local clock %j to remote clock %j', this._peerId(), localClock, remoteClock)
-      return localClock &&
-          (!remoteClock || !pushedClock ||
-            (vectorclock.compare(localClock, remoteClock) >= 0 &&
-            !vectorclock.isIdentical(localClock, remoteClock) &&
-            !vectorclock.isIdentical(localClock, pushedClock)))
+      const myClock = this._clocks.getFor(this._peerId())
+      const remoteClock = this._clocks.getFor(remotePeerId)
+      debug('%s: comparing local clock %j to remote clock %j', this._peerId(), myClock, remoteClock)
+      return (vectorclock.compare(myClock, remoteClock) >= 0) &&
+             (!vectorclock.isIdentical(myClock, remoteClock))
     }
 
     const reduceEntropy = () => {
@@ -90,7 +90,7 @@ module.exports = class PushProtocol {
     }
 
     const onClockChanged = (newClock) => {
-      localClock = newClock
+      this._clocks.setFor(this._peerId(), newClock)
       queue.add(reduceEntropy).catch(onEnd)
     }
 
@@ -112,15 +112,13 @@ module.exports = class PushProtocol {
       }
 
       if (newRemoteClock) {
-        remoteClock = vectorclock.merge(remoteClock || {}, newRemoteClock)
+        this._clocks.setFor(remotePeerId, newRemoteClock)
       }
       if (newRemoteClock || startEager) {
-        queue.add(() => {
-          this._store.getLatestClock()
-            .then((latestClock) => {
-              localClock = latestClock
-              return reduceEntropy()
-            })
+        queue.add(async() => {
+          const myClock = await this._store.getLatestClock()
+          this._clocks.setFor(this._peerId(), myClock)
+          await reduceEntropy()
         }).catch(onEnd)
       }
     }

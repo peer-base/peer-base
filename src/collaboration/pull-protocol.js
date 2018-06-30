@@ -9,9 +9,10 @@ const encode = require('../common/encode')
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PullProtocol {
-  constructor (ipfs, store, options) {
+  constructor (ipfs, store, clocks, options) {
     this._ipfs = ipfs
     this._store = store
+    this._clocks = clocks
     this._options = options
   }
 
@@ -23,12 +24,13 @@ module.exports = class PullProtocol {
     let waitingForClock = null
     let timeout
 
-    const onNewClock = (clock) => {
+    const onNewLocalClock = (clock) => {
       debug('%s got new clock from state:', this._peerId(), clock)
       // TODO: only send difference from previous clock
+      this._clocks.setFor(this._peerId(), clock)
       output.push(encode([clock]))
     }
-    this._store.on('clock changed', onNewClock)
+    this._store.on('clock changed', onNewLocalClock)
 
     const onData = (err, data) => {
       if (err) {
@@ -48,10 +50,12 @@ module.exports = class PullProtocol {
           delta = deltaRecord[2]
           clock = vectorclock.increment(previousClock, author)
         } else if (newState) {
-          [clock, state] = newState
+          clock = newState[0]
+          state = newState[1]
         }
 
         if (clock) {
+          this._clocks.setFor(remotePeerId, clock)
           if (state || delta) {
             if (waitingForClock &&
                 (vectorclock.isIdentical(waitingForClock, clock) ||
@@ -64,8 +68,9 @@ module.exports = class PullProtocol {
             }
             if (await this._store.contains(clock)) {
               // we already have this state
-              // send a "prune" message
-              debug('%s: setting %s to lazy mode', this._peerId(), remotePeerId)
+              // send a "prune" messagere
+              debug('%s: store contains clock', this._peerId(), clock)
+              debug('%s: setting %s to lazy mode (1)', this._peerId(), remotePeerId)
               output.push(encode([null, true]))
             } else {
               let saved
@@ -76,7 +81,7 @@ module.exports = class PullProtocol {
               }
               if (!saved) {
                 debug('%s: did not save', this._peerId())
-                debug('%s: setting %s to lazy mode', this._peerId(), remotePeerId)
+                debug('%s: setting %s to lazy mode (2)', this._peerId(), remotePeerId)
                 output.push(encode([null, true]))
               } else {
                 debug('%s: saved with new clock %j', this._peerId(), saved)
@@ -115,11 +120,12 @@ module.exports = class PullProtocol {
     const onEnd = (err) => {
       if (!ended) {
         if (err) {
+          console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err)
           console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.message)
           debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)
         }
         ended = true
-        this._store.removeListener('clock changed', onNewClock)
+        this._store.removeListener('clock changed', onNewLocalClock)
         output.end(err)
       }
     }

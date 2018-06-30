@@ -54,7 +54,8 @@ module.exports = class GlobalConnectionManager {
                 console.error('connection to %s ended with error', peerId, err.message)
                 debug('connection to %s ended with error', peerId, err)
               }
-              this._peerCollaborations.get(peerId).delete(protocol)
+              const peerCollaborations = this._peerCollaborations.get(peerId)
+              peerCollaborations && peerCollaborations.delete(protocol)
               this.maybeHangUp(peerInfo)
             })
           )
