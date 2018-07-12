@@ -19,6 +19,11 @@ module.exports = class CollaborationStore extends EventEmitter {
     this._collaboration = collaboration
     this._options = options
 
+    this._cipher = options.createCipher
+    if (typeof this._cipher !== 'function') {
+      throw new Error('need options.createCipher')
+    }
+
     this._queue = new Queue({ concurrency: 1 })
   }
 
@@ -46,7 +51,7 @@ module.exports = class CollaborationStore extends EventEmitter {
 
   _get (key) {
     return new Promise((resolve, reject) => {
-      this._store.get(key, parsingResult((err, value) => {
+      this._store.get(key, this._parsingResult((err, value) => {
         if (err) {
           return reject(err)
         }
@@ -153,7 +158,7 @@ module.exports = class CollaborationStore extends EventEmitter {
       this._store.query({
         prefix: '/d:'
       }),
-      pull.map((d) => decode(d.value)),
+      pull.asyncMap(({value}, cb) => this._decode(value, cb)),
       pull.map((d) => {
         debug('%s: delta stream candidate: %j', this._id, d)
         return d
@@ -185,8 +190,13 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   _save (key, value) {
+    return this._encode(value || null)
+      .then((encoded) => this._saveEncoded(key, encoded))
+  }
+
+  _saveEncoded (key, value) {
     return new Promise((resolve, reject) => {
-      this._store.put(key, encode(value || null), (err) => {
+      this._store.put(key, value, (err) => {
         if (err) {
           reject(err)
         } else {
@@ -240,6 +250,43 @@ module.exports = class CollaborationStore extends EventEmitter {
       )
     })
   }
+
+  _encode (value) {
+    return this._cipher().then((cipher) => {
+      return new Promise((resolve, reject) => {
+        cipher.encrypt(encode(value), (err, encrypted) => {
+          if (err) {
+            return reject(err)
+          }
+          resolve(encrypted)
+        })
+      })
+    })
+  }
+
+  _decode (bytes, callback) {
+    this._cipher().then((cipher) => {
+      cipher.decrypt(bytes, (err, decrypted) => {
+        if (err) {
+          return callback(err)
+        }
+        const decoded = decode(decrypted)
+        callback(null, decoded)
+      })
+    }).catch(callback)
+  }
+
+  _parsingResult (callback) {
+    return (err, result) => {
+      if (err) {
+        if (isNotFoundError(err)) {
+          return callback(null, undefined)
+        }
+        return callback(err)
+      }
+      this._decode(result, callback)
+    }
+  }
 }
 
 function datastore (ipfs, collaboration) {
@@ -253,25 +300,6 @@ function datastore (ipfs, collaboration) {
     // resolve(ds)
     resolve(new NamespaceStore(ds, new Key(`peer-star-collab-${collaboration.name}`)))
   })
-}
-
-function parsingResult (callback) {
-  return (err, result) => {
-    if (err) {
-      if (isNotFoundError(err)) {
-        return callback(null, undefined)
-      }
-      return callback(err)
-    }
-    let parsed
-    try {
-      parsed = decode(result)
-    } catch (err) {
-      callback(err)
-      return
-    }
-    callback(null, parsed)
-  }
 }
 
 function isNotFoundError (err) {

@@ -8,6 +8,7 @@ const expect = chai.expect
 const pair = require('pull-pair')
 const MemoryDatastore = require('interface-datastore').MemoryDatastore
 const vectorclock = require('vectorclock')
+const crypto = require('libp2p-crypto')
 
 const Store = require('../src/collaboration/store')
 const Shared = require('../src/collaboration/shared')
@@ -15,17 +16,35 @@ const Protocol = require('../src/collaboration/protocol')
 
 const Type = require('./utils/fake-crdt')
 
-const storeOptions = {
+const _storeOptions = {
   maxDeltaRetention: 0,
-  deltaTrimTimeoutMS: 0
+  deltaTrimTimeoutMS: 0,
 }
 
 describe('collaboration protocol', function () {
+  let storeOptions
   const pusher = {}
   const puller = {}
   const pusher2 = {}
   const pusher3 = {}
   const puller2 = {}
+
+  before(() => {
+    const key = crypto.randomBytes(16)
+    const iv = crypto.randomBytes(16)
+    storeOptions = Object.assign({}, _storeOptions, {
+      createCipher: () => {
+        return new Promise((resolve, reject) => {
+          crypto.aes.create(Buffer.from(key), Buffer.from(iv), (err, key) => {
+            if (err) {
+              return reject(err)
+            }
+            resolve(key)
+          })
+        })
+      }
+    })
+  })
 
   it('pusher can be created', async () => {
     const ipfs = {

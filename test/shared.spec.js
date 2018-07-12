@@ -6,15 +6,29 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const MemoryDatastore = require('interface-datastore').MemoryDatastore
+const crypto = require('libp2p-crypto')
 
 const Shared = require('../src/collaboration/shared')
 const Store = require('../src/collaboration/store')
 const CRDT = require('../src/collaboration/crdt')
 require('./utils/fake-crdt')
 
+const key = crypto.randomBytes(16)
+const iv = crypto.randomBytes(16)
+
 const storeOptions = {
   maxDeltaRetention: 0,
-  deltaTrimTimeoutMS: 0
+  deltaTrimTimeoutMS: 0,
+  createCipher: () => {
+    return new Promise((resolve, reject) => {
+      crypto.aes.create(Buffer.from(key), Buffer.from(iv), (err, key) => {
+        if (err) {
+          return reject(err)
+        }
+        resolve(key)
+      })
+    })
+  }
 }
 
 describe('shared', () => {
