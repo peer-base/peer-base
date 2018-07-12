@@ -1,0 +1,35 @@
+'use strict'
+
+const bs58 = require('bs58')
+const crypto = require('libp2p-crypto')
+
+function uriDecode (str) {
+  return new Promise((resolve, reject) => {
+    const keyComponents = str.split('/')
+    if (keyComponents.length < 1 || keyComponents.length > 2) {
+      throw new Error('invalid URI')
+    }
+    const readEncoded = keyComponents[0]
+    const read = bs58.decode(readEncoded)
+    const writeEncoded = keyComponents[1]
+    const write = writeEncoded && bs58.decode(writeEncoded)
+
+    const readKey = crypto.keys.unmarshalPublicKey(read)
+
+    if (write) {
+      crypto.keys.unmarshalPrivateKey(write, (err, writeKey) => {
+        if (err) {
+          return reject(err)
+        }
+        resolve({
+          read: readKey,
+          write: writeKey
+        })
+      })
+    } else {
+      resolve({ read: readKey })
+    }
+  })
+}
+
+module.exports = uriDecode

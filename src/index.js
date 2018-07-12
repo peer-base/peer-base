@@ -1,4 +1,5 @@
 'use strict'
 
-module.exports = require('./app')
-module.exports.collaborationTypes = require('delta-crdts')
+exports = module.exports = require('./app')
+exports.keys = require('./keys')
+exports.collaborationTypes = require('delta-crdts')
