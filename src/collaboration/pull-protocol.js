@@ -9,10 +9,11 @@ const encode = require('../common/encode')
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PullProtocol {
-  constructor (ipfs, store, clocks, options) {
+  constructor (ipfs, store, clocks, keys, options) {
     this._ipfs = ipfs
     this._store = store
     this._clocks = clocks
+    this._keys = keys
     this._options = options
   }
 
@@ -32,12 +33,7 @@ module.exports = class PullProtocol {
     }
     this._store.on('clock changed', onNewLocalClock)
 
-    const onData = (err, data) => {
-      if (err) {
-        onEnd(err)
-        return
-      }
-
+    const onNewData = (data) => {
       debug('%s got new data from %s :', this._peerId(), remotePeerId, data)
 
       queue.add(async () => {
@@ -115,6 +111,15 @@ module.exports = class PullProtocol {
       }).catch(onEnd)
 
       return true // keep the stream alive
+    }
+
+    const onData = (err, data) => {
+      if (err) {
+        onEnd(err)
+        return
+      }
+
+      onNewData(data)
     }
 
     const onEnd = (err) => {

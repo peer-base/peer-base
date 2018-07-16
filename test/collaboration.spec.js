@@ -6,6 +6,7 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const crypto = require('libp2p-crypto')
+const PeerStar = require('../')
 const App = require('./utils/create-app')
 require('./utils/fake-crdt')
 const A_BIT = 19000
@@ -14,20 +15,7 @@ describe('collaboration', function () {
   this.timeout(20000)
 
   const peerCount = 2 // 10
-  const key = crypto.randomBytes(16)
-  const iv = crypto.randomBytes(16)
-  const collaborationOptions = {
-    createCipher: () => {
-      return new Promise((resolve, reject) => {
-        crypto.aes.create(Buffer.from(key), Buffer.from(iv), (err, key) => {
-          if (err) {
-            return reject(err)
-          }
-          resolve(key)
-        })
-      })
-    }
-  }
+  const collaborationOptions = {}
 
   let swarm = []
   let collaborations
@@ -43,6 +31,10 @@ describe('collaboration', function () {
       after(() => swarm[i] && swarm[i].stop())
     })(i)
   }
+
+  before(async () => {
+    collaborationOptions.keys = await PeerStar.keys.generate()
+  })
 
   before((done) => {
     // wait a bit for things to sync

@@ -11,6 +11,10 @@ module.exports = class ConnectionManager {
     this._globalConnectionManager = globalConnectionManager
     this._options = options
 
+    if (!this._options.keys) {
+      throw new Error('need options.keys')
+    }
+
     this._stopped = true
 
     this._ring = ring
@@ -19,7 +23,7 @@ module.exports = class ConnectionManager {
     this._inboundConnections = new PeerSet()
     this._outboundConnections = new PeerSet()
 
-    this._protocol = Protocol(ipfs, collaboration, store)
+    this._protocol = Protocol(ipfs, collaboration, store, this._options.keys)
 
     this._protocol.on('inbound connection', (peerInfo) => {
       this._inboundConnections.add(peerInfo)

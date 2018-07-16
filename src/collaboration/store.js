@@ -25,6 +25,8 @@ module.exports = class CollaborationStore extends EventEmitter {
     }
 
     this._queue = new Queue({ concurrency: 1 })
+
+    this._shareds = []
   }
 
   async start () {
@@ -34,7 +36,7 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   setShared (shared) {
-    this._shared = shared
+    this._shareds.push(shared)
   }
 
   stop () {
@@ -93,7 +95,8 @@ module.exports = class CollaborationStore extends EventEmitter {
 
       debug('%s: saving delta %j = %j', this._id, deltaKey, deltaRecord)
 
-      const newState = this._shared.apply(delta)
+      const newState = (await Promise.all(
+        this._shareds.map((shared) => shared.apply(nextClock, delta))))[0]
 
       await Promise.all([
         this._save(deltaKey, deltaRecord),
@@ -107,13 +110,17 @@ module.exports = class CollaborationStore extends EventEmitter {
       debug('%s: saved delta and vector clock', this._id)
       this.emit('delta', delta, nextClock)
       this.emit('clock changed', nextClock)
-      this.emit('state changed', newState)
+      this.emit('state changed', newState, nextClock)
       debug('%s: emitted state changed event', this._id)
       return nextClock
     })
   }
 
   saveState ([clock, state]) {
+    if (!Buffer.isBuffer(state)) {
+      throw new Error('state should be a buffer')
+    }
+
     debug('%s: save state', this._id, [clock, state])
     // TODO: include parent vector clock
     // to be able to decide whether to ignore this state or not
@@ -132,7 +139,8 @@ module.exports = class CollaborationStore extends EventEmitter {
         clock = vectorclock.merge(latest, clock)
       }
 
-      const newState = this._shared.apply(state)
+      const newState = (await Promise.all(
+        this._shareds.map((shared) => shared.apply(clock, state))))[0]
 
       debug('%s: new merged state is %j', this._id, newState)
 

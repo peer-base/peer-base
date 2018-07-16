@@ -13,6 +13,7 @@ const crypto = require('libp2p-crypto')
 const Store = require('../src/collaboration/store')
 const Shared = require('../src/collaboration/shared')
 const Protocol = require('../src/collaboration/protocol')
+const generateKeys = require('../src/keys/generate')
 
 const Type = require('./utils/fake-crdt')
 
@@ -22,12 +23,17 @@ const _storeOptions = {
 }
 
 describe('collaboration protocol', function () {
+  let keys
   let storeOptions
   const pusher = {}
   const puller = {}
   const pusher2 = {}
   const pusher3 = {}
   const puller2 = {}
+
+  before(async () => {
+    keys = await generateKeys()
+  })
 
   before(() => {
     const key = crypto.randomBytes(16)
@@ -60,7 +66,7 @@ describe('collaboration protocol', function () {
     pusher.store = new Store(ipfs, collaboration, storeOptions)
     await pusher.store.start()
     pusher.protocol = Protocol(ipfs, collaboration, pusher.store)
-    pusher.shared = await Shared('pusher', Type, pusher.store)
+    pusher.shared = await Shared('pusher', Type, pusher.store, keys)
     pusher.store.setShared(pusher.shared)
   })
 
@@ -80,7 +86,7 @@ describe('collaboration protocol', function () {
     puller.protocol = Protocol(ipfs, collaboration, puller.store, {
       receiveTimeout: 500
     })
-    puller.shared = await Shared('puller', Type, puller.store)
+    puller.shared = await Shared('puller', Type, puller.store, keys)
     puller.store.setShared(puller.shared)
   })
 
@@ -129,7 +135,7 @@ describe('collaboration protocol', function () {
     pusher2.store = new Store(ipfs, collaboration, storeOptions)
     await pusher2.store.start()
     pusher2.protocol = Protocol(ipfs, collaboration, pusher2.store)
-    pusher2.shared = await Shared('pusher 2', Type, pusher2.store)
+    pusher2.shared = await Shared('pusher 2', Type, pusher2.store, keys)
     pusher2.store.setShared(pusher2.shared)
   })
 
@@ -187,7 +193,7 @@ describe('collaboration protocol', function () {
     const collaboration = { name: 'collaboration protocol test' }
     pusher3.store = puller.store // same store as puller
     pusher3.protocol = Protocol(ipfs, collaboration, pusher3.store)
-    pusher3.shared = await Shared('pusher from puller', Type, pusher3.store)
+    pusher3.shared = await Shared('pusher from puller', Type, pusher3.store, keys)
     pusher3.store.setShared(pusher3.shared)
   })
 
@@ -207,7 +213,7 @@ describe('collaboration protocol', function () {
     puller2.protocol = Protocol(ipfs, collaboration, puller2.store, {
       receiveTimeout: 500
     })
-    puller2.shared = await Shared('puller 2', Type, puller2.store)
+    puller2.shared = await Shared('puller 2', Type, puller2.store, keys)
     puller2.store.setShared(puller2.shared)
   })
 
@@ -238,39 +244,9 @@ describe('collaboration protocol', function () {
     expect(puller2.shared.value()).to.equal('abc')
   })
 
-  it('can add duplicate data to pusher 1 and 2', async () => {
-    // all connections are on an eager mode
-    // force one to go to lazy mode by sending duplicate data
-    const latestClock = vectorclock.merge(
-      await pusher.store.getLatestClock(),
-      await pusher2.store.getLatestClock())
-
-    const nextClock = vectorclock.increment(latestClock, 'some other node id')
-
-    await Promise.all([
-      pusher.store.saveState([nextClock, 'd']),
-      pusher2.store.saveDelta([nextClock, 'd'])])
-  })
-
-  it('waits a bit', (done) => setTimeout(done, 500))
-
-  it('puller got new state', () => {
-    expect(puller.shared.value()).to.equal('abcd')
-  })
-
-  it('waits another bit', (done) => setTimeout(done, 1000))
-
-  it('newest puller got new state', () => {
-    expect(puller2.shared.value()).to.equal('abcd')
-  })
-
-  it('new data happens in lazy mode connection', () => {
-    pusher2.shared.add('e')
-    pusher.shared.add('f')
-  })
-
-  it('puller in lazy mode connection does not still have this state', () => {
-    expect(puller.shared.value()).to.equal('abcd')
+  it('new data', () => {
+    pusher2.shared.add('d')
+    pusher.shared.add('e')
   })
 
   it('waits a bit', function (done) {
@@ -278,7 +254,7 @@ describe('collaboration protocol', function () {
   })
 
   it('puller eventually got the new state', () => {
-    expect(puller.shared.value()).to.equal('abcdef')
+    expect(puller.shared.value()).to.equal('abcde')
   })
 })
 
@@ -291,3 +267,7 @@ function fakePeerInfoFor (id) {
     }
   }
 }
+
+process.on('unhandledRejection', (err) => {
+  console.error(err)
+})

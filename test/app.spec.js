@@ -14,9 +14,14 @@ describe('app', function () {
   let repo
   let app
   let collaboration
+  let collaborationOptions = {}
 
   before(() => {
     repo = Repo()
+  })
+
+  before(async () => {
+    collaborationOptions.keys = await PeerStar.keys.generate()
   })
 
   after(() => repo.teardown())
@@ -33,12 +38,12 @@ describe('app', function () {
   it('can be started', () => app.start())
 
   it('can get collaboration', async () => {
-    collaboration = await app.collaborate('collaboration name', 'fake')
+    collaboration = await app.collaborate('collaboration name', 'fake', collaborationOptions)
     expect(collaboration).to.not.be.empty()
   })
 
   it('can reget collaboration', async () => {
-    expect(await app.collaborate('collaboration name', 'fake')).to.equal(collaboration)
+    expect(await app.collaborate('collaboration name', 'fake', collaborationOptions)).to.equal(collaboration)
   })
 
   it('can be stopped', () => app.stop())

@@ -17,7 +17,7 @@ module.exports = (...args) => {
 }
 
 class Protocol extends EventEmitter {
-  constructor (ipfs, collaboration, store, options) {
+  constructor (ipfs, collaboration, store, keys, options) {
     super()
     this._ipfs = ipfs
     this._collaboration = collaboration
@@ -25,8 +25,8 @@ class Protocol extends EventEmitter {
     this._options = Object.assign({}, defaultOptions, options)
     this._streamsFor = new Map()
     this._clocks = new Clocks()
-    this._pushProtocol = new PushProtocol(ipfs, store, this._clocks, this._options)
-    this._pullProtocol = new PullProtocol(ipfs, store, this._clocks, this._options)
+    this._pushProtocol = new PushProtocol(ipfs, store, this._clocks, keys, this._options)
+    this._pullProtocol = new PullProtocol(ipfs, store, this._clocks, keys, this._options)
 
     this.handler = this.handler.bind(this)
   }
