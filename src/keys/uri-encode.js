@@ -11,7 +11,7 @@ function uriEncode (keys) {
     uri.push(bs58.encode(crypto.keys.marshalPrivateKey(keys.write)))
   }
 
-  return uri.join('/')
+  return uri.join('-')
 }
 
 module.exports = uriEncode

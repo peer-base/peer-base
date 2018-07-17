@@ -2,10 +2,11 @@
 
 const bs58 = require('bs58')
 const crypto = require('libp2p-crypto')
+const deriveCipherFromKeys = require('./derive-cipher-from-keys')
 
 function uriDecode (str) {
   return new Promise((resolve, reject) => {
-    const keyComponents = str.split('/')
+    const keyComponents = str.split('-')
     if (keyComponents.length < 1 || keyComponents.length > 2) {
       throw new Error('invalid URI')
     }
@@ -21,10 +22,13 @@ function uriDecode (str) {
         if (err) {
           return reject(err)
         }
-        resolve({
+
+        const keys = {
           read: readKey,
           write: writeKey
-        })
+        }
+        keys.cipher = deriveCipherFromKeys(keys)
+        resolve(keys)
       })
     } else {
       resolve({ read: readKey })

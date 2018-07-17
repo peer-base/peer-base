@@ -28,7 +28,7 @@ class ArrayCollaboration extends Collaboration {
     }
   }
 
-  render() {
+  renderCollaboration() {
     return (
       <div>
         <hr />

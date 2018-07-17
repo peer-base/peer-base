@@ -60,7 +60,12 @@ module.exports = async (id, type, store, keys) => {
 
   const storeState = await store.getState()
   if (storeState !== undefined && storeState !== null) {
-    state = crdt.join(state, storeState)
+    if (state === undefined || state === null) {
+      state = storeState
+    } else {
+      console.log('joining', state, storeState)
+      state = crdt.join(state, storeState)
+    }
   }
 
   return shared

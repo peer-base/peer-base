@@ -1,9 +1,12 @@
 import React, { Component } from 'react';
+import { HashRouter as Router, Route } from 'react-router-dom'
 import logo from './logo.svg';
 import './App.css';
 
 import PeerStarApp from 'peer-star-app'
 
+import Home from './Home'
+import CreateKey from './CreateKey'
 import GCounterCollaboration from './GCounterCollaboration'
 import ArrayCollaboration from './ArrayCollaboration'
 import TextCollaboration from './TextCollaboration'
@@ -37,6 +40,35 @@ class App extends Component {
   }
 
   render() {
+    const routes = [
+      {
+        path: '/counter/:name/:keys',
+        render: (props) => (
+          <GCounterCollaboration
+            match={props.match}
+            keys={props.match.params.keys}
+            app={this._app}
+            name={props.match.params.name} /> )
+      },
+      {
+        path: '/counter',
+        component: CreateKey,
+        exact: true
+      }
+      // {
+      //   path: '/array',
+      //   component: CreateKey
+      // },
+      // {
+      //   path: '/array/:keys',
+      //   render: (props) => (
+      //     <ArrayCollaboration
+      //       match={props.match}
+      //       app={this._app}
+      //       name="peer-star-app-example-counter" /> )
+      // }
+    ]
+
     return (
       <div className="App">
         <header className="App-header">
@@ -48,13 +80,13 @@ class App extends Component {
           App-wide peer count estimate: {this.state.appPeerCountEstimate} peers
         </p>
 
-        <GCounterCollaboration app={this._app} name="peer-star-app-example-counter" />
+        <Router>
+          <div>
+            <Route exact path="/" component={Home} />
 
-        <ArrayCollaboration app={this._app} name="peer-star-app-example-array" />
-
-        <TextCollaboration app={this._app} name="peer-star-app-example-text" />
-
-        <DiscussionTreeCollaboration app={this._app} name="peer-star-app-example-discussion" />
+            {routes.map((route, i) => <Route key={i} {...route} />)}
+          </div>
+        </Router>
 
       </div>
     );
