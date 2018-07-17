@@ -58,15 +58,15 @@ module.exports = async (id, type, store, keys) => {
     // nothing to do here...
   }
 
-  const storeState = await store.getState()
-  if (storeState !== undefined && storeState !== null) {
-    if (state === undefined || state === null) {
-      decryptAndVerify(storeState)
-        .then((storeState) => {
-          state = crdt.join(state, storeState)
-        })
-        .catch((err) => shared.emit('error', err))
+  const encryptedStoreState = await store.getState()
+  try {
+    if (encryptedStoreState !== undefined && encryptedStoreState !== null) {
+      const storeState = decode(await decryptAndVerify(encryptedStoreState))
+      state = crdt.join(state, storeState)
+      shared.emit('state changed')
     }
+  } catch (err) {
+    shared.emit('error', err)
   }
 
   return shared
