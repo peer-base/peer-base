@@ -16,7 +16,7 @@ class GCounterCollaboration extends Collaboration {
       <div>
         <hr />
         <h1>G-Counter</h1>
-        <p>{this._collab && this._collab.name}</p>
+        <p>({this._collab && this._collab.name})</p>
         <div className="App-intro">
           Value: <pre>{JSON.stringify(this.state.value)}</pre>
         </div>

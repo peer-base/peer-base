@@ -28,11 +28,12 @@ class ArrayCollaboration extends Collaboration {
     }
   }
 
-  renderCollaboration() {
+  render() {
     return (
       <div>
         <hr />
         <h1>Array</h1>
+        <p>({this._collab && this._collab.name})</p>
         <div className="App-intro">
           Value: <pre>{JSON.stringify(this.state.value)}</pre>
         </div>

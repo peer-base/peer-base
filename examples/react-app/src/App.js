@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { HashRouter as Router, Route } from 'react-router-dom'
+import { HashRouter as Router, Route, Link } from 'react-router-dom'
 import logo from './logo.svg';
 import './App.css';
 
@@ -54,41 +54,71 @@ class App extends Component {
         path: '/counter',
         component: CreateKey,
         exact: true
+      },
+      {
+        path: '/array/:name/:keys',
+        render: (props) => (
+          <ArrayCollaboration
+            match={props.match}
+            keys={props.match.params.keys}
+            app={this._app}
+            name={props.match.params.name} /> )
+      },
+      {
+        path: '/array',
+        component: CreateKey,
+        exact: true
+      },
+      {
+        path: '/text/:name/:keys',
+        render: (props) => (
+          <TextCollaboration
+            match={props.match}
+            keys={props.match.params.keys}
+            app={this._app}
+            name={props.match.params.name} /> )
+      },
+      {
+        path: '/text',
+        component: CreateKey,
+        exact: true
+      },
+      {
+        path: '/discussion/:name/:keys',
+        render: (props) => (
+          <DiscussionTreeCollaboration
+            match={props.match}
+            keys={props.match.params.keys}
+            app={this._app}
+            name={props.match.params.name} /> )
+      },
+      {
+        path: '/discussion',
+        component: CreateKey,
+        exact: true
       }
-      // {
-      //   path: '/array',
-      //   component: CreateKey
-      // },
-      // {
-      //   path: '/array/:keys',
-      //   render: (props) => (
-      //     <ArrayCollaboration
-      //       match={props.match}
-      //       app={this._app}
-      //       name="peer-star-app-example-counter" /> )
-      // }
+
     ]
 
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h1 className="App-title">Welcome to Peer-Star Counter app</h1>
-        </header>
+      <Router>
+        <div className="App">
+            <header className="App-header">
+              <img src={logo} className="App-logo" alt="logo" />
+              <h1 className="App-title"><Link to="/">Welcome to Peer-Star Counter app</Link></h1>
+            </header>
 
-        <p className="App-intro">
-          App-wide peer count estimate: {this.state.appPeerCountEstimate} peers
-        </p>
+            <p className="App-intro">
+              App-wide peer count estimate: {this.state.appPeerCountEstimate} peers
+            </p>
 
-        <Router>
-          <div>
-            <Route exact path="/" component={Home} />
+              <div>
+                <Route exact path="/" component={Home} />
 
-            {routes.map((route, i) => <Route key={i} {...route} />)}
-          </div>
-        </Router>
-
-      </div>
+                {routes.map((route, i) => <Route key={i} {...route} />)}
+              </div>
+        </div>
+      </Router>
     );
   }
 }
