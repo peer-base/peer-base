@@ -7,7 +7,7 @@
     "test": "npm run test:node && npm run test:browser",
     "test:node": "aegir test -t node",
     "test:browser": "aegir test -t browser",
-    "lint": "aegir lint"
+    "lint": "standard src/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -60,7 +60,8 @@
     "lodash.uniq": "^4.5.0",
     "pull-pair": "^1.1.0",
     "rimraf": "^2.6.2",
-    "sinon": "^5.1.1"
+    "sinon": "^5.1.1",
+    "standard": "^11.0.1"
   },
   "browser": {
     "./test/utils/repo.js": "./test/utils/repo-browser.js"

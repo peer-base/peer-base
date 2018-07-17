@@ -121,7 +121,7 @@ module.exports = class PushProtocol {
         this._clocks.setFor(remotePeerId, newRemoteClock)
       }
       if (newRemoteClock || startEager) {
-        queue.add(async() => {
+        queue.add(async () => {
           const myClock = await this._store.getLatestClock()
           this._clocks.setFor(this._peerId(), myClock)
           await reduceEntropy()
