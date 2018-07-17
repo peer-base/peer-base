@@ -1,5 +1,6 @@
-import { Component } from 'react';
+import React, { Component } from 'react';
 import PropTypes from 'prop-types'
+import { keys as Keys } from 'peer-star-app'
 
 class Collaboration extends Component {
   constructor (props) {
@@ -11,30 +12,46 @@ class Collaboration extends Component {
       outboundConnectionCount: 0
     }
 
-    props.app.start().then(() => {
-      props.app.collaborate(props.name, props.type)
-        .then((collab) => {
-          console.log('collaboration started')
-          this._collab = collab
+    console.log('props.match:', props.match)
 
-          this.setState({ value: collab.shared.value() })
+    Keys.uriDecode(props.keys).then((keys) => {
+      console.log('keys:', keys)
 
-          collab.shared.on('state changed', () => {
-            this.setState({ value: collab.shared.value() })
-          })
+      props.app.start().then(() => {
+        props.app.collaborate(props.name, props.type, { keys })
+          .then((collab) => {
+            console.log('collaboration started')
+            let value
+            this._collab = collab
 
-          collab.on('membership changed', (peers) => {
-            this.setState({ peers })
-            console.log('membership changed:', peers)
-          })
+            const onStateChanged = () => {
+              const newValue = collab.shared.value()
 
-          setInterval(() => {
-            this.setState({
-              inboundConnectionCount: collab.inboundConnectionCount(),
-              outboundConnectionCount: collab.outboundConnectionCount()
+              if (this.onValueChanged) {
+                const oldValue = value
+                value = newValue
+                this.onValueChanged(oldValue, newValue)
+              }
+              this.setState({ value: newValue })
+            }
+
+            onStateChanged()
+
+            collab.shared.on('state changed', onStateChanged)
+
+            collab.on('membership changed', (peers) => {
+              this.setState({ peers })
+              console.log('membership changed:', peers)
             })
-          }, 2000)
-        })
+
+            setInterval(() => {
+              this.setState({
+                inboundConnectionCount: collab.inboundConnectionCount(),
+                outboundConnectionCount: collab.outboundConnectionCount()
+              })
+            }, 2000)
+          })
+      })
     })
   }
 }

@@ -5,6 +5,7 @@ const Membership = require('./membership')
 const Store = require('./store')
 const Shared = require('./shared')
 const CRDT = require('./crdt')
+const deriveCreateCipherFromKeys = require('../keys/derive-cipher-from-keys')
 
 const defaultOptions = {
   preambleByteCount: 2,
@@ -23,6 +24,14 @@ class Collaboration extends EventEmitter {
     this._app = app
     this.name = name
     this._options = Object.assign({}, defaultOptions, options)
+
+    if (!this._options.keys) {
+      throw new Error('need options.keys')
+    }
+
+    if (!this._options.createCipher) {
+      this._options.createCipher = deriveCreateCipherFromKeys(this._options.keys)
+    }
 
     this._store = new Store(ipfs, this, this._options)
     this._store.on('state changed', (state) => {
@@ -56,7 +65,8 @@ class Collaboration extends EventEmitter {
     await this._membership.start()
     await this._store.start()
     const id = (await this._ipfs.id()).id
-    this.shared = await Shared(id, this._type, this._store)
+    this.shared = await Shared(id, this._type, this._store, this._options.keys)
+    this.shared.on('error', (err) => this.emit('error', err))
     this._store.setShared(this.shared)
   }
 

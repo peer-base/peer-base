@@ -2,7 +2,7 @@
 
 const msgpack = require('msgpack-lite')
 
-const codec =  msgpack.createCodec()
+const codec = msgpack.createCodec()
 
 codec.addExtPacker(0x40, Map, [mapPacker, msgpack.encode])
 codec.addExtUnpacker(0x40, [msgpack.decode, mapUnpacker])

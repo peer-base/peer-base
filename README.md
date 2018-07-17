@@ -9,6 +9,11 @@ Peer-Star App support for real-time collaborative DApps built on top of IPFS
 * [Example app](examples/react-app)
 * [How to run the example app](#run-example-app)
 
+# Documentation
+
+* [Code structure](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/CODE-STRUCTURE.md)
+* [Protocol](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/PROTOCOL.md)
+
 ## Install
 
 ```bash
@@ -21,14 +26,9 @@ $ npm install peer-star-app
 const PeerStar = require('peer-star-app')
 ```
 
-# Documentation
+# API
 
-* [Code structure](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/CODE-STRUCTURE.md)
-* [Protocol](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/PROTOCOL.md)
-
-## API
-
-### Create app
+## Create app
 
 ```js
 const app = PeerStar('app name', options)
@@ -43,21 +43,64 @@ Options (are not required):
 * targetGlobalMembershipGossipFrequencyMS: (defaults to `1000`): target global membership gossip frequency, in ms.
 * urgencyFrequencyMultiplier: (defaults to `10`): urgency multiplier when someone is wrong about membership
 
-### Start app
+## Start app
 
 ```js
 await app.start()
 ```
 
-### js-IPFS node
+## js-IPFS node
 
-A peer-star app comes with an IPFS node. You can access through `app.ipfs`. Example:
+A peer-star app comes with [a js-ipfs node](https://github.com/ipfs/js-ipfs#readme). You can access through `app.ipfs`. Example:
 
 ```js
 console.log(await app.ipfs.id())
 ```
 
-### Create collaboration
+### Guess peer count
+
+```js
+app.peerCountGuess() // returns integer Number >= 0
+```
+
+## Keys
+
+Keys are required to collaborate. They authenticate changes to the collaboration and encrypts them for transmission and storage. You can either create new keys or parse them from a string.
+
+### `await Keys.generate()`
+
+```js
+const Keys = require('peer-star-app').keys
+
+const keys = await Keys.generate()
+```
+
+### `Keys.uriEncode`
+
+Encode keys into a URI-acceptable string:
+
+```js
+const Keys = require('peer-star-app').keys
+const keys = await Keys.generate()
+
+const string = Keys.uriEncode(keys)
+```
+
+### `await Keys.uriDecode`
+
+Decode keys from a string:
+
+```js
+const Keys = require('peer-star-app').keys
+const keys = await Keys.generate()
+
+const string = Keys.uriEncode(keys)
+
+const decodedKeys = Keys.uriDecode(string)
+```
+
+
+## Create collaboration
 
 ```js
 const collaboration = await app.collaborate(collaborationName, type, options)
@@ -69,12 +112,13 @@ await collaboration.stop()
 Arguments:
 * `collaborationName`: string: should uniquely identify this collaboration in the whole world
 * `type`: a string, identifying which type of CRDT should be used. Use [this reference table in the delta-crdts package](https://github.com/ipfs-shipyard/js-delta-crdts#types).
-* `options`: object, optional. Can contain the keys:
+* `options`: object, mandatory. Can contain the keys:
+  * `keys`: keys, generated or parsed from URL. See [keys secion](#keys)
   * `maxDeltaRetention`: number: maximum number of retained deltas. Defaults to `1000`.
   * `deltaTrimTimeoutMS`: number: after a delta was added to the store, the time it waits before trying to trim the deltas.
   * `debounceResetConnectionsMS`: (defaults to `1000`): debounce membership changes before resetting connections.
 
-#### Create your own collaboration type
+### Create your own collaboration type
 
 You can create your own collaboration type by registering it:
 
@@ -97,38 +141,38 @@ Returns estimate of peers in app.
 app.peerCountEstimate()
 ```
 
-### App Events
+## App Events
 
-#### `app.emit('error', err)`
+### `app.emit('error', err)`
 
-#### `app.emit('peer connected', (peerInfo) => {})`
+### `app.emit('peer connected', (peerInfo) => {})`
 
 When a peer connects.
 
-#### `app.emit('outbound peer connected', (peerInfo) => {})`
+### `app.emit('outbound peer connected', (peerInfo) => {})`
 
 When a push connection is created.
 
-#### `app.emit('inbound peer connected', (peerInfo) => {})`
+### `app.emit('inbound peer connected', (peerInfo) => {})`
 
 When a pull connection is created.
 
-#### `app.emit('peer disconnected', (peerInfo) => {})`
+### `app.emit('peer disconnected', (peerInfo) => {})`
 
 When a peer disconnects.
 
-#### `app.emit('outbound peer disconnected', (peerInfo) => {})`
+### `app.emit('outbound peer disconnected', (peerInfo) => {})`
 
 When a push connection ends.
 
-#### `app.emit('inbound peer disconnected', (peerInfo) => {})`
+### `app.emit('inbound peer disconnected', (peerInfo) => {})`
 
 When a pull connection ends.
 
 
-### Collaboration
+## Collaboration
 
-#### `collaboration.peers()`
+### `collaboration.peers()`
 
 Returns the peers of the collaboration, a Set of peer ids (string).
 
@@ -138,17 +182,17 @@ Array.from(collaboration.peers()).forEach((peer) => {
 })
 ```
 
-#### `collaboration.outboundConnectionCount()`
+### `collaboration.outboundConnectionCount()`
 
 Returns the number of peers this peer is pushing data to.
 
-#### `collaboration.inboundConnectionCount()`
+### `collaboration.inboundConnectionCount()`
 
 Returns the number of peers this peer is pulling data from.
 
-#### Events:
+### Events:
 
-##### `"membership changed" (peers: Set<peer id>)`
+#### `"membership changed" (peers: Set<peer id>)`
 
 ```js
 collaboration.on('membership changed', (peers) => {
@@ -158,7 +202,7 @@ collaboration.on('membership changed', (peers) => {
 })
 ```
 
-##### `"state changed"`
+#### `"state changed"`
 
 ```js
 collaboration.on('state changed', () => {
@@ -166,15 +210,15 @@ collaboration.on('state changed', () => {
 })
 ```
 
-#### `collaboration.shared`
+### `collaboration.shared`
 
 The shared data in this collaboration.
 
-##### `shared.value()`
+#### `shared.value()`
 
 Returns the CRDT view value.
 
-##### shared mutators
+#### shared mutators
 
 Each shared document has document-specific mutators. See [the delta-crdts documentation](https://github.com/ipfs-shipyard/js-delta-crdts#types) for these.
 
@@ -190,16 +234,10 @@ collaboration.shared.push('some element')
 await collaboration.stop()
 ```
 
-### Stop app
+## Stop app
 
 ```js
 await app.stop()
-```
-
-### Guess peer count
-
-```js
-app.peerCountGuess() // returns integer Number >= 0
 ```
 
 # Run example app

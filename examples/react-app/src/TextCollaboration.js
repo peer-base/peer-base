@@ -6,16 +6,10 @@ class TextCollaboration extends Collaboration {
   constructor (props) {
     super(Object.assign({}, props, { type: 'rga' }))
     this.onTextChange = this.onTextChange.bind(this)
-    this.cursor = {}
-    this.onKeyUp = this.onKeyUp.bind(this)
   }
 
   onTextChange (event) {
     this.applyChanges(event.target, event.target.value)
-  }
-
-  onKeyUp (event) {
-    this.saveCursorPos()
   }
 
   applyChanges (target, newText) {
@@ -37,22 +31,50 @@ class TextCollaboration extends Collaboration {
         pos += d[1].length
       }
     })
-
-    this.saveCursorPos()
   }
 
-  saveCursorPos () {
-    this.cursor.start = this.refs.collaborativeTextArea.selectionStart
-    this.cursor.end = this.refs.collaborativeTextArea.selectionEnd
-  }
+  onValueChanged (oldText=[], newText) {
+    console.log('onValueChanged', oldText, newText)
+    const textArea = this.refs.collaborativeTextArea
+    oldText = oldText.join('')
+    newText = newText.join('')
+    if (textArea.value === newText) {
+      console.log('value is the same', textArea.value)
+      return
+    }
+    const cursor = {
+      start: textArea.selectionStart,
+      end: textArea.selectionEnd
+    }
 
-  restoreCursorPos () {
-    // this.refs.collaborativeTextArea.selectionStart = this.cursor.start
-    // this.refs.collaborativeTextArea.selectionEnd = this.cursor.end
-  }
+    const diffs = Diff(oldText, newText)
 
-  componentDidUpdate () {
-    this.restoreCursorPos()
+    let pos = 0
+    diffs.forEach((d) => {
+      if (d[0] === 0) { // EQUAL
+        pos += d[1].length
+      } else if (d[0] === -1) { // DELETE
+        const delText = d[1]
+        if (pos < cursor.start) {
+          cursor.start -= delText.length
+        }
+        if (pos < cursor.end) {
+          cursor.end -= delText.length
+        }
+      } else { // INSERT
+        const insertText = d[1]
+        if (pos < cursor.start) {
+          cursor.start += insertText.length
+        }
+        if (pos < cursor.end) {
+          cursor.end += insertText.length
+        }
+      }
+    })
+
+    this.refs.collaborativeTextArea.value = newText
+    this.refs.collaborativeTextArea.selectionStart = cursor.start
+    this.refs.collaborativeTextArea.selectionEnd = cursor.end
   }
 
   render() {
@@ -66,11 +88,9 @@ class TextCollaboration extends Collaboration {
 
         <div>
           <textarea
+            style={{width: '100%', height: '200px'}}
             ref="collaborativeTextArea"
-            onChange={this.onTextChange}
-            onKeyUp={this.onKeyUp}
-            onClick={this.onKeyUp}
-            value={((this.state.value !== undefined) && this.state.value.join('')) || ''} />
+            onChange={this.onTextChange} />
         </div>
 
         <p>Have {this.state.peers.size} peers for this collaboration (myself included)</p>

@@ -1,4 +1,6 @@
 'use strict'
 
-module.exports = require('./app')
-module.exports.collaborationTypes = require('delta-crdts')
+exports = module.exports = require('./app')
+exports.keys = require('./keys')
+exports.generateRandomName = require('./keys/generate-random-name')
+exports.collaborationTypes = require('delta-crdts')

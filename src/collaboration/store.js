@@ -19,7 +19,14 @@ module.exports = class CollaborationStore extends EventEmitter {
     this._collaboration = collaboration
     this._options = options
 
+    this._cipher = options.createCipher
+    if (typeof this._cipher !== 'function') {
+      throw new Error('need options.createCipher')
+    }
+
     this._queue = new Queue({ concurrency: 1 })
+
+    this._shareds = []
   }
 
   async start () {
@@ -29,7 +36,7 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   setShared (shared) {
-    this._shared = shared
+    this._shareds.push(shared)
   }
 
   stop () {
@@ -46,7 +53,7 @@ module.exports = class CollaborationStore extends EventEmitter {
 
   _get (key) {
     return new Promise((resolve, reject) => {
-      this._store.get(key, parsingResult((err, value) => {
+      this._store.get(key, this._parsingResult((err, value) => {
         if (err) {
           return reject(err)
         }
@@ -88,7 +95,8 @@ module.exports = class CollaborationStore extends EventEmitter {
 
       debug('%s: saving delta %j = %j', this._id, deltaKey, deltaRecord)
 
-      const newState = this._shared.apply(delta)
+      const newState = (await Promise.all(
+        this._shareds.map((shared) => shared.apply(nextClock, delta))))[0]
 
       await Promise.all([
         this._save(deltaKey, deltaRecord),
@@ -102,13 +110,17 @@ module.exports = class CollaborationStore extends EventEmitter {
       debug('%s: saved delta and vector clock', this._id)
       this.emit('delta', delta, nextClock)
       this.emit('clock changed', nextClock)
-      this.emit('state changed', newState)
+      this.emit('state changed', newState, nextClock)
       debug('%s: emitted state changed event', this._id)
       return nextClock
     })
   }
 
   saveState ([clock, state]) {
+    if (!Buffer.isBuffer(state)) {
+      throw new Error('state should be a buffer')
+    }
+
     debug('%s: save state', this._id, [clock, state])
     // TODO: include parent vector clock
     // to be able to decide whether to ignore this state or not
@@ -127,7 +139,8 @@ module.exports = class CollaborationStore extends EventEmitter {
         clock = vectorclock.merge(latest, clock)
       }
 
-      const newState = this._shared.apply(state)
+      const newState = (await Promise.all(
+        this._shareds.map((shared) => shared.apply(clock, state))))[0]
 
       debug('%s: new merged state is %j', this._id, newState)
 
@@ -153,7 +166,7 @@ module.exports = class CollaborationStore extends EventEmitter {
       this._store.query({
         prefix: '/d:'
       }),
-      pull.map((d) => decode(d.value)),
+      pull.asyncMap(({value}, cb) => this._decode(value, cb)),
       pull.map((d) => {
         debug('%s: delta stream candidate: %j', this._id, d)
         return d
@@ -185,8 +198,13 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   _save (key, value) {
+    return this._encode(value || null)
+      .then((encoded) => this._saveEncoded(key, encoded))
+  }
+
+  _saveEncoded (key, value) {
     return new Promise((resolve, reject) => {
-      this._store.put(key, encode(value || null), (err) => {
+      this._store.put(key, value, (err) => {
         if (err) {
           reject(err)
         } else {
@@ -240,6 +258,43 @@ module.exports = class CollaborationStore extends EventEmitter {
       )
     })
   }
+
+  _encode (value) {
+    return this._cipher().then((cipher) => {
+      return new Promise((resolve, reject) => {
+        cipher.encrypt(encode(value), (err, encrypted) => {
+          if (err) {
+            return reject(err)
+          }
+          resolve(encrypted)
+        })
+      })
+    })
+  }
+
+  _decode (bytes, callback) {
+    this._cipher().then((cipher) => {
+      cipher.decrypt(bytes, (err, decrypted) => {
+        if (err) {
+          return callback(err)
+        }
+        const decoded = decode(decrypted)
+        callback(null, decoded)
+      })
+    }).catch(callback)
+  }
+
+  _parsingResult (callback) {
+    return (err, result) => {
+      if (err) {
+        if (isNotFoundError(err)) {
+          return callback(null, undefined)
+        }
+        return callback(err)
+      }
+      this._decode(result, callback)
+    }
+  }
 }
 
 function datastore (ipfs, collaboration) {
@@ -253,25 +308,6 @@ function datastore (ipfs, collaboration) {
     // resolve(ds)
     resolve(new NamespaceStore(ds, new Key(`peer-star-collab-${collaboration.name}`)))
   })
-}
-
-function parsingResult (callback) {
-  return (err, result) => {
-    if (err) {
-      if (isNotFoundError(err)) {
-        return callback(null, undefined)
-      }
-      return callback(err)
-    }
-    let parsed
-    try {
-      parsed = decode(result)
-    } catch (err) {
-      callback(err)
-      return
-    }
-    callback(null, parsed)
-  }
 }
 
 function isNotFoundError (err) {

@@ -9,10 +9,11 @@ const encode = require('../common/encode')
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PushProtocol {
-  constructor (ipfs, store, clocks, options) {
+  constructor (ipfs, store, clocks, keys, options) {
     this._ipfs = ipfs
     this._store = store
     this._clocks = clocks
+    this._keys = keys
     this._options = options
   }
 
@@ -50,6 +51,7 @@ module.exports = class PushProtocol {
 
     const updateRemote = async () => {
       if (pushing) {
+        debug('updating remote')
         // Let's try to see if we have deltas to deliver
         await pushDeltas()
         if (remoteNeedsUpdate()) {
@@ -57,6 +59,7 @@ module.exports = class PushProtocol {
             debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
             // remote still needs update
             const clockAndState = await this._store.getClockAndState()
+            debug('clock and state: ', clockAndState)
             const [clock] = clockAndState
             if (Object.keys(clock).length) {
               this._clocks.setFor(remotePeerId, clock)
@@ -86,10 +89,13 @@ module.exports = class PushProtocol {
     const reduceEntropy = () => {
       if (remoteNeedsUpdate()) {
         return updateRemote()
+      } else {
+        debug('remote is up to date')
       }
     }
 
     const onClockChanged = (newClock) => {
+      debug('clock changed to %j', newClock)
       this._clocks.setFor(this._peerId(), newClock)
       queue.add(reduceEntropy).catch(onEnd)
     }
@@ -115,7 +121,7 @@ module.exports = class PushProtocol {
         this._clocks.setFor(remotePeerId, newRemoteClock)
       }
       if (newRemoteClock || startEager) {
-        queue.add(async() => {
+        queue.add(async () => {
           const myClock = await this._store.getLatestClock()
           this._clocks.setFor(this._peerId(), myClock)
           await reduceEntropy()

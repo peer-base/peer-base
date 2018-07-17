@@ -21,6 +21,6 @@ module.exports = class Clocks {
 
   takeDown (peerId) {
     debug('taking down clock for %s', peerId)
-    this.clocks.delete(peerId)
+    this._clocks.delete(peerId)
   }
 }
