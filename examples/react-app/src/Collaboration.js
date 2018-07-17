@@ -21,13 +21,23 @@ class Collaboration extends Component {
         props.app.collaborate(props.name, props.type, { keys })
           .then((collab) => {
             console.log('collaboration started')
+            let value
             this._collab = collab
 
-            this.setState({ value: collab.shared.value() })
+            const onStateChanged = () => {
+              const newValue = collab.shared.value()
 
-            collab.shared.on('state changed', () => {
-              this.setState({ value: collab.shared.value() })
-            })
+              if (this.onValueChanged) {
+                const oldValue = value
+                value = newValue
+                this.onValueChanged(oldValue, newValue)
+              }
+              this.setState({ value: newValue })
+            }
+
+            onStateChanged()
+
+            collab.shared.on('state changed', onStateChanged)
 
             collab.on('membership changed', (peers) => {
               this.setState({ peers })
