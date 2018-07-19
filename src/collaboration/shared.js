@@ -8,7 +8,7 @@ const encode = require('../common/encode')
 const decode = require('../common/decode')
 const vectorclock = require('../common/vectorclock')
 
-module.exports = async (name, id, type, collaboration, store, keys, path) => {
+module.exports = async (name, id, type, collaboration, store, keys) => {
   const queue = new Queue({ concurrency: 1 })
   const applyQueue = new Queue({ concurrency: 1 })
   const shared = new EventEmitter()
@@ -72,7 +72,7 @@ module.exports = async (name, id, type, collaboration, store, keys, path) => {
   const encryptedStoreState = await store.getState(name)
   try {
     if (encryptedStoreState) {
-      const [name, typeName, encryptedState] = decode(encryptedStoreState)
+      const [, , encryptedState] = decode(encryptedStoreState)
       const storeState = decode(await decryptAndVerify(encryptedState))
       state = crdt.join(state, storeState)
       shared.emit('state changed')
