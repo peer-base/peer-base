@@ -62,9 +62,9 @@ module.exports = class CollaborationStore extends EventEmitter {
     })
   }
 
-  getClockAndState () {
+  getClockAndStates () {
     return Promise.all(
-      [this.getLatestClock(), this.getState()])
+      [this.getLatestClock(), this.getStates()])
   }
 
   saveDelta ([previousClock, author, delta]) {
@@ -95,12 +95,20 @@ module.exports = class CollaborationStore extends EventEmitter {
 
       debug('%s: saving delta %j = %j', this._id, deltaKey, deltaRecord)
 
-      const newState = (await Promise.all(
-        this._shareds.map((shared) => shared.apply(nextClock, delta))))[0]
+      const newStateAndName = (await Promise.all(
+        this._shareds.map((shared) => shared.apply(nextClock, delta)))).filter(Boolean)[0]
+
+      if (!newStateAndName) {
+        return
+      }
+      const [name, newState] = newStateAndName
+
+      debug('%s: new state is', this._id, newState)
 
       await Promise.all([
+        this._saveStateName(name),
         this._save(deltaKey, deltaRecord),
-        this._save('/state', newState),
+        this._save('/state/' + name, newState),
         this._save('/clock', nextClock),
         this._save('/seq', seq)
       ])
@@ -116,14 +124,8 @@ module.exports = class CollaborationStore extends EventEmitter {
     })
   }
 
-  saveState ([clock, state]) {
-    if (!Buffer.isBuffer(state)) {
-      throw new Error('state should be a buffer')
-    }
-
-    debug('%s: save state', this._id, [clock, state])
-    // TODO: include parent vector clock
-    // to be able to decide whether to ignore this state or not
+  async saveStates ([clock, states]) {
+    debug('%s: saveStates', this._id, clock, states)
     return this._queue.add(async () => {
       const latest = await this.getLatestClock()
       debug('%s: latest vector clock:', this._id, latest)
@@ -139,25 +141,60 @@ module.exports = class CollaborationStore extends EventEmitter {
         clock = vectorclock.merge(latest, clock)
       }
 
-      const newState = (await Promise.all(
-        this._shareds.map((shared) => shared.apply(clock, state))))[0]
+      for (let state of states.values()) {
+        await this._saveState(clock, state)
+      }
 
-      debug('%s: new merged state is %j', this._id, newState)
-
-      await Promise.all([
-        this._save('/state', state),
-        this._save('/clock', clock)])
-
-      debug('%s: saved state and vector clock', this._id)
-      this.emit('clock changed', clock)
-      this.emit('state changed', newState)
-      debug('%s: emitted state changed event', this._id)
       return clock
     })
   }
 
-  async getState () {
-    return this._get('/state')
+  async _saveState (clock, state) {
+    if (!Buffer.isBuffer(state)) {
+      throw new Error('state should be a buffer: ' + JSON.stringify(state))
+    }
+
+    debug('%s: save state', this._id, clock, state)
+    // TODO: include parent vector clock
+    // to be able to decide whether to ignore this state or not
+
+    const newStateAndName = (await Promise.all(
+      this._shareds.map((shared) => shared.apply(clock, state))))[0]
+
+    if (!newStateAndName) {
+      return
+    }
+
+    const [name, newState] = newStateAndName
+
+    debug('%s: new merged state is %j', this._id, newState)
+
+    await Promise.all([
+      this._saveStateName(name),
+      this._save('/state/' + name, newState),
+      this._save('/clock', clock)])
+
+    debug('%s: saved state and vector clock', this._id)
+    this.emit('clock changed', clock)
+    this.emit('state changed', newState)
+    debug('%s: emitted state changed event', this._id)
+    return clock
+  }
+
+  async getState (name) {
+    if (!name) {
+      name = null
+    }
+    return this._get('/state/' + name)
+  }
+
+  async getStates () {
+    const stateNames = Array.from(await this._get('/stateNames') || new Set())
+    const states = await Promise.all(stateNames.map((stateName) => this._get('/state/' + stateName)))
+    return stateNames.reduce((acc, name, index) => {
+      acc.set(name, states[index])
+      return acc
+    }, new Map())
   }
 
   deltaStream (since = {}) {
@@ -200,6 +237,14 @@ module.exports = class CollaborationStore extends EventEmitter {
   _save (key, value) {
     return this._encode(value || null)
       .then((encoded) => this._saveEncoded(key, encoded))
+  }
+
+  async _saveStateName (name) {
+    const stateNames = await this._get('/stateNames') || new Set()
+    if (!stateNames.has(name)) {
+      stateNames.add(name)
+      await this._save('/stateNames', stateNames)
+    }
   }
 
   _saveEncoded (key, value) {

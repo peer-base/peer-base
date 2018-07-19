@@ -39,7 +39,7 @@ module.exports = class PullProtocol {
       queue.add(async () => {
         const [deltaRecord, newState] = data
         let clock
-        let state
+        let states
         let delta
         if (deltaRecord) {
           const [previousClock, author] = deltaRecord
@@ -47,12 +47,12 @@ module.exports = class PullProtocol {
           clock = vectorclock.increment(previousClock, author)
         } else if (newState) {
           clock = newState[0]
-          state = newState[1]
+          states = newState[1]
         }
 
         if (clock) {
           this._clocks.setFor(remotePeerId, clock)
-          if (state || delta) {
+          if (states || delta) {
             if (waitingForClock &&
                 (vectorclock.isIdentical(waitingForClock, clock) ||
                  vectorclock.compare(waitingForClock, clock) < 0)) {
@@ -70,8 +70,9 @@ module.exports = class PullProtocol {
               output.push(encode([null, true]))
             } else {
               let saved
-              if (state) {
-                saved = await this._store.saveState([clock, state])
+              if (states) {
+                debug('%s: saving states', this._peerId(), states)
+                saved = await this._store.saveStates([clock, states])
               } else if (delta) {
                 saved = await this._store.saveDelta(deltaRecord)
               }

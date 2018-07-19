@@ -8,7 +8,7 @@ const encode = require('../common/encode')
 const decode = require('../common/decode')
 const vectorclock = require('../common/vectorclock')
 
-module.exports = async (id, type, store, keys) => {
+module.exports = async (name, id, type, collaboration, store, keys, path) => {
   const queue = new Queue({ concurrency: 1 })
   const applyQueue = new Queue({ concurrency: 1 })
   const shared = new EventEmitter()
@@ -27,9 +27,12 @@ module.exports = async (id, type, store, keys) => {
       apply(delta)
 
       queue.add(async () => {
-        const encryptedDelta = await signAndEncrypt(encode(delta))
-        const newClock = await store.saveDelta([null, null, encryptedDelta])
-        clock = vectorclock.merge(clock, newClock)
+        const namedDelta = [name, type.typeName, await signAndEncrypt(encode(delta))]
+        debug('%s: named delta: ', id, namedDelta)
+        const newClock = await store.saveDelta([null, null, encode(namedDelta)])
+        if (newClock) {
+          clock = vectorclock.merge(clock, newClock)
+        }
       }).catch((err) => shared.emit('error', err))
     }
   })
@@ -37,20 +40,28 @@ module.exports = async (id, type, store, keys) => {
   // shared value
   shared.value = () => crdt.value(state)
 
-  shared.apply = (remoteClock, encryptedState) => {
-    if (!Buffer.isBuffer(encryptedState)) {
-      throw new Error('can only apply from buffer')
+  shared.apply = (remoteClock, encodedDelta) => {
+    if (!Buffer.isBuffer(encodedDelta)) {
+      throw new Error('encoded delta should have been buffer')
     }
-    debug('%s: shared.apply %j', id, remoteClock, encryptedState)
     return applyQueue.add(async () => {
-      if (!containsClock(remoteClock)) {
-        const encodedState = await decryptAndVerify(encryptedState)
-        const newState = decode(encodedState)
-        clock = vectorclock.merge(clock, remoteClock)
-        apply(newState)
+      const [forName, typeName, encryptedState] = decode(encodedDelta)
+      debug('%s: shared.apply %j', id, remoteClock, forName)
+      if (forName === name) {
+        if (!containsClock(remoteClock)) {
+          const encodedState = await decryptAndVerify(encryptedState)
+          const newState = decode(encodedState)
+          clock = vectorclock.merge(clock, remoteClock)
+          apply(newState)
+          debug('%s state after apply:', id, state)
+        } else {
+          debug('%s: already contains clock %j', id, remoteClock)
+        }
+        return [name, encode([name, forName && type.typeName, await signAndEncrypt(encode(state))])]
+      } else if (typeName) {
+        const sub = await collaboration.sub(forName, typeName)
+        return sub.shared.apply(remoteClock, encodedDelta)
       }
-
-      return signAndEncrypt(encode(state))
     })
   }
 
@@ -58,10 +69,11 @@ module.exports = async (id, type, store, keys) => {
     // nothing to do here...
   }
 
-  const encryptedStoreState = await store.getState()
+  const encryptedStoreState = await store.getState(name)
   try {
-    if (encryptedStoreState !== undefined && encryptedStoreState !== null) {
-      const storeState = decode(await decryptAndVerify(encryptedStoreState))
+    if (encryptedStoreState) {
+      const [name, typeName, encryptedState] = decode(encryptedStoreState)
+      const storeState = decode(await decryptAndVerify(encryptedState))
       state = crdt.join(state, storeState)
       shared.emit('state changed')
     }
@@ -80,6 +92,8 @@ module.exports = async (id, type, store, keys) => {
   }
 
   function containsClock (someClock) {
+    debug('%s: containsClock ? %j', id, someClock)
+    debug('%s: current clock is %j', id, clock)
     const comparison = vectorclock.compare(clock, someClock)
     let contains
     if (comparison < 0) {

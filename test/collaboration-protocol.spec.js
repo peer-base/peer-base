@@ -66,7 +66,7 @@ describe('collaboration protocol', function () {
     pusher.store = new Store(ipfs, collaboration, storeOptions)
     await pusher.store.start()
     pusher.protocol = Protocol(ipfs, collaboration, pusher.store)
-    pusher.shared = await Shared('pusher', Type, pusher.store, keys)
+    pusher.shared = await Shared(null, 'pusher', Type, collaboration, pusher.store, keys)
     pusher.store.setShared(pusher.shared)
   })
 
@@ -86,7 +86,7 @@ describe('collaboration protocol', function () {
     puller.protocol = Protocol(ipfs, collaboration, puller.store, {
       receiveTimeout: 500
     })
-    puller.shared = await Shared('puller', Type, puller.store, keys)
+    puller.shared = await Shared(null, 'puller', Type, collaboration, puller.store, keys)
     puller.store.setShared(puller.shared)
   })
 
@@ -135,7 +135,7 @@ describe('collaboration protocol', function () {
     pusher2.store = new Store(ipfs, collaboration, storeOptions)
     await pusher2.store.start()
     pusher2.protocol = Protocol(ipfs, collaboration, pusher2.store)
-    pusher2.shared = await Shared('pusher 2', Type, pusher2.store, keys)
+    pusher2.shared = await Shared(null, 'pusher 2', Type, collaboration, pusher2.store, keys)
     pusher2.store.setShared(pusher2.shared)
   })
 
@@ -193,7 +193,7 @@ describe('collaboration protocol', function () {
     const collaboration = { name: 'collaboration protocol test' }
     pusher3.store = puller.store // same store as puller
     pusher3.protocol = Protocol(ipfs, collaboration, pusher3.store)
-    pusher3.shared = await Shared('pusher from puller', Type, pusher3.store, keys)
+    pusher3.shared = await Shared(null, 'pusher from puller', Type, collaboration, pusher3.store, keys)
     pusher3.store.setShared(pusher3.shared)
   })
 
@@ -213,7 +213,7 @@ describe('collaboration protocol', function () {
     puller2.protocol = Protocol(ipfs, collaboration, puller2.store, {
       receiveTimeout: 500
     })
-    puller2.shared = await Shared('puller 2', Type, puller2.store, keys)
+    puller2.shared = await Shared(null, 'puller 2', Type, collaboration, puller2.store, keys)
     puller2.store.setShared(puller2.shared)
   })
 

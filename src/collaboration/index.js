@@ -18,9 +18,11 @@ const defaultOptions = {
 module.exports = (...args) => new Collaboration(...args)
 
 class Collaboration extends EventEmitter {
-  constructor (ipfs, globalConnectionManager, app, name, type, options) {
+  constructor (isRoot, ipfs, globalConnectionManager, app, name, type, options) {
     super()
+    this._isRoot = isRoot
     this._ipfs = ipfs
+    this._globalConnectionManager = globalConnectionManager
     this._app = app
     this.name = name
     this._options = Object.assign({}, defaultOptions, options)
@@ -33,12 +35,12 @@ class Collaboration extends EventEmitter {
       this._options.createCipher = deriveCreateCipherFromKeys(this._options.keys)
     }
 
-    this._store = new Store(ipfs, this, this._options)
+    this._store = this._options.store || new Store(ipfs, this, this._options)
     this._store.on('state changed', (state) => {
       this.emit('state changed', state)
     })
 
-    this._membership = new Membership(ipfs, globalConnectionManager, app, this, this._store, this._options)
+    this._membership = this._options.membership || new Membership(ipfs, globalConnectionManager, app, this, this._store, this._options)
     this._membership.on('changed', () => {
       this.emit('membership changed', this._membership.peers())
     })
@@ -50,29 +52,69 @@ class Collaboration extends EventEmitter {
     if (!this._type) {
       console.log('invalid collaboration type:', type)
     }
+
+    this._subs = new Map()
   }
 
-  start () {
+  async start () {
     if (this._starting) {
       return this._starting
     }
 
     this._starting = this._start()
-    return this._starting
+    await this._starting
+    await Promise.all(Array.from(this._subs.values()).map((sub) => sub.start()))
+  }
+
+  async sub (name, type) {
+    let collab = this._subs.get(name)
+    if (!collab) {
+      const options = Object.assign({}, this._options, {
+        store: this._store,
+        membership: this._membership
+      })
+
+      collab = new Collaboration(
+        false,
+        this._ipfs,
+        this._globalConnectionManager,
+        this._app,
+        name,
+        type,
+        options
+      )
+
+      this._subs.set(name, collab)
+    }
+
+    if (this._starting) {
+      await this._starting
+      await collab.start()
+    }
+
+    return collab
   }
 
   async _start () {
-    await this._membership.start()
-    await this._store.start()
+    if (this._isRoot) {
+      await this._membership.start()
+      await this._store.start()
+    }
     const id = (await this._ipfs.id()).id
-    this.shared = await Shared(id, this._type, this._store, this._options.keys)
+    const name = this._storeName()
+    this.shared = await Shared(name, id, this._type, this, this._store, this._options.keys)
     this.shared.on('error', (err) => this.emit('error', err))
-    this._store.setShared(this.shared)
+    this._store.setShared(this.shared, name)
+
+    await Array.from(this._subs.values()).map((sub) => sub.start())
   }
 
   async stop () {
     this.shared.stop()
-    await Promise.all([this._membership.stop(), this._store.stop()])
+    if (this._isRoot) {
+      await Promise.all([this._membership.stop(), this._store.stop()])
+    }
+    await Array.from(this._subs.values()).map((sub) => sub.stop())
     this.emit('stopped')
   }
 
@@ -92,11 +134,7 @@ class Collaboration extends EventEmitter {
     return this._membership.deliverRemoteMembership(membership)
   }
 
-  saveState (state) {
-    return this._store.saveState([undefined, state])
-  }
-
-  getState () {
-    return this._store.getState()
+  _storeName () {
+    return this._isRoot ? null : this.name
   }
 }

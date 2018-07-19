@@ -58,13 +58,13 @@ module.exports = class PushProtocol {
           if (pushing) {
             debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
             // remote still needs update
-            const clockAndState = await this._store.getClockAndState()
-            debug('clock and state: ', clockAndState)
-            const [clock] = clockAndState
+            const clockAndStates = await this._store.getClockAndStates()
+            debug('clock and states: ', clockAndStates)
+            const [clock] = clockAndStates
             if (Object.keys(clock).length) {
               this._clocks.setFor(remotePeerId, clock)
-              debug('%s: sending clock and state to %s:', this._peerId(), remotePeerId, clockAndState)
-              output.push(encode([null, clockAndState]))
+              debug('%s: sending clock and states to %s:', this._peerId(), remotePeerId, clockAndStates)
+              output.push(encode([null, clockAndStates]))
             }
           } else {
             // send only clock

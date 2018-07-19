@@ -11,6 +11,7 @@ const crypto = require('libp2p-crypto')
 const Shared = require('../src/collaboration/shared')
 const Store = require('../src/collaboration/store')
 const CRDT = require('../src/collaboration/crdt')
+const Keys = require('../src/keys')
 require('./utils/fake-crdt')
 
 const key = crypto.randomBytes(16)
@@ -50,7 +51,8 @@ describe('shared', () => {
     }
     const store = new Store(ipfs, collaboration, storeOptions)
     await store.start()
-    shared = await Shared('replica id', CRDT('fake'), store)
+    const keys = await Keys.generate()
+    shared = await Shared('name', 'replica id', CRDT('fake'), {}, store, keys)
     store.setShared(shared)
   })
 
@@ -66,4 +68,8 @@ describe('shared', () => {
   it('has the correct value', () => {
     expect(shared.value()).to.equal('ab')
   })
+})
+
+process.on('unhandledRejection', (err) => {
+  console.error(err)
 })
