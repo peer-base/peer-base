@@ -141,6 +141,17 @@ Returns estimate of peers in app.
 app.peerCountEstimate()
 ```
 
+## Sub-collaborations
+
+You can create sub-collaborations to a given "root" collaboration, with it's separate CRDT type, but that is causally consistent with the root CRDT. Here's how:
+
+```js
+const subCollaboration = await collaboration.sub('name', 'type')
+```
+
+A sub-collaboration has the same API as a collaboration.
+
+
 ## App Events
 
 ### `app.emit('error', err)`
