@@ -110,7 +110,10 @@ class Collaboration extends EventEmitter {
   }
 
   async stop () {
-    this.shared.stop()
+    if (this.shared) {
+      this.shared.stop()
+    }
+
     if (this._isRoot) {
       await Promise.all([this._membership.stop(), this._store.stop()])
     }

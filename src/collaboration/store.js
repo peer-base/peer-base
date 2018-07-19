@@ -197,7 +197,8 @@ module.exports = class CollaborationStore extends EventEmitter {
     }, new Map())
   }
 
-  deltaStream (since = {}) {
+  deltaStream (_since = {}) {
+    let since = Object.assign({}, _since)
     debug('%s: delta stream since %j', this._id, since)
     return pull(
       this._store.query({
@@ -209,13 +210,11 @@ module.exports = class CollaborationStore extends EventEmitter {
         return d
       }),
       pull.asyncMap(([previousClock, author, delta], callback) => {
-        const clock = vectorclock.increment(previousClock, author)
-        if (vectorclock.compare(clock, since) < 0 || vectorclock.isIdentical(clock, since)) {
-          debug('%s: candidate rejected because of clock: %j', this._id, clock)
+        if (!vectorclock.isIdentical(previousClock, since)) {
+          debug('%s: candidate rejected because of clock: %j', this._id, previousClock)
           return callback(null, null)
         }
-        debug('%s: delta stream entry: %j', this._id, delta)
-        since = clock
+        since = vectorclock.increment(previousClock, author)
         callback(null, [previousClock, author, delta])
       }),
       pull.filter(Boolean) // only allow non-null values
@@ -273,6 +272,7 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   _trimDeltas () {
+    console.log('trim deltas')
     this._trimmingDeltas = true
     return new Promise((resolve, reject) => {
       const seq = this._seq

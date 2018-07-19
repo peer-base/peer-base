@@ -15,7 +15,9 @@ describe('sub-collaboration', function () {
   this.timeout(20000)
 
   const peerCount = 2 // 10
-  const collaborationOptions = {}
+  const collaborationOptions = {
+    maxDeltaRetention: 0
+  }
 
   let swarm = []
   let collaborations
@@ -90,5 +92,27 @@ describe('sub-collaboration', function () {
       .forEach((sub) => {
         expect(sub.shared.value()).to.equal('cd')
       })
+  })
+
+  it('can create another replica', async () => {
+    const peer = App({ maxThrottleDelayMS: 1000 })
+    const collaboration = await peer.app.collaborate('test sub-collaboration', 'fake', collaborationOptions)
+    swarm.push(peer)
+    collaborations.push(collaboration)
+    await peer.app.start()
+  })
+
+  it('waits a bit', (done) => {
+    setTimeout(done, 4000)
+  })
+
+  it('root collaboration still has same value', () => {
+    collaborations.forEach((collab) => {
+      expect(collab.shared.value()).to.equal('ab')
+    })
+  })
+
+  it('can kill 3rd replica', () => {
+    return swarm[peerCount].stop()
   })
 })
