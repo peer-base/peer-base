@@ -50,7 +50,7 @@ class Collaboration extends EventEmitter {
     }
     this._type = CRDT(type)
     if (!this._type) {
-      console.log('invalid collaboration type:', type)
+      throw new Error('invalid collaboration type:' + type)
     }
 
     this._subs = new Map()
