@@ -272,7 +272,6 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   _trimDeltas () {
-    console.log('trim deltas')
     this._trimmingDeltas = true
     return new Promise((resolve, reject) => {
       const seq = this._seq
