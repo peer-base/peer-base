@@ -32,6 +32,10 @@ const PeerStar = require('peer-star-app')
 
 ```js
 const app = PeerStar('app name', options)
+
+app.on('error', (err) => {
+  console.error('error in app:', err)
+})
 ```
 
 Options (are not required):
