@@ -5,6 +5,7 @@ const Membership = require('./membership')
 const Store = require('./store')
 const Shared = require('./shared')
 const CRDT = require('./crdt')
+const Gossip = require('./gossip')
 const deriveCreateCipherFromKeys = require('../keys/derive-cipher-from-keys')
 
 const defaultOptions = {
@@ -18,7 +19,7 @@ const defaultOptions = {
 module.exports = (...args) => new Collaboration(...args)
 
 class Collaboration extends EventEmitter {
-  constructor (isRoot, ipfs, globalConnectionManager, app, name, type, options) {
+  constructor (isRoot, ipfs, globalConnectionManager, app, name, type, options, parentCollab) {
     super()
     this._isRoot = isRoot
     this._ipfs = ipfs
@@ -26,6 +27,8 @@ class Collaboration extends EventEmitter {
     this._app = app
     this.name = name
     this._options = Object.assign({}, defaultOptions, options)
+    this._parentCollab = parentCollab
+    this._gossips = new Set()
 
     if (!this._options.keys) {
       throw new Error('need options.keys')
@@ -81,7 +84,8 @@ class Collaboration extends EventEmitter {
         this._app,
         name,
         type,
-        options
+        options,
+        this
       )
 
       this._subs.set(name, collab)
@@ -93,6 +97,27 @@ class Collaboration extends EventEmitter {
     }
 
     return collab
+  }
+
+  gossipName () {
+    let name
+    if (this._isRoot) {
+      name = [this._app.name, this.name].join('/')
+    } else {
+      name = [this._parentCollab.gossipName(), this.name].join('/')
+    }
+    return name
+  }
+
+  gossip () {
+    const gossip = Gossip(this._ipfs, this.gossipName(), this._options.keys)
+    gossip.then((gossip) => {
+      this._gossips.add(gossip)
+      gossip.once('stopped', () => {
+        this._gossips.delete(gossip)
+      })
+    })
+    return gossip
   }
 
   async _start () {
@@ -117,7 +142,9 @@ class Collaboration extends EventEmitter {
     if (this._isRoot) {
       await Promise.all([this._membership.stop(), this._store.stop()])
     }
-    await Array.from(this._subs.values()).map((sub) => sub.stop())
+    await Promise.all(Array.from(this._subs.values()).map((sub) => sub.stop()))
+    await Promise.all(Array.from(this._gossips).map((gossip) => gossip.stop()))
+
     this.emit('stopped')
   }
 

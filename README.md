@@ -152,6 +152,23 @@ const subCollaboration = await collaboration.sub('name', 'type')
 A sub-collaboration has the same API as a collaboration.
 
 
+## Collaboration gossip
+
+You can have collaboration-level private gossip like this:
+
+```js
+const gossip = await collaboration.gossip()
+
+gossip.on('message', (message, fromPeer) => {
+  console.log('got message from peer ${fromPeer}: ${JSON.stringify(message)}')
+})
+
+const message = ['any', 'JSON', 'object']
+
+gossip.broadcast(message)
+```
+
+
 ## App Events
 
 ### `app.emit('error', err)`
