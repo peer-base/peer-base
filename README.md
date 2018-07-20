@@ -111,7 +111,7 @@ const keys = await Keys.generate()
 
 const string = Keys.uriEncode(keys)
 
-const decodedKeys = Keys.uriDecode(string)
+const decodedKeys = await Keys.uriDecode(string)
 ```
 
 ### Read-only keys
