@@ -139,11 +139,12 @@ class Collaboration extends EventEmitter {
       this.shared.stop()
     }
 
+    await Promise.all(Array.from(this._subs.values()).map((sub) => sub.stop()))
+    await Promise.all(Array.from(this._gossips).map((gossip) => gossip.stop()))
+
     if (this._isRoot) {
       await Promise.all([this._membership.stop(), this._store.stop()])
     }
-    await Promise.all(Array.from(this._subs.values()).map((sub) => sub.stop()))
-    await Promise.all(Array.from(this._gossips).map((gossip) => gossip.stop()))
 
     this.emit('stopped')
   }
