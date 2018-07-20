@@ -18,7 +18,7 @@ function uriDecode (str) {
     const readKey = crypto.keys.unmarshalPublicKey(read)
 
     const keys = {
-      read: readKey,
+      read: readKey
     }
 
     keys.cipher = deriveCipherFromKeys(keys)

@@ -147,7 +147,6 @@ class Collaboration extends EventEmitter {
       console.error('error stopping shared collaboration:', err)
     }
 
-
     if (this._isRoot) {
       try {
         await Promise.all([this._membership.stop(), this._store.stop()])
