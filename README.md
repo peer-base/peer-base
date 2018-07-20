@@ -90,6 +90,17 @@ const keys = await Keys.generate()
 const string = Keys.uriEncode(keys)
 ```
 
+### `Keys.uriEncodeReadOnly`
+
+Encode the read-only key into a URI-acceptable string:
+
+```js
+const Keys = require('peer-star-app').keys
+const keys = await Keys.generate()
+
+const string = Keys.uriEncodeReadOnly(keys)
+```
+
 ### `await Keys.uriDecode`
 
 Decode keys from a string:
@@ -103,6 +114,16 @@ const string = Keys.uriEncode(keys)
 const decodedKeys = Keys.uriDecode(string)
 ```
 
+### Read-only keys
+
+You can distribute a read-only key by using `PeerStar.keys.uriEncodeReadOnly(keys)`:
+
+```js
+const Keys = require('peer-star-app').keys
+const keys = await Keys.generate()
+
+const string = Keys.uriEncodeReadOnly(keys)
+```
 
 ## Create collaboration
 

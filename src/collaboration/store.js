@@ -98,20 +98,22 @@ module.exports = class CollaborationStore extends EventEmitter {
       const newStateAndName = (await Promise.all(
         this._shareds.map((shared) => shared.apply(nextClock, delta)))).filter(Boolean)[0]
 
-      if (!newStateAndName) {
-        return
+      const [name, newState] = newStateAndName || []
+
+      const tasks = [
+        this._save(deltaKey, deltaRecord),
+        this._save('/clock', nextClock),
+        this._save('/seq', seq)
+      ]
+
+      if (newStateAndName) {
+        tasks.push(this._saveStateName(name))
+        tasks.push(this._save('/state/' + name, newState))
       }
-      const [name, newState] = newStateAndName
 
       debug('%s: new state is', this._id, newState)
 
-      await Promise.all([
-        this._saveStateName(name),
-        this._save(deltaKey, deltaRecord),
-        this._save('/state/' + name, newState),
-        this._save('/clock', nextClock),
-        this._save('/seq', seq)
-      ])
+      await Promise.all(tasks)
 
       this._scheduleDeltaTrim()
 

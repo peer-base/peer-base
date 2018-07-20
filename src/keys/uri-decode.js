@@ -17,21 +17,24 @@ function uriDecode (str) {
 
     const readKey = crypto.keys.unmarshalPublicKey(read)
 
+    const keys = {
+      read: readKey,
+    }
+
+    keys.cipher = deriveCipherFromKeys(keys)
+
     if (write) {
       crypto.keys.unmarshalPrivateKey(write, (err, writeKey) => {
         if (err) {
           return reject(err)
         }
 
-        const keys = {
-          read: readKey,
-          write: writeKey
-        }
-        keys.cipher = deriveCipherFromKeys(keys)
+        keys.write = writeKey
+
         resolve(keys)
       })
     } else {
-      resolve({ read: readKey })
+      resolve(keys)
     }
   })
 }

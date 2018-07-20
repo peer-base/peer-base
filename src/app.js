@@ -103,7 +103,12 @@ class App extends EventEmitter {
   }
 
   async stop () {
-    await Promise.all(Array.from(this._collaborations.values()).map((collaboration) => collaboration.stop()))
+    try {
+      await Promise.all(Array.from(this._collaborations.values()).map((collaboration) => collaboration.stop()))
+    } catch (err) {
+      console.error('error stopping collaborations:', err)
+    }
+
     this._collaborations.clear()
     await this.ipfs.stop()
     this._peerCountGuess.stop()
