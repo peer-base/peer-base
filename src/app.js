@@ -14,6 +14,7 @@ class App extends EventEmitter {
     super()
     this.name = name
     this.ipfs = IPFS(this, options)
+    this.ipfs.on('error', (err) => this.emit('error', err))
     this._peerCountGuess = new PeerCountGuess(this, options && options.peerCountGuess)
     this._collaborations = new Map()
     this._starting = null
