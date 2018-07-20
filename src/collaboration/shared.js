@@ -57,7 +57,9 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
         } else {
           debug('%s: already contains clock %j', id, remoteClock)
         }
-        return [name, encode([name, forName && type.typeName, await signAndEncrypt(encode(state))])]
+        if (keys.write) {
+          return [name, encode([name, forName && type.typeName, await signAndEncrypt(encode(state))])]
+        }
       } else if (typeName) {
         const sub = await collaboration.sub(forName, typeName)
         return sub.shared.apply(remoteClock, encodedDelta)
