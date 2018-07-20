@@ -24,7 +24,7 @@ class Collaboration extends EventEmitter {
     this._isRoot = isRoot
     this._ipfs = ipfs
     this._globalConnectionManager = globalConnectionManager
-    this._app = app
+    this.app = app
     this.name = name
     this._options = Object.assign({}, defaultOptions, options)
     this._parentCollab = parentCollab
@@ -81,7 +81,7 @@ class Collaboration extends EventEmitter {
         false,
         this._ipfs,
         this._globalConnectionManager,
-        this._app,
+        this.app,
         name,
         type,
         options,
@@ -102,7 +102,7 @@ class Collaboration extends EventEmitter {
   gossipName (_name) {
     let name = _name
     if (this._isRoot) {
-      name = [this._app.name, this.name, name].join('/')
+      name = [this.app.name, this.name, name].join('/')
     } else {
       name = [this._parentCollab.gossipName(), this.name, name].join('/')
     }
