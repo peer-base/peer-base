@@ -46,7 +46,7 @@ describe('collaboration gossip', function () {
   })
 
   before(async () => {
-    gossips = await Promise.all(collaborations.map((collab) => collab.gossip()))
+    gossips = await Promise.all(collaborations.map((collab) => collab.gossip('gossip name')))
   })
 
   before((done) => {
@@ -76,5 +76,4 @@ describe('collaboration gossip', function () {
 
     gossips[0].broadcast(['hello',  'world!'])
   })
-
 })

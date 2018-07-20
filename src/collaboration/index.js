@@ -99,18 +99,18 @@ class Collaboration extends EventEmitter {
     return collab
   }
 
-  gossipName () {
-    let name
+  gossipName (_name) {
+    let name = _name
     if (this._isRoot) {
-      name = [this._app.name, this.name].join('/')
+      name = [this._app.name, this.name, name].join('/')
     } else {
-      name = [this._parentCollab.gossipName(), this.name].join('/')
+      name = [this._parentCollab.gossipName(), this.name, name].join('/')
     }
     return name
   }
 
-  gossip () {
-    const gossip = Gossip(this._ipfs, this.gossipName(), this._options.keys)
+  gossip (name) {
+    const gossip = Gossip(this._ipfs, this.gossipName(name), this._options.keys)
     gossip.then((gossip) => {
       this._gossips.add(gossip)
       gossip.once('stopped', () => {
