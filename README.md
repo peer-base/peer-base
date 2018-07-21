@@ -125,6 +125,24 @@ const keys = await Keys.generate()
 const string = Keys.uriEncodeReadOnly(keys)
 ```
 
+### Generate symmetrical key
+
+```js
+const Keys = require('peer-star-app').keys
+
+// options are optiona. defaults to:
+const options = {
+  keyLength: 32,
+  ivLength: 16
+}
+const keys = await Keys.generateSymmetrical(options)
+
+key.raw // contains raw key (buffer)
+key.key // contains AES key
+```
+
+Returns (asynchronously) a key of type AES, as defined in [libp2p-crypto](https://github.com/libp2p/js-libp2p-crypto).
+
 ## Create collaboration
 
 ```js

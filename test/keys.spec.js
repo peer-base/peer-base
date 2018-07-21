@@ -25,4 +25,18 @@ describe('keys', () => {
     expect(decoded.read.equals(keys.read)).to.be.true()
     expect(decoded.write.equals(keys.write)).to.be.true()
   })
+
+  it('can generate a new symmetrical key', (done) => {
+    Keys.generateSymmetrical().then((key) => {
+      key.key.encrypt(Buffer.from('message'), (err, encrypted) => {
+        expect(err).to.not.exist()
+        key.key.decrypt(encrypted, (err, decrypted) => {
+          expect(err).to.not.exist()
+          expect(decrypted.toString()).to.equal('message')
+          done()
+        })
+      })
+    })
+
+  })
 })
