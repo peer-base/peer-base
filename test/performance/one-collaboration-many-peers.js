@@ -12,7 +12,7 @@ const { fork } = require('child_process')
 const PeerStar = require('../../')
 const A_BIT = 20000
 
-const peerCount = 2
+const peerCount = 5
 const duration = 20000
 const coolDownTimeMS = peerCount * 5000
 const collaborationName = 'array'
@@ -37,6 +37,7 @@ describe('performance tests - one collaboration, many peers', function () {
 
   it('starts replicas', () => {
     const workers = []
+    const workerResults = []
     for(let i = 0; i < peerCount; i++) {
       ((i) => {
         const data = dataForWorker(i)
@@ -57,13 +58,22 @@ describe('performance tests - one collaboration, many peers', function () {
           })
           worker.on('message', (message) => {
             console.log('worker %d message:', i, message)
-            expect(message.length).to.equal(expectedLength)
+            workerResults.push(message)
+            if (workerResults.length === peerCount) {
+              testWorkerResults()
+            }
           })
         }))
       })(i)
     }
 
     return Promise.all(workers)
+
+    function testWorkerResults () {
+      workerResults.forEach((workerResult) => {
+        expect(workerResult.length).to.equal(expectedLength)
+      })
+    }
   })
 })
 
