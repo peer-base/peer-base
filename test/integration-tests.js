@@ -1,0 +1,6 @@
+require('./app-swarm.spec')
+require('./app.spec')
+require('./peer-count-guess.spec')
+require('./collaboration.spec')
+require('./collaboration-gossip.spec')
+require('./sub-collaboration.spec')

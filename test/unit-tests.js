@@ -1,0 +1,5 @@
+require('./dias-set.spec')
+require('./keys.spec')
+require('./app-transport.spec')
+require('./shared.spec')
+require('./collaboration-protocol.spec')

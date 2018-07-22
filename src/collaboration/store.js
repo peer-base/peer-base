@@ -211,13 +211,15 @@ module.exports = class CollaborationStore extends EventEmitter {
         debug('%s: delta stream candidate: %j', this._id, d)
         return d
       }),
-      pull.asyncMap(([previousClock, author, delta], callback) => {
-        if (!vectorclock.isIdentical(previousClock, since)) {
+      pull.asyncMap((entireDelta, callback) => {
+        const [previousClock, author, delta] = entireDelta
+        const thisDeltaClock = vectorclock.increment(previousClock, author)
+        if (!vectorclock.isFirstDirectChildOfSecond(thisDeltaClock, since)) {
           debug('%s: candidate rejected because of clock: %j', this._id, previousClock)
           return callback(null, null)
         }
-        since = vectorclock.increment(previousClock, author)
-        callback(null, [previousClock, author, delta])
+        since = vectorclock.merge(since, thisDeltaClock)
+        callback(null, entireDelta)
       }),
       pull.filter(Boolean) // only allow non-null values
     )

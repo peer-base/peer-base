@@ -1,100 +1,81 @@
 /* eslint-env mocha */
 'use strict'
 
-// const {
-//   Worker, isMainThread, parentPort, workerData
-// } = require('worker_threads');
-
-// if (!isMainThread) {
-
-//   return
-// }
-
+const path = require('path')
 const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const crypto = require('libp2p-crypto')
+const { fork } = require('child_process')
+
 const PeerStar = require('../../')
-const App = require('../utils/create-app')
 const A_BIT = 20000
 
-const peerCount = 5
+const peerCount = 2
 const duration = 20000
+const coolDownTimeMS = peerCount * 5000
+const collaborationName = 'array'
+const opsPerSecond = 1
 
-describe('sub-collaboration', function () {
-  this.timeout(duration * 2)
+describe('performance tests - one collaboration, many peers', function () {
+  this.timeout(duration * 2 + coolDownTimeMS)
 
+  const expectedLength = peerCount * opsPerSecond * Math.round(duration / 1000)
 
-  let swarm = []
-  let collaborations
+  let workers = []
   let opCount = 0
-  const collaborationOptions = {}
-
-  for (let i = 0; i < peerCount; i++) {
-    ((i) => {
-      before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
-        swarm.push(app)
-        return app.start()
-      })
-
-      after(() => swarm[i] && swarm[i].stop())
-    })(i)
+  const workerData = {
+    opsPerSecond,
+    coolDownTimeMS,
+    collaborationName
   }
 
   before(async () => {
-    collaborationOptions.keys = await PeerStar.keys.generate()
+    workerData.keys = PeerStar.keys.uriEncode(await PeerStar.keys.generate())
   })
 
-  before(async () => {
-    collaborations = await Promise.all(
-      swarm.map((peer) => peer.app.collaborate('array', 'rga', collaborationOptions)))
-    expect(collaborations.length).to.equal(peerCount)
-  })
+  it('starts replicas', () => {
+    const workers = []
+    for(let i = 0; i < peerCount; i++) {
+      ((i) => {
+        const data = dataForWorker(i)
+        const thisWorkerData = Object.assign({}, workerData, { data })
+        const worker = fork(
+          path.join(__dirname, 'replica.js'), [
+          JSON.stringify(thisWorkerData)],
+          {
+            stdio: [0, 1, 2, 'ipc']
+          })
 
-  before((done) => {
-    // wait a bit for things to sync
-    setTimeout(done, A_BIT)
-  })
+        workers.push(new Promise((resolve, reject) => {
+          worker.once('exit', (code) => {
+            if (code !== 0) {
+              return reject(new Error(`Worker stopped with exit code ${code}`));
+            }
+            resolve()
+          })
+          worker.on('message', (message) => {
+            console.log('worker %d message:', i, message)
+            expect(message.length).to.equal(expectedLength)
+          })
+        }))
+      })(i)
+    }
 
-  it('do one operation per second on each peer', (done) => {
-    console.log('Starting test...')
-    const intervalMS = Math.round(1000 / peerCount)
-    const interval = setInterval(() => {
-      const peerIndex = opCount % peerCount
-      const replica = collaborations[peerIndex]
-      replica.shared.push(++opCount)
-      process.stdout.write('.')
-    }, intervalMS)
-
-    setTimeout(() => {
-      console.log('\nDone.\nDid %s operations', opCount)
-      clearInterval(interval)
-      done()
-    }, duration)
-  })
-
-  it('waits a bit', (done) => {
-    setTimeout(done, A_BIT)
-  })
-
-  it('all replicas are in sync', () => {
-    let first
-    const allResults = []
-    collaborations.forEach((collaboration) => {
-      const value = collaboration.shared.value()
-      expect(value.length).to.equal(opCount)
-      console.log('result:', value)
-      if (!first) {
-        first = value
-      } else {
-        expect(value).to.deep.equal(first)
-      }
-      allResults.push(value)
-    })
+    return Promise.all(workers)
   })
 })
+
+function dataForWorker (n) {
+  const opCount = Math.round(duration / 1000) * opsPerSecond
+  const arr = new Array(opCount)
+  for (let i = 0; i < opCount; i++) {
+    arr[i] = (n * opCount) + i + 1
+  }
+
+  return arr
+}
 
 function array (opCount) {
   const arr = new Array(opCount)

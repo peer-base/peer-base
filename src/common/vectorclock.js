@@ -25,3 +25,15 @@ exports.delta = (c1, c2) => {
 
   return deltas
 }
+
+exports.isFirstDirectChildOfSecond = (first, second) => {
+  let diff = 0
+  for (let key of Object.keys(first)) {
+    diff += first[key] - (second[key] || 0)
+    if (diff > 1) {
+      return false
+    }
+  }
+
+  return diff === 1
+}

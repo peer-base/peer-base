@@ -7,7 +7,8 @@
     "test": "npm run test:node && npm run test:browser",
     "test:node": "aegir test -t node",
     "test:browser": "aegir test -t browser",
-    "lint": "standard src/**/*.js"
+    "lint": "standard src/**/*.js",
+    "test:perf": "mocha test/performance/all.js"
   },
   "repository": {
     "type": "git",

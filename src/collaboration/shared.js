@@ -88,7 +88,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   function apply (s) {
     debug('%s: apply ', id, s)
     state = crdt.join(state, s)
-    debug('new state after join is', state)
+    debug('%s: new state after join is', id, state)
     shared.emit('state changed')
     return state
   }
