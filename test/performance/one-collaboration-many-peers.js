@@ -12,14 +12,14 @@ const { fork } = require('child_process')
 const PeerStar = require('../../')
 const A_BIT = 20000
 
-const peerCount = 5
+const peerCount = 10
 const duration = 20000
-const coolDownTimeMS = peerCount * 5000
+const coolDownTimeMS = peerCount * 10000
 const collaborationName = 'array'
 const opsPerSecond = 1
 
 describe('performance tests - one collaboration, many peers', function () {
-  this.timeout(duration * 2 + coolDownTimeMS)
+  this.timeout(duration * 2 + coolDownTimeMS * 2)
 
   const expectedLength = peerCount * opsPerSecond * Math.round(duration / 1000)
 
@@ -46,7 +46,7 @@ describe('performance tests - one collaboration, many peers', function () {
           path.join(__dirname, 'replica.js'), [
           JSON.stringify(thisWorkerData)],
           {
-            stdio: [0, 1, 2, 'ipc']
+            stdio: [0, 1, 'ignore', 'ipc']
           })
 
         workers.push(new Promise((resolve, reject) => {
