@@ -212,7 +212,7 @@ module.exports = class CollaborationStore extends EventEmitter {
         return d
       }),
       pull.asyncMap((entireDelta, callback) => {
-        const [previousClock, author, delta] = entireDelta
+        const [previousClock, author] = entireDelta
         const thisDeltaClock = vectorclock.increment(previousClock, author)
         if (!vectorclock.isFirstDirectChildOfSecond(thisDeltaClock, since)) {
           debug('%s: candidate rejected because of clock: %j', this._id, previousClock)
