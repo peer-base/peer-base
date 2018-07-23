@@ -15,9 +15,7 @@ const defaultOptions = {
   preambleByteCount: 2
 }
 
-module.exports = (...args) => new AppTransport(...args)
-
-class AppTransport extends EventEmitter {
+module.exports = class AppTransport extends EventEmitter {
   constructor (app, ipfs, transport, options) {
     super()
     this._started = false
