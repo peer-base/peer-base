@@ -69,7 +69,7 @@ app.peerCountGuess() // returns integer Number >= 0
 
 ## Keys
 
-Keys are required to collaborate. They authenticate changes to the collaboration and encrypts them for transmission and storage. You can either create new keys or parse them from a string.
+Keys can be used to collaborate. If provided, they authenticate changes to the collaboration and encrypts them for transmission and storage. You can either create new keys or parse them from a string.
 
 ### `await Keys.generate()`
 
@@ -155,7 +155,7 @@ await collaboration.stop()
 Arguments:
 * `collaborationName`: string: should uniquely identify this collaboration in the whole world
 * `type`: a string, identifying which type of CRDT should be used. Use [this reference table in the delta-crdts package](https://github.com/ipfs-shipyard/js-delta-crdts#types).
-* `options`: object, mandatory. Can contain the keys:
+* `options`: object, not required. Can contain the keys:
   * `keys`: keys, generated or parsed from URL. See [keys secion](#keys)
   * `maxDeltaRetention`: number: maximum number of retained deltas. Defaults to `1000`.
   * `deltaTrimTimeoutMS`: number: after a delta was added to the store, the time it waits before trying to trim the deltas.
