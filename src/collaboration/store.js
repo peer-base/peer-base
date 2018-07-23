@@ -230,7 +230,7 @@ module.exports = class CollaborationStore extends EventEmitter {
             flowing = true
             return callback(null, entireDelta)
           } else {
-            return callback(null,  null)
+            return callback(null, null)
           }
         }
         // they're concurrent
