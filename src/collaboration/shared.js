@@ -24,7 +24,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     shared[mutatorName] = (...args) => {
       const delta = mutator(state, ...args)
       clock = vectorclock.increment(clock, id)
-      apply(delta)
+      apply(delta, true)
 
       queue.add(async () => {
         const namedDelta = [name, type.typeName, await signAndEncrypt(encode(delta))]
@@ -78,8 +78,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     if (encryptedStoreState) {
       const [, , encryptedState] = decode(encryptedStoreState)
       const storeState = decode(await decryptAndVerify(encryptedState))
-      state = crdt.join(state, storeState)
-      shared.emit('state changed')
+      apply(storeState, true)
     }
   } catch (err) {
     shared.emit('error', err)
@@ -87,11 +86,11 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
 
   return shared
 
-  function apply (s) {
+  function apply (s, fromSelf) {
     debug('%s: apply ', id, s)
     state = crdt.join(state, s)
     debug('%s: new state after join is', id, state)
-    shared.emit('state changed')
+    shared.emit('state changed', fromSelf)
     return state
   }
 

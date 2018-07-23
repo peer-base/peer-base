@@ -1,6 +1,7 @@
 'use strict'
 
 const EventEmitter = require('events')
+const debounce = require('lodash.debounce')
 const Membership = require('./membership')
 const Store = require('./store')
 const Shared = require('./shared')
@@ -14,7 +15,8 @@ const defaultOptions = {
   debounceResetConnectionsMS: 1000,
   maxDeltaRetention: 1000,
   deltaTrimTimeoutMS: 1000,
-  resetConnectionIntervalMS: 6000
+  resetConnectionIntervalMS: 6000,
+  debounceChangeEventsMS: 200
 }
 
 module.exports = (...args) => new Collaboration(...args)
@@ -39,10 +41,11 @@ class Collaboration extends EventEmitter {
       this._options.createCipher = deriveCreateCipherFromKeys(this._options.keys)
     }
 
+    this._debouncedEmitStateChangedEvent = debounce(() => {
+      this.emit('debounced state changed')
+    }, this._options.debounceChangeEventsMS)
+
     this._store = this._options.store || new Store(ipfs, this, this._options)
-    this._store.on('state changed', (state) => {
-      this.emit('state changed', state)
-    })
 
     this._membership = this._options.membership || new Membership(ipfs, globalConnectionManager, app, this, this._store, this._options)
     this._membership.on('changed', () => {
@@ -134,6 +137,10 @@ class Collaboration extends EventEmitter {
     const name = this._storeName()
     this.shared = await Shared(name, id, this._type, this, this._store, this._options.keys)
     this.shared.on('error', (err) => this.emit('error', err))
+    this.shared.on('state changed', (fromSelf) => {
+      this.emit('state changed', fromSelf)
+      this._debouncedEmitStateChangedEvent()
+    })
     this._store.setShared(this.shared, name)
 
     await Array.from(this._subs.values()).map((sub) => sub.start())

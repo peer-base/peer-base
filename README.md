@@ -160,6 +160,7 @@ Arguments:
   * `maxDeltaRetention`: number: maximum number of retained deltas. Defaults to `1000`.
   * `deltaTrimTimeoutMS`: number: after a delta was added to the store, the time it waits before trying to trim the deltas.
   * `debounceResetConnectionsMS`: (defaults to `1000`): debounce membership changes before resetting connections.
+  * `debounceChangeEventsMS` (defaults to `200`): debounce `debounced state changed` events.
 
 ### Create your own collaboration type
 
@@ -275,9 +276,21 @@ collaboration.on('membership changed', (peers) => {
 
 #### `"state changed"`
 
+Emitted every time the state changes. Has one argument, a boolean, saying `true` if and only if the change came from this peer.
+
 ```js
-collaboration.on('state changed', () => {
+collaboration.on('state changed', (fromSelf) => {
   console.log('state changed. New collaboration value is: %j', collaboration.shared.value())
+})
+```
+
+#### `"debounced state changed"`
+
+Emitted `options.debounceChangeEventsMS` miliseconds after the last `state changed` event.
+
+```js
+collaboration.on('debounced state changed', () => {
+  console.log('debounced state changed. Collaboration value is: %j', collaboration.shared.value())
 })
 ```
 
