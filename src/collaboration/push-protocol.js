@@ -51,8 +51,9 @@ module.exports = class PushProtocol {
     }
 
     const updateRemote = async (myClock) => {
+      debug('%s: updateRemote %s', this._peerId(), remotePeerId)
       if (pushing) {
-        debug('updating remote')
+        debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
         await pushDeltas(myClock)
         if (remoteNeedsUpdate(myClock)) {
@@ -72,8 +73,11 @@ module.exports = class PushProtocol {
             // send only clock
             output.push(encode([null, [this._clocks.getFor(this._peerId())]]))
           }
+        } else {
+          debug('%s: remote %s does not need update', this._peerId(), remotePeerId)
         }
       } else {
+        debug('%s: NOT pushing to %s', this._peerId(), remotePeerId)
         output.push(encode([null, [this._clocks.getFor(this._peerId())]]))
       }
     }
@@ -86,6 +90,7 @@ module.exports = class PushProtocol {
     }
 
     const reduceEntropy = () => {
+      debug('%s: reduceEntropy to %s', this._peerId(), remotePeerId)
       if (remoteNeedsUpdate()) {
         return updateRemote(this._clocks.getFor(this._peerId()))
       } else {
@@ -94,7 +99,7 @@ module.exports = class PushProtocol {
     }
 
     const onClockChanged = (newClock) => {
-      debug('clock changed to %j', newClock)
+      debug('%s: clock changed to %j', this._peerId(), newClock)
       this._clocks.setFor(this._peerId(), newClock)
       queue.add(reduceEntropy).catch(onEnd)
     }
