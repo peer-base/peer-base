@@ -1,7 +1,6 @@
 'use strict'
 
 const EventEmitter = require('events')
-const debounce = require('lodash.debounce')
 const Membership = require('./membership')
 const Store = require('./store')
 const Shared = require('./shared')
@@ -15,8 +14,7 @@ const defaultOptions = {
   debounceResetConnectionsMS: 1000,
   maxDeltaRetention: 1000,
   deltaTrimTimeoutMS: 1000,
-  resetConnectionIntervalMS: 6000,
-  debounceChangeEventsMS: 200
+  resetConnectionIntervalMS: 6000
 }
 
 module.exports = (...args) => new Collaboration(...args)
@@ -40,10 +38,6 @@ class Collaboration extends EventEmitter {
     if (!this._options.createCipher && this._options.keys.read) {
       this._options.createCipher = deriveCreateCipherFromKeys(this._options.keys)
     }
-
-    this._debouncedEmitStateChangedEvent = debounce(() => {
-      this.emit('debounced state changed')
-    }, this._options.debounceChangeEventsMS)
 
     this._store = this._options.store || new Store(ipfs, this, this._options)
 
@@ -139,7 +133,6 @@ class Collaboration extends EventEmitter {
     this.shared.on('error', (err) => this.emit('error', err))
     this.shared.on('state changed', (fromSelf) => {
       this.emit('state changed', fromSelf)
-      this._debouncedEmitStateChangedEvent()
     })
     this._store.setShared(this.shared, name)
 
