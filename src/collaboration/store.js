@@ -115,6 +115,8 @@ module.exports = class CollaborationStore extends EventEmitter {
 
       await Promise.all(tasks)
 
+      debug('%s: saved delta %j', this._id, deltaKey)
+
       this._scheduleDeltaTrim()
 
       debug('%s: saved delta and vector clock', this._id)
@@ -235,6 +237,8 @@ module.exports = class CollaborationStore extends EventEmitter {
         if (vectorclock.isFirstImmediateToSecond(thisDeltaClock, since)) {
           flowing = true
           return callback(null, entireDelta)
+        } else {
+          return callback(null, null)
         }
       }),
       pull.filter(Boolean) // only allow non-null values
