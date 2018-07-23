@@ -60,9 +60,9 @@ module.exports = class ConnectionManager {
     this._stopped = false
     this._diasSet = diasSet
 
-    // this._resetInterval = setInterval(() => {
-    //   this._resetConnections()
-    // }, this._options.resetConnectionIntervalMS)
+    this._resetInterval = setInterval(() => {
+      this._resetConnections()
+    }, this._options.resetConnectionIntervalMS)
 
     await this._globalConnectionManager.handle(this._protocol.name(), this._protocol.handler)
   }
