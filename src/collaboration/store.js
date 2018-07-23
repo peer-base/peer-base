@@ -20,9 +20,6 @@ module.exports = class CollaborationStore extends EventEmitter {
     this._options = options
 
     this._cipher = options.createCipher
-    if (typeof this._cipher !== 'function') {
-      throw new Error('need options.createCipher')
-    }
 
     this._queue = new Queue({ concurrency: 1 })
 
@@ -328,6 +325,9 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   _encode (value) {
+    if (!this._cipher) {
+      return Promise.resolve(encode(value))
+    }
     return this._cipher().then((cipher) => {
       return new Promise((resolve, reject) => {
         cipher.encrypt(encode(value), (err, encrypted) => {
@@ -341,6 +341,15 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   _decode (bytes, callback) {
+    if (!this._cipher) {
+      let decoded
+      try {
+        decoded = decode(bytes)
+      } catch (err) {
+        return callback(err)
+      }
+      return callback(null, decoded)
+    }
     this._cipher().then((cipher) => {
       cipher.decrypt(bytes, (err, decrypted) => {
         if (err) {

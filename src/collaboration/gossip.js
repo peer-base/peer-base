@@ -45,6 +45,9 @@ class Gossip extends EventEmitter {
 
   broadcast (_message) {
     const message = encode(_message)
+    if (!this._keys.cipher) {
+      return this._ipfs.pubsub.publish(this.name, message)
+    }
     this._keys.cipher().then((cipher) => {
       cipher.encrypt(message, (err, encrypted) => {
         if (err) {
@@ -57,6 +60,18 @@ class Gossip extends EventEmitter {
   }
 
   _pubSubHandler (_message) {
+    if (!this._keys.cipher) {
+      let message
+      try {
+        message = decode(_message.data)
+      } catch (err) {
+        console.error('error caught while handling pubsub message:', err)
+        return
+      }
+
+      this.emit('message', message, _message.from)
+      return
+    }
     this._keys.cipher().then((cipher) => {
       cipher.decrypt(_message.data, (err, decrypted) => {
         if (err) {
