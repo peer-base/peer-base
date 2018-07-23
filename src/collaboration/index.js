@@ -13,7 +13,8 @@ const defaultOptions = {
   peerIdByteCount: 32,
   debounceResetConnectionsMS: 1000,
   maxDeltaRetention: 1000,
-  deltaTrimTimeoutMS: 1000
+  deltaTrimTimeoutMS: 1000,
+  resetConnectionIntervalMS: 6000
 }
 
 module.exports = (...args) => new Collaboration(...args)
@@ -120,6 +121,10 @@ class Collaboration extends EventEmitter {
     return gossip
   }
 
+  vectorClock (peerId) {
+    return this._membership.vectorClock(peerId)
+  }
+
   async _start () {
     if (this._isRoot) {
       await this._membership.start()
@@ -166,8 +171,16 @@ class Collaboration extends EventEmitter {
     return this._membership.outboundConnectionCount()
   }
 
+  outboundConnectedPeers () {
+    return this._membership.outboundConnectedPeers()
+  }
+
   inboundConnectionCount () {
     return this._membership.inboundConnectionCount()
+  }
+
+  inboundConnectedPeers () {
+    return this._membership.inboundConnectedPeers()
   }
 
   deliverRemoteMembership (membership) {

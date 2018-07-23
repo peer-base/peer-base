@@ -115,6 +115,8 @@ module.exports = class CollaborationStore extends EventEmitter {
 
       await Promise.all(tasks)
 
+      debug('%s: saved delta %j', this._id, deltaKey)
+
       this._scheduleDeltaTrim()
 
       debug('%s: saved delta and vector clock', this._id)
@@ -199,9 +201,11 @@ module.exports = class CollaborationStore extends EventEmitter {
     }, new Map())
   }
 
-  deltaStream (_since = {}) {
-    let since = Object.assign({}, _since)
+  deltaStream (since = {}) {
     debug('%s: delta stream since %j', this._id, since)
+
+    let flowing = false
+
     return pull(
       this._store.query({
         prefix: '/d:'
@@ -212,14 +216,30 @@ module.exports = class CollaborationStore extends EventEmitter {
         return d
       }),
       pull.asyncMap((entireDelta, callback) => {
+        if (flowing) {
+          return callback(null, entireDelta)
+        }
         const [previousClock, author] = entireDelta
         const thisDeltaClock = vectorclock.increment(previousClock, author)
-        if (!vectorclock.isFirstDirectChildOfSecond(thisDeltaClock, since)) {
-          debug('%s: candidate rejected because of clock: %j', this._id, previousClock)
+        const comparison = vectorclock.compare(thisDeltaClock, since)
+        if (comparison < 0) {
           return callback(null, null)
         }
-        since = vectorclock.merge(since, thisDeltaClock)
-        callback(null, entireDelta)
+        if (comparison > 0) {
+          if (vectorclock.isFirstDirectChildOfSecond(thisDeltaClock, since)) {
+            flowing = true
+            return callback(null, entireDelta)
+          } else {
+            return callback(null, null)
+          }
+        }
+        // they're concurrent
+        if (vectorclock.isFirstImmediateToSecond(thisDeltaClock, since)) {
+          flowing = true
+          return callback(null, entireDelta)
+        } else {
+          return callback(null, null)
+        }
       }),
       pull.filter(Boolean) // only allow non-null values
     )

@@ -33,6 +33,7 @@ module.exports = class PushProtocol {
             debug('%s: delta:', this._peerId(), delta)
             if (pushing) {
               const pushedClock = vectorclock.increment(previousClock, author)
+              debug('%s: pushed %j to %s', this._peerId(), pushedClock, remotePeerId)
               this._clocks.setFor(remotePeerId, pushedClock)
               // TODO: consider sending only clock deltas
               output.push(encode([[previousClock, author, delta]]))
@@ -49,12 +50,13 @@ module.exports = class PushProtocol {
       })
     }
 
-    const updateRemote = async () => {
+    const updateRemote = async (myClock) => {
+      debug('%s: updateRemote %s', this._peerId(), remotePeerId)
       if (pushing) {
-        debug('updating remote')
+        debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
-        await pushDeltas()
-        if (remoteNeedsUpdate()) {
+        await pushDeltas(myClock)
+        if (remoteNeedsUpdate(myClock)) {
           if (pushing) {
             debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
             // remote still needs update
@@ -62,40 +64,42 @@ module.exports = class PushProtocol {
             debug('clock and states: ', clockAndStates)
             const [clock] = clockAndStates
             if (Object.keys(clock).length) {
+              debug('%s: clock of %s now is %j', this._peerId(), remotePeerId, clock)
               this._clocks.setFor(remotePeerId, clock)
               debug('%s: sending clock and states to %s:', this._peerId(), remotePeerId, clockAndStates)
               output.push(encode([null, clockAndStates]))
             }
           } else {
             // send only clock
-            const myClock = this._clocks.getFor(this._peerId())
-            output.push(encode([null, [myClock]]))
+            output.push(encode([null, [this._clocks.getFor(this._peerId())]]))
           }
+        } else {
+          debug('%s: remote %s does not need update', this._peerId(), remotePeerId)
         }
       } else {
-        const myClock = this._clocks.getFor(this._peerId())
-        output.push(encode([null, [myClock]]))
+        debug('%s: NOT pushing to %s', this._peerId(), remotePeerId)
+        output.push(encode([null, [this._clocks.getFor(this._peerId())]]))
       }
     }
 
-    const remoteNeedsUpdate = () => {
-      const myClock = this._clocks.getFor(this._peerId())
+    const remoteNeedsUpdate = (_myClock) => {
+      const myClock = _myClock || this._clocks.getFor(this._peerId())
       const remoteClock = this._clocks.getFor(remotePeerId)
       debug('%s: comparing local clock %j to remote clock %j', this._peerId(), myClock, remoteClock)
-      return (vectorclock.compare(myClock, remoteClock) >= 0) &&
-             (!vectorclock.isIdentical(myClock, remoteClock))
+      return !vectorclock.doesSecondHaveFirst(myClock, remoteClock)
     }
 
     const reduceEntropy = () => {
+      debug('%s: reduceEntropy to %s', this._peerId(), remotePeerId)
       if (remoteNeedsUpdate()) {
-        return updateRemote()
+        return updateRemote(this._clocks.getFor(this._peerId()))
       } else {
         debug('remote is up to date')
       }
     }
 
     const onClockChanged = (newClock) => {
-      debug('clock changed to %j', newClock)
+      debug('%s: clock changed to %j', this._peerId(), newClock)
       this._clocks.setFor(this._peerId(), newClock)
       queue.add(reduceEntropy).catch(onEnd)
     }

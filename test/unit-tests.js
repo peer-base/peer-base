@@ -1,3 +1,4 @@
+require('./ring.spec')
 require('./dias-set.spec')
 require('./keys.spec')
 require('./app-transport.spec')

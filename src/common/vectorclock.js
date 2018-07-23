@@ -37,3 +37,28 @@ exports.isFirstDirectChildOfSecond = (first, second) => {
 
   return diff === 1
 }
+
+exports.doesSecondHaveFirst = (first, second) => {
+  for (let key of Object.keys(first)) {
+    if ((second[key] || 0) < first[key]) {
+      return false
+    }
+  }
+  return true
+}
+
+exports.isFirstImmediateToSecond = (first, second) => {
+  let diff = 0
+  for (let key of Object.keys(first)) {
+    const firstValue = first[key]
+    const secondValue = second[key] || 0
+    if (secondValue < firstValue) {
+      diff += first[key] - (second[key] || 0)
+      if (diff > 1) {
+        return false
+      }
+    }
+  }
+
+  return diff === 1
+}

@@ -9,7 +9,7 @@ const crypto = require('libp2p-crypto')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 require('./utils/fake-crdt')
-const A_BIT = 10000
+const A_BIT = 5000
 
 describe('sub-collaboration', function () {
   this.timeout(20000)
@@ -61,12 +61,13 @@ describe('sub-collaboration', function () {
   })
 
   it('waits a bit', (done) => {
-    setTimeout(done, 2000)
+    setTimeout(done, A_BIT)
   })
 
   it('all replicas in sync', () => {
     collaborations.forEach((collab) => {
-      expect(collab.shared.value()).to.equal('ab')
+      const value = collab.shared.value()
+      expect(value).to.equal('ab')
     })
   })
 
@@ -78,7 +79,7 @@ describe('sub-collaboration', function () {
   })
 
   it('waits a bit', (done) => {
-    setTimeout(done, 4000)
+    setTimeout(done, A_BIT)
   })
 
   it('root collaboration still has same value', () => {

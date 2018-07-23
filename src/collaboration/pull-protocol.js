@@ -62,6 +62,7 @@ module.exports = class PullProtocol {
                 clearTimeout(timeout)
               }
             }
+            debug('%s: received clock from %s: %j', this._peerId(), remotePeerId, clock)
             if (await this._store.contains(clock)) {
               // we already have this state
               // send a "prune" messagere

@@ -24,7 +24,7 @@ class Protocol extends EventEmitter {
     this._store = store
     this._options = Object.assign({}, defaultOptions, options)
     this._streamsFor = new Map()
-    this._clocks = new Clocks()
+    this._clocks = new Clocks(this._ipfs._peerInfo.id.toB58String())
     this._pushProtocol = new PushProtocol(ipfs, store, this._clocks, keys, this._options)
     this._pullProtocol = new PullProtocol(ipfs, store, this._clocks, keys, this._options)
 
@@ -81,6 +81,11 @@ class Protocol extends EventEmitter {
       }),
       conn
     )
+  }
+
+  vectorClock (_peerId) {
+    const peerId = _peerId || this._ipfs._peerInfo.id.toB58String()
+    return this._clocks.getFor(peerId)
   }
 
   _peerId () {
