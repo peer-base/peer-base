@@ -37,6 +37,8 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     }
   })
 
+  shared.state = () => state
+
   // shared value
   shared.value = () => crdt.value(state)
 

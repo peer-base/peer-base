@@ -10,16 +10,16 @@ const crypto = require('libp2p-crypto')
 const { fork } = require('child_process')
 
 const PeerStar = require('../../')
-const A_BIT = 20000
 
-const peerCount = 10
+const ignoreWorkerStdErr = false
+const enableDebug = true
+const peerCount = 5 // 10
 const duration = 20000
-const coolDownTimeMS = peerCount * 10000
 const collaborationName = 'array'
 const opsPerSecond = 1
 
 describe('performance tests - one collaboration, many peers', function () {
-  this.timeout(duration * 2 + coolDownTimeMS * 2)
+  this.timeout(duration * 3)
 
   const expectedLength = peerCount * opsPerSecond * Math.round(duration / 1000)
 
@@ -27,52 +27,54 @@ describe('performance tests - one collaboration, many peers', function () {
   let opCount = 0
   const workerData = {
     opsPerSecond,
-    coolDownTimeMS,
-    collaborationName
+    collaborationName,
+    expectedLength,
+    enableDebug
   }
 
   before(async () => {
     workerData.keys = PeerStar.keys.uriEncode(await PeerStar.keys.generate())
   })
 
-  it('starts replicas', () => {
-    const workers = []
+  after(() => {
+    workers.forEach((worker) => worker.kill('SIGKILL'))
+  })
+
+  it('starts replicas', (done) => {
     const workerResults = []
     for(let i = 0; i < peerCount; i++) {
       ((i) => {
         const data = dataForWorker(i)
-        const thisWorkerData = Object.assign({}, workerData, { data })
+        const thisWorkerData = Object.assign({}, workerData, {
+          data,
+          workerId: i
+        })
         const worker = fork(
           path.join(__dirname, 'replica.js'), [
           JSON.stringify(thisWorkerData)],
-          {
-            stdio: [0, 1, 'ignore', 'ipc']
-          })
+          // {
+          //   // stdio: [0, 1, ignoreWorkerStdErr ? 'ignore' : 2, 'ipc']
+          // }
+          )
 
-        workers.push(new Promise((resolve, reject) => {
-          worker.once('exit', (code) => {
-            if (code !== 0) {
-              return reject(new Error(`Worker stopped with exit code ${code}`));
-            }
-            resolve()
-          })
-          worker.on('message', (message) => {
-            console.log('worker %d message:', i, message)
-            workerResults.push(message)
-            if (workerResults.length === peerCount) {
-              testWorkerResults()
-            }
-          })
-        }))
+        workers.push(worker)
+        worker.on('message', (message) => {
+          console.log('worker %d message length:', i, message.length)
+          workerResults.push(message)
+          if (workerResults.length === peerCount) {
+            testWorkerResults()
+            done()
+          }
+        })
       })(i)
     }
 
-    return Promise.all(workers)
-
     function testWorkerResults () {
-      workerResults.forEach((workerResult) => {
+      workerResults.forEach((workerResult, index) => {
+        console.log('%d has %d entries', index, workerResult.length)
         expect(workerResult.length).to.equal(expectedLength)
       })
+      expect(workerResults.length).to.equal(peerCount)
     }
   })
 })

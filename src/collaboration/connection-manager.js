@@ -48,6 +48,10 @@ module.exports = class ConnectionManager {
       }
     })
 
+    this._protocol.on('error', (err) => {
+      collaboration.emit('error', err)
+    })
+
     this._debouncedResetConnections = debounce(
       this._resetConnections.bind(this), this._options.debounceResetConnectionsMS)
   }
@@ -56,10 +60,15 @@ module.exports = class ConnectionManager {
     this._stopped = false
     this._diasSet = diasSet
 
+    // this._resetInterval = setInterval(() => {
+    //   this._resetConnections()
+    // }, this._options.resetConnectionIntervalMS)
+
     await this._globalConnectionManager.handle(this._protocol.name(), this._protocol.handler)
   }
 
   stop () {
+    // clearInterval(this._resetInterval)
     this._stopped = true
     this._globalConnectionManager.unhandle(this._protocol.name())
   }
@@ -68,8 +77,20 @@ module.exports = class ConnectionManager {
     return this._outboundConnections.size
   }
 
+  outboundConnectedPeers () {
+    return Array.from(this._outboundConnections.values()).map(peerInfoToPeerId)
+  }
+
   inboundConnectionCount () {
     return this._inboundConnections.size
+  }
+
+  inboundConnectedPeers () {
+    return Array.from(this._inboundConnections.values()).map(peerInfoToPeerId)
+  }
+
+  vectorClock (peerId) {
+    return this._protocol.vectorClock(peerId)
   }
 
   _onRingChange () {
@@ -109,4 +130,8 @@ module.exports = class ConnectionManager {
       debug('error resetting connections:', err)
     })
   }
+}
+
+function peerInfoToPeerId (peerInfo) {
+  return peerInfo.id.toB58String()
 }

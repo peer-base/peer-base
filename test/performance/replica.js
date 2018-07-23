@@ -28,6 +28,12 @@ const start = async () => {
     console.log('Error on collaboration:', err)
   })
 
+  // let stateChanges = 0
+  // collaboration.on('state changed', () => {
+  //   stateChanges ++
+  //   console.log('worker %s has %d state changes', workerData.workerId, stateChanges)
+  // })
+
   setTimeout(() => {
     console.log('starting load...')
     const intervalMS = 1000 / workerData.opsPerSecond
@@ -45,13 +51,41 @@ const start = async () => {
     function stop () {
       console.log('cooling down...')
       clearInterval(interval)
-      setTimeout(async () => {
-        process.send(collaboration.shared.value())
-        console.log('stopping...')
+      let debugEnabled = false
+      let stopStarted = Date.now()
+      scheduleStopPoll()
+
+      function scheduleStopPoll () {
         setTimeout(() => {
-          process.exit()
-        }, 1000)
-      }, workerData.coolDownTimeMS)
+          if (!pollForFinalDataLength()) {
+            scheduleStopPoll()
+          }
+        }, 2000)
+      }
+
+      function pollForFinalDataLength () {
+        if (workerData.enablDebug && ((Date.now() - stopStarted) > 5000) && !debugEnabled) {
+          console.log('%s: ENABLING DEBUGGING', workerData.workerId)
+          debugEnabled = true
+          PeerStar.debug.enable('peer-star:collaboration:*')
+        }
+        const l = collaboration.shared.value().length
+        console.log('%s: current length: %d', workerData.workerId, l)
+        console.log('%s: collaboration:', workerData.workerId, {
+          peerId: collaboration.app.ipfs._peerInfo.id.toB58String(),
+          inboundConnectionCount: collaboration.inboundConnectionCount(),
+          outboundConnectionCount: collaboration.outboundConnectionCount(),
+          inboundConnectedPeers: collaboration.inboundConnectedPeers(),
+          ouboundConnectedPeers: collaboration.outboundConnectedPeers(),
+          vertices: Array.from(collaboration.shared.state()[2]).length,
+          clock: collaboration.vectorClock()
+        })
+        if (l === workerData.expectedLength) {
+          console.log('stopping...')
+          process.send(collaboration.shared.value())
+          return true
+        }
+      }
     }
   }, 1000)
 }

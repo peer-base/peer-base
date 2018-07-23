@@ -75,8 +75,20 @@ module.exports = class Membership extends EventEmitter {
     return this._connectionManager.outboundConnectionCount()
   }
 
+  outboundConnectedPeers () {
+    return this._connectionManager.outboundConnectedPeers()
+  }
+
   inboundConnectionCount () {
     return this._connectionManager.inboundConnectionCount()
+  }
+
+  inboundConnectedPeers () {
+    return this._connectionManager.inboundConnectedPeers()
+  }
+
+  vectorClock (peerId) {
+    return this._connectionManager.vectorClock(peerId)
   }
 
   needsUrgentBroadcast () {
