@@ -59,7 +59,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
         } else {
           debug('%s: already contains clock %j', id, remoteClock)
         }
-        if (keys.write) {
+        if (!keys.public || keys.write) {
           return [name, encode([name, forName && type.typeName, await signAndEncrypt(encode(state))])]
         }
       } else if (typeName) {
