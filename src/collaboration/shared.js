@@ -114,6 +114,9 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
 
   function signAndEncrypt (data) {
     return new Promise((resolve, reject) => {
+      if (!keys.write) {
+        return resolve(data)
+      }
       keys.write.sign(data, (err, signature) => {
         if (err) {
           return reject(err)
@@ -141,6 +144,9 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
       throw new Error('need buffer')
     }
     return new Promise((resolve, reject) => {
+      if (!keys.cipher && !keys.read) {
+        return resolve(encrypted)
+      }
       keys.cipher()
         .then((cipher) => cipher.decrypt(encrypted, (err, decrypted) => {
           if (err) {

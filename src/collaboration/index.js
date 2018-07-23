@@ -32,10 +32,10 @@ class Collaboration extends EventEmitter {
     this._gossips = new Set()
 
     if (!this._options.keys) {
-      throw new Error('need options.keys')
+      this._options.keys = {}
     }
 
-    if (!this._options.createCipher) {
+    if (!this._options.createCipher && this._options.keys.read) {
       this._options.createCipher = deriveCreateCipherFromKeys(this._options.keys)
     }
 

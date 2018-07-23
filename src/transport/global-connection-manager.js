@@ -50,7 +50,7 @@ module.exports = class GlobalConnectionManager {
           source: pull(
             conn.source,
             pull.through(null, (err) => {
-              if (err) {
+              if (err && err.message !== 'underlying socket has been closed') {
                 console.error('connection to %s ended with error', peerId, err.message)
                 debug('connection to %s ended with error', peerId, err)
               }

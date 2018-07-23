@@ -126,7 +126,7 @@ module.exports = class PullProtocol {
 
     const onEnd = (err) => {
       if (!ended) {
-        if (err) {
+        if (err && err.message !== 'underlying socket has been closed') {
           console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err)
           console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.message)
           debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)
