@@ -275,11 +275,15 @@ collaboration.on('membership changed', (peers) => {
 
 #### `"state changed"`
 
+Emitted every time the state changes. Has one argument, a boolean, saying `true` if and only if the change came from this peer. This is emitted immediately after a change is applied on the CRDT state.
+
 ```js
-collaboration.on('state changed', () => {
+collaboration.on('state changed', (fromSelf) => {
   console.log('state changed. New collaboration value is: %j', collaboration.shared.value())
 })
 ```
+
+__NOTE__: When receiving remote updates, this event may fire many times per second. You may want to use a debounce or a throttle mechanism when handling this event. If you do that, beware that the state in your UI may be out of sync with the state of the CRDT.
 
 ### `collaboration.shared`
 

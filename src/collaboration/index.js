@@ -40,9 +40,6 @@ class Collaboration extends EventEmitter {
     }
 
     this._store = this._options.store || new Store(ipfs, this, this._options)
-    this._store.on('state changed', (state) => {
-      this.emit('state changed', state)
-    })
 
     this._membership = this._options.membership || new Membership(ipfs, globalConnectionManager, app, this, this._store, this._options)
     this._membership.on('changed', () => {
@@ -134,6 +131,9 @@ class Collaboration extends EventEmitter {
     const name = this._storeName()
     this.shared = await Shared(name, id, this._type, this, this._store, this._options.keys)
     this.shared.on('error', (err) => this.emit('error', err))
+    this.shared.on('state changed', (fromSelf) => {
+      this.emit('state changed', fromSelf)
+    })
     this._store.setShared(this.shared, name)
 
     await Array.from(this._subs.values()).map((sub) => sub.start())
