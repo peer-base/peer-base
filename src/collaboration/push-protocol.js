@@ -152,7 +152,7 @@ module.exports = class PushProtocol {
 
     const onEnd = (err) => {
       if (!ended) {
-        if (err) {
+        if (err && err.message !== 'underlying socket has been closed') {
           console.error(err.message)
           debug(err)
         }

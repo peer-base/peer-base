@@ -52,7 +52,7 @@ class Protocol extends EventEmitter {
         this._pullProtocol.forPeer(peerInfo),
         passthrough((err) => {
           this._decrementStreamsFor(peerInfo)
-          if (err) {
+          if (err && err.message !== 'underlying socket has been closed') {
             console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
             debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           }
@@ -73,7 +73,7 @@ class Protocol extends EventEmitter {
       this._pushProtocol.forPeer(peerInfo),
       passthrough((err) => {
         this._decrementStreamsFor(peerInfo)
-        if (err) {
+        if (err && err.message !== 'underlying socket has been closed') {
           console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
         }
