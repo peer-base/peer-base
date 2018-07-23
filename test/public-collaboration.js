@@ -15,7 +15,6 @@ describe('public collaboration', function () {
   this.timeout(A_BIT * 2)
 
   const peerCount = 2 // 10
-  const collaborationOptions = {}
 
   let swarm = []
   let collaborations
@@ -40,7 +39,7 @@ describe('public collaboration', function () {
 
   it('can be created', async () => {
     collaborations = await Promise.all(
-      swarm.map((peer) => peer.app.collaborate('test public collaboration', 'fake', collaborationOptions)))
+      swarm.map((peer) => peer.app.collaborate('test public collaboration', 'fake')))
     expect(collaborations.length).to.equal(peerCount)
   })
 
@@ -59,7 +58,7 @@ describe('public collaboration', function () {
 
   it('adding another peer', async () => {
     const peer = App({ maxThrottleDelayMS: 1000 })
-    const collaboration = await peer.app.collaborate('test public collaboration', 'fake', collaborationOptions)
+    const collaboration = await peer.app.collaborate('test public collaboration', 'fake')
     swarm.push(peer)
     collaborations.push(collaboration)
     await peer.app.start()
@@ -70,7 +69,7 @@ describe('public collaboration', function () {
   })
 
   it('can push operation', async () => {
-    const collaboration = await swarm[0].app.collaborate('test public collaboration', 'fake', collaborationOptions)
+    const collaboration = await swarm[0].app.collaborate('test public collaboration', 'fake')
     collaboration.shared.add('a')
     collaboration.shared.add('b')
   })
@@ -81,7 +80,7 @@ describe('public collaboration', function () {
 
   it('all replicas in sync', async () => {
     const collaborations = await Promise.all(
-      swarm.map(async (peer) => peer.app.collaborate('test public collaboration', 'fake', collaborationOptions)))
+      swarm.map(async (peer) => peer.app.collaborate('test public collaboration', 'fake')))
 
     await Promise.all(collaborations.map(async (collab) => {
       expect(collab.shared.value()).to.equal('ab')
