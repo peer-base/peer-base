@@ -97,13 +97,15 @@ describe('public collaboration', function () {
       gossip.once('message', async (message, fromPeerId) => {
         expect(message).to.deep.equal(['hello', 'from', 'unencrypted'])
         count++
-        console.log('count is', count)
-        if (count === gossips.length) {
+        if (count === peerCount) {
+          clearInterval(interval)
           done()
         }
       })
     })
-    gossips[0].broadcast(['hello', 'from', 'unencrypted'])
+    const interval = setInterval(() => {
+      gossips[0].broadcast(['hello', 'from', 'unencrypted'])
+    }, 1000)
   })
 
   it('closes peer', () => {
