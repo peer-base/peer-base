@@ -13,13 +13,13 @@ const PeerStar = require('../../')
 
 const ignoreWorkerStdErr = false
 const enableDebug = true
-const peerCount = 5 // 10
+const peerCount = 10
 const duration = 20000
 const collaborationName = 'array'
 const opsPerSecond = 1
 
 describe('performance tests - one collaboration, many peers', function () {
-  this.timeout(duration * 3)
+  this.timeout(duration * 10)
 
   const expectedLength = peerCount * opsPerSecond * Math.round(duration / 1000)
 
