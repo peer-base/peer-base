@@ -113,7 +113,11 @@ module.exports = class ConnectionManager {
             const connection = await this._globalConnectionManager.connect(
               peerInfo, this._protocol.name())
             this._protocol.dialerFor(peerInfo, connection)
+            connection.once('closed', () => {
+              this._ring.remove(peerInfo)
+            })
           } catch (err) {
+            this._ring.remove(peerInfo)
             console.log('error connecting:', err.message)
             debug('error connecting:', err)
           }

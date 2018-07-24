@@ -86,21 +86,26 @@ class App extends EventEmitter {
 
   _onGossipMessage (message) {
     this.emit('gossip', message)
-    let collaborationName, membership
-    try {
-      [collaborationName, membership] = decode(message.data)
-    } catch (err) {
-      console.log('error parsing gossip message:', err)
-      return
-    }
+    this.ipfs.id().then((peerInfo) => {
+      if (message.from === peerInfo.id) {
+        return
+      }
+      let collaborationName, membership
+      try {
+        [collaborationName, membership] = decode(message.data)
+      } catch (err) {
+        console.log('error parsing gossip message:', err)
+        return
+      }
 
-    if (this._collaborations.has(collaborationName)) {
-      const collaboration = this._collaborations.get(collaborationName)
-      collaboration.deliverRemoteMembership(membership)
-        .catch((err) => {
-          console.error('error delivering remote membership:', err)
-        })
-    }
+      if (this._collaborations.has(collaborationName)) {
+        const collaboration = this._collaborations.get(collaborationName)
+        collaboration.deliverRemoteMembership(membership)
+          .catch((err) => {
+            console.error('error delivering remote membership:', err)
+          })
+      }
+    })
   }
 
   async stop () {

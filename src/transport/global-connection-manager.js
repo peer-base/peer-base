@@ -2,6 +2,7 @@
 
 const debug = require('debug')('peer-star:global-connection-manager')
 const pull = require('pull-stream')
+const EventEmitter = require('events')
 const PeerSet = require('../common/peer-set')
 
 module.exports = class GlobalConnectionManager {
@@ -45,7 +46,7 @@ module.exports = class GlobalConnectionManager {
           return reject(err)
         }
 
-        resolve({
+        const retConn = Object.assign(new EventEmitter(), {
           sink: conn.sink,
           source: pull(
             conn.source,
@@ -57,9 +58,12 @@ module.exports = class GlobalConnectionManager {
               const peerCollaborations = this._peerCollaborations.get(peerId)
               peerCollaborations && peerCollaborations.delete(protocol)
               this.maybeHangUp(peerInfo)
+              retConn.emit('closed', err)
             })
           )
         })
+
+        resolve(retConn)
       })
     })
   }

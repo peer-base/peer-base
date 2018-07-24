@@ -25,7 +25,7 @@ module.exports = class Membership extends EventEmitter {
 
     this._members = new Set()
     this._membershipGossipFrequencyHeuristic = new MembershipGossipFrequencyHeuristic(app, this, options)
-    this._someoneHasMembershipWrong = true
+    this._someoneHasMembershipWrong = false
 
     this._ring = Ring(this._options.preambleByteCount)
     this._connectionManager = new ConnectionManager(
@@ -38,7 +38,11 @@ module.exports = class Membership extends EventEmitter {
 
     this._gossipNow = this._gossipNow.bind(this)
     this._ring.on('removed', (peerInfo) => {
-      this._members.delete(peerInfo.id.toB58String())
+      const peerId = peerInfo.id.toB58String()
+      this._memberCRDT.remove(peerId)
+      this._members.delete(peerId)
+      this.emit('peer left', peerInfo)
+      this.emit('changed')
     })
   }
 
@@ -165,6 +169,10 @@ module.exports = class Membership extends EventEmitter {
         if (this._memberCRDT) {
           this._memberCRDT.apply(remoteMembership)
           const members = this._memberCRDT.value()
+          if (!members.has(id)) {
+            this._memberCRDT.add(id)
+            this._someoneHasMembershipWrong = true
+          }
 
           if (!eqSet(members, this._members)) {
             const diff = setDiff(this._members, members)
