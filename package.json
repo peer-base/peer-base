@@ -34,7 +34,7 @@
     "delay": "^3.0.0",
     "delta-crdts": "~0.2.5",
     "interface-datastore": "~0.4.2",
-    "ipfs": "git+https://git@github.com/pgte/js-ipfs.git#feat/libp2p-dynamic-modules",
+    "ipfs": "git+https://git@github.com/pgte/js-ipfs.git#feat/libp2p-dynamic-modules-2",
     "leftpad": "0.0.1",
     "libp2p-crypto": "~0.13.0",
     "libp2p-websocket-star": "~0.8.1",

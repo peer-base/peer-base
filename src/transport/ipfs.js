@@ -34,7 +34,7 @@ module.exports = (app, options) => {
 
     return {
       transport: [ appTransport ],
-      discovery: [ appTransport.discovery ]
+      peerDiscovery: [ appTransport.discovery ]
     }
   }
 }
