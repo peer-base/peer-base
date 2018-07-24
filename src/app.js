@@ -4,6 +4,7 @@ const EventEmitter = require('events')
 const Collaboration = require('./collaboration')
 const IPFS = require('./transport/ipfs')
 const PeerCountGuess = require('./peer-count-guess')
+const decode = require('./common/decode')
 
 module.exports = (appName, options) => {
   return new App(appName, options)
@@ -87,7 +88,7 @@ class App extends EventEmitter {
     this.emit('gossip', message)
     let collaborationName, membership
     try {
-      [collaborationName, membership] = JSON.parse(message.data.toString())
+      [collaborationName, membership] = decode(message.data)
     } catch (err) {
       console.log('error parsing gossip message:', err)
       return
@@ -110,7 +111,7 @@ class App extends EventEmitter {
     }
 
     this._collaborations.clear()
-    await this.ipfs.stop()
     this._peerCountGuess.stop()
+    await this.ipfs.stop()
   }
 }

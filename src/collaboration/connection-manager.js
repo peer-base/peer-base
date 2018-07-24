@@ -70,6 +70,11 @@ module.exports = class ConnectionManager {
   stop () {
     // clearInterval(this._resetInterval)
     this._stopped = true
+    if (this._resetInterval) {
+      clearInterval(this._resetInterval)
+      this._resetInterval = null
+    }
+
     this._globalConnectionManager.unhandle(this._protocol.name())
   }
 

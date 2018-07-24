@@ -123,7 +123,9 @@ module.exports = class GlobalConnectionManager {
           }
         })
       } catch (err) {
-        console.error('error hanging up:', err.message)
+        if (err.message !== 'The libp2p node is not started yet') {
+          console.error('error hanging up:', err.message)
+        }
         debug('error hanging up:', err)
       }
     }

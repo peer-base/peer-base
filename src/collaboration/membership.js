@@ -9,6 +9,7 @@ const Ring = require('../common/ring')
 const DiasSet = require('../common/dias-peer-set')
 const ConnectionManager = require('./connection-manager')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
+const encode = require('../common/encode')
 
 module.exports = class Membership extends EventEmitter {
   constructor (ipfs, globalConnectionManager, app, collaboration, store, options) {
@@ -61,6 +62,7 @@ module.exports = class Membership extends EventEmitter {
   stop () {
     this._membershipGossipFrequencyHeuristic.stop()
     this._membershipGossipFrequencyHeuristic.removeListener('gossip now', this._gossipNow)
+    this._connectionManager.stop()
   }
 
   peerCount () {
@@ -132,7 +134,7 @@ module.exports = class Membership extends EventEmitter {
     const message = [
       this._membershipTopic(),
       this._createMembershipSummaryHash()]
-    return Buffer.from(JSON.stringify(message))
+    return encode(message)
   }
 
   _createMembershipSummaryHash () {
@@ -147,7 +149,7 @@ module.exports = class Membership extends EventEmitter {
     this._members.add(selfId)
     const message = [this._membershipTopic(), Array.from(this._members)]
     // TODO: sign and encrypt membership message
-    return Buffer.from(JSON.stringify(message))
+    return encode(message)
   }
 
   _joinMembership (remoteMembershipArray) {
