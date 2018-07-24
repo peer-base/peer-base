@@ -140,9 +140,17 @@ class Collaboration extends EventEmitter {
   }
 
   async stop () {
-    await Promise.all(Array.from(this._subs.values()).map((sub) => sub.stop()))
+    try {
+      await Promise.all(Array.from(this._subs.values()).map((sub) => sub.stop()))
+    } catch (err) {
+      console.error('error stopping sub-collaboration:', err)
+    }
 
-    await Promise.all(Array.from(this._gossips).map((gossip) => gossip.stop()))
+    try {
+      await Promise.all(Array.from(this._gossips).map((gossip) => gossip.stop()))
+    } catch (err) {
+      console.error('error stopping gossip:', err)
+    }
 
     try {
       if (this.shared) {

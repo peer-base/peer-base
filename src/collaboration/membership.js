@@ -5,10 +5,14 @@ const multihashing = require('multihashing')
 const PeerId = require('peer-id')
 const PeerInfo = require('peer-info')
 const bs58 = require('bs58')
+const AWORSet = require('delta-crdts')('aworset')
 const Ring = require('../common/ring')
 const DiasSet = require('../common/dias-peer-set')
 const ConnectionManager = require('./connection-manager')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
+const encode = require('../common/encode')
+const eqSet = require('../common/eq-set')
+const setDiff = require('../common/set-diff')
 
 module.exports = class Membership extends EventEmitter {
   constructor (ipfs, globalConnectionManager, app, collaboration, store, options) {
@@ -21,7 +25,7 @@ module.exports = class Membership extends EventEmitter {
 
     this._members = new Set()
     this._membershipGossipFrequencyHeuristic = new MembershipGossipFrequencyHeuristic(app, this, options)
-    this._someoneHasMembershipWrong = true
+    this._someoneHasMembershipWrong = false
 
     this._ring = Ring(this._options.preambleByteCount)
     this._connectionManager = new ConnectionManager(
@@ -34,7 +38,11 @@ module.exports = class Membership extends EventEmitter {
 
     this._gossipNow = this._gossipNow.bind(this)
     this._ring.on('removed', (peerInfo) => {
-      this._members.delete(peerInfo.id.toB58String())
+      const peerId = peerInfo.id.toB58String()
+      this._memberCRDT.remove(peerId)
+      this._members.delete(peerId)
+      this.emit('peer left', peerInfo)
+      this.emit('changed')
     })
   }
 
@@ -46,6 +54,10 @@ module.exports = class Membership extends EventEmitter {
 
   async _startPeerInfo () {
     if (this._ipfs._peerInfo) {
+      const peerId = this._ipfs._peerInfo.id.toB58String()
+      this._memberCRDT = AWORSet(peerId)
+      this._memberCRDT.add(peerId)
+      this._members.add(peerId)
       this._diasSet = DiasSet(
         this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
       return this._connectionManager.start(this._diasSet)
@@ -61,6 +73,7 @@ module.exports = class Membership extends EventEmitter {
   stop () {
     this._membershipGossipFrequencyHeuristic.stop()
     this._membershipGossipFrequencyHeuristic.removeListener('gossip now', this._gossipNow)
+    this._connectionManager.stop()
   }
 
   peerCount () {
@@ -107,8 +120,8 @@ module.exports = class Membership extends EventEmitter {
   async deliverRemoteMembership (membership) {
     if ((typeof membership) === 'string') {
       const expectedMembershipHash = this._createMembershipSummaryHash()
-      this._someoneHasMembershipWrong = membership !== expectedMembershipHash
-    } else if (Array.isArray(membership)) {
+      this._someoneHasMembershipWrong = (membership !== expectedMembershipHash)
+    } else {
       await this._joinMembership(membership)
     }
   }
@@ -132,7 +145,7 @@ module.exports = class Membership extends EventEmitter {
     const message = [
       this._membershipTopic(),
       this._createMembershipSummaryHash()]
-    return Buffer.from(JSON.stringify(message))
+    return encode(message)
   }
 
   _createMembershipSummaryHash () {
@@ -144,28 +157,44 @@ module.exports = class Membership extends EventEmitter {
 
   _createMembershipMessage (selfId) {
     // TODO: membership should be a AW-OR-Set CRDT instead of a G-Set
-    this._members.add(selfId)
-    const message = [this._membershipTopic(), Array.from(this._members)]
+    const message = [this._membershipTopic(), this._memberCRDT.state()]
     // TODO: sign and encrypt membership message
-    return Buffer.from(JSON.stringify(message))
+    return encode(message)
   }
 
-  _joinMembership (remoteMembershipArray) {
+  _joinMembership (remoteMembership) {
     return this._ipfs.id()
       .then((peer) => peer.id)
       .then((id) => {
-        let hasChanges = false
-        remoteMembershipArray.forEach((member) => {
-          if (!this._members.has(member) && member !== id) {
-            hasChanges = true
-            this._members.add(member)
-            this.emit('peer joined', member)
-            this._ring.add(new PeerInfo(new PeerId(bs58.decode(member))))
+        if (this._memberCRDT) {
+          this._memberCRDT.apply(remoteMembership)
+          const members = this._memberCRDT.value()
+          if (!members.has(id)) {
+            this._memberCRDT.add(id)
+            this._someoneHasMembershipWrong = true
           }
-        })
 
-        if (hasChanges) {
-          this.emit('changed')
+          if (!eqSet(members, this._members)) {
+            const diff = setDiff(this._members, members)
+
+            for (let addedPeer of diff.added) {
+              if (addedPeer !== id) {
+                this._members.add(addedPeer)
+                this._ring.add(new PeerInfo(new PeerId(bs58.decode(addedPeer))))
+                this.emit('peer joined', addedPeer)
+              }
+            }
+
+            for (let removedPeer of diff.removed) {
+              if (removedPeer !== id) {
+                this._members.delete(removedPeer)
+                this._ring.remove(new PeerInfo(new PeerId(bs58.decode(removedPeer))))
+                this.emit('peer left', removedPeer)
+              }
+            }
+
+            this.emit('changed')
+          }
         }
       })
   }
