@@ -249,9 +249,7 @@ describe('collaboration protocol', function () {
     pusher.shared.add('e')
   })
 
-  it('waits a bit', function (done) {
-    setTimeout(done, 1900)
-  })
+  it('waits a bit', (done) => setTimeout(done, 500))
 
   it('puller eventually got the new state', () => {
     expect(puller.shared.value()).to.equal('abcde')

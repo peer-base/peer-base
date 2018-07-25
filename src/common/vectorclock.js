@@ -7,7 +7,10 @@ exports.isIdentical = vectorclock.isIdentical
 exports.compare = vectorclock.compare
 
 exports.increment = (clock, author) => {
-  return vectorclock.increment(Object.assign({}, clock), author)
+  if (author) {
+    return vectorclock.increment(Object.assign({}, clock), author)
+  }
+  return Object.assign({}, clock)
 }
 
 exports.delta = (c1, c2) => {

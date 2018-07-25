@@ -37,12 +37,15 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     }
   })
 
+  shared.name = name
+
   shared.state = () => state
 
   // shared value
   shared.value = () => crdt.value(state)
 
   shared.apply = (remoteClock, encodedDelta) => {
+    debug('%s: apply', id, remoteClock, encodedDelta)
     if (!Buffer.isBuffer(encodedDelta)) {
       throw new Error('encoded delta should have been buffer')
     }
@@ -71,6 +74,46 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
 
   shared.stop = () => {
     // nothing to do here...
+  }
+
+  shared.initial = () => Promise.resolve(new Map())
+
+  shared.join = async (_acc, delta) => {
+    const acc = await _acc
+    debug('%s: shared.join', id, delta, acc)
+    const [previousClock, author, encodedDelta] = delta
+    const [forName, type, encryptedDelta] = decode(encodedDelta)
+    debug('%s: shared.join [forName, type, encryptedDelta] = ', [forName, type, encryptedDelta])
+    if (forName !== name) {
+      throw new Error('delta name does not match:', forName)
+    }
+    if (!acc.has(name)) {
+      acc.set(name, [name, type, {}, null, crdt.initial()])
+    }
+    let [, , clock, previousAuthor, s1] = acc.get(name)
+    if (previousAuthor) {
+      clock = vectorclock.increment(clock, previousAuthor)
+    }
+    const encodedState = await decryptAndVerify(encryptedDelta)
+    const s2 = decode(encodedState)
+
+    const newClock = vectorclock.merge(clock, previousClock)
+    const newState = crdt.join(s1, s2)
+    acc.set(name, [name, type, newClock, author, newState])
+
+    debug('%s: shared.join: new state is', id, newState)
+
+    return acc
+  }
+
+  shared.signAndEncrypt = async (message) => {
+    let encrypted
+    if (!keys.public || keys.write) {
+      encrypted = await signAndEncrypt(message)
+    } else {
+      encrypted = message
+    }
+    return encrypted
   }
 
   const encryptedStoreState = await store.getState(name)
@@ -139,9 +182,6 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   }
 
   function decryptAndVerify (encrypted) {
-    if (!Buffer.isBuffer(encrypted)) {
-      throw new Error('need buffer')
-    }
     return new Promise((resolve, reject) => {
       if (!keys.cipher && !keys.read) {
         return resolve(encrypted)
@@ -151,7 +191,8 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
           if (err) {
             return reject(err)
           }
-          const [encoded, signature] = decode(decrypted)
+          const decoded = decode(decrypted)
+          const [encoded, signature] = decoded
 
           keys.read.verify(encoded, signature, (err, valid) => {
             if (err) {

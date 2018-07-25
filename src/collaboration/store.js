@@ -36,6 +36,10 @@ module.exports = class CollaborationStore extends EventEmitter {
     this._shareds.push(shared)
   }
 
+  findShared (name) {
+    return this._shareds.find((shared) => shared.name === name)
+  }
+
   stop () {
     // TO DO
   }
@@ -240,6 +244,46 @@ module.exports = class CollaborationStore extends EventEmitter {
       }),
       pull.filter(Boolean) // only allow non-null values
     )
+  }
+
+  deltaBatch (since = {}) {
+    return new Promise((resolve, reject) => {
+      pull(
+        this.deltaStream(since),
+        pull.reduce(
+          (acc, delta) => {
+            const [previousClock, author, encodedDelta] = delta
+            const [forName, type, encryptedDelta] = decode(encodedDelta)
+            const shared = this.findShared(forName)
+            if (!shared) {
+              reject(new Error('could not find share for name', forName))
+              return
+            }
+            return shared.join(acc, delta)
+          },
+          this._shareds[0].initial(),
+          (err, deltaBatch) => {
+            if (err) {
+              return reject(err)
+            }
+
+            deltaBatch
+              .then(async (batch) => {
+                for (let collabKey of batch.keys()) {
+                  const collab = batch.get(collabKey)
+                  const [name, type, clock, author, state] = collab
+                  const shared = this.findShared(collabKey)
+                  const finalBatch = [clock, author, encode([name, type, await shared.signAndEncrypt(encode(state))])]
+                  batch.set(collabKey, finalBatch)
+                }
+
+                resolve(batch)
+              })
+              .catch((err) => reject(err))
+          }
+        )
+      )
+    })
   }
 
   contains (clock) {
