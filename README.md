@@ -46,6 +46,8 @@ Options (are not required):
 * samplingIntervalMS: (defaults to `1000`): membership gossip frequency heuristic sampling interval
 * targetGlobalMembershipGossipFrequencyMS: (defaults to `1000`): target global membership gossip frequency, in ms.
 * urgencyFrequencyMultiplier: (defaults to `10`): urgency multiplier when someone is wrong about membership
+* transport: optional object containing:
+  * maxThrottleDelayMS: the maximum delay betweeen discovering a new peer and quering it to see whether they're interested in the app.
 
 ## Start app
 
