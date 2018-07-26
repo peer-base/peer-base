@@ -6,6 +6,5 @@ function removedFrom (a, b) {
 
 module.exports = (a, b) => ({
   removed: removedFrom(a, b),
-  added: removedFrom(b, a),
+  added: removedFrom(b, a)
 })
-

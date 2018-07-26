@@ -4,6 +4,7 @@ const debug = require('debug')('peer-star:collaboration:push-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const Queue = require('p-queue')
+const debounce = require('lodash.debounce')
 const handlingData = require('../common/handling-data')
 const encode = require('../common/encode')
 const vectorclock = require('../common/vectorclock')
@@ -24,30 +25,18 @@ module.exports = class PushProtocol {
     let ended = false
     let pushing = true
 
-    const pushDeltas = () => {
-      debug('%s: pushing deltas to %s', this._peerId(), remotePeerId)
-      return new Promise((resolve, reject) => {
-        pull(
-          this._store.deltaStream(this._clocks.getFor(remotePeerId)),
-          pull.map(([previousClock, author, delta]) => {
-            debug('%s: delta:', this._peerId(), delta)
-            if (pushing) {
-              const pushedClock = vectorclock.increment(previousClock, author)
-              debug('%s: pushed %j to %s', this._peerId(), pushedClock, remotePeerId)
-              this._clocks.setFor(remotePeerId, pushedClock)
-              // TODO: consider sending only clock deltas
-              output.push(encode([[previousClock, author, delta]]))
-            }
-          }),
-          pull.onEnd((err) => {
-            debug('%s: delta stream ended', this._peerId(), err)
-            if (err) {
-              reject(err)
-            } else {
-              resolve()
-            }
-          }))
-      })
+    const pushDeltas = async () => {
+      debug('%s: push deltas to %s', this._peerId(), remotePeerId)
+      const since = this._clocks.getFor(remotePeerId)
+      const batch = await this._store.deltaBatch(since)
+      debug('%s: batch to %s:', this._peerId(), remotePeerId, batch)
+      for (let collab of batch.keys()) {
+        const collabBatch = batch.get(collab)
+        let [clock, authorClock] = collabBatch
+        clock = vectorclock.incrementAll(clock, authorClock)
+        this._clocks.setFor(remotePeerId, clock)
+        output.push(encode([collabBatch]))
+      }
     }
 
     const updateRemote = async (myClock) => {
@@ -86,7 +75,9 @@ module.exports = class PushProtocol {
       const myClock = _myClock || this._clocks.getFor(this._peerId())
       const remoteClock = this._clocks.getFor(remotePeerId)
       debug('%s: comparing local clock %j to remote clock %j', this._peerId(), myClock, remoteClock)
-      return !vectorclock.doesSecondHaveFirst(myClock, remoteClock)
+      const needs = !vectorclock.doesSecondHaveFirst(myClock, remoteClock)
+      debug('%s: remote %s needs update?', this._peerId(), remotePeerId, needs)
+      return needs
     }
 
     const reduceEntropy = () => {
@@ -98,10 +89,14 @@ module.exports = class PushProtocol {
       }
     }
 
+    const debouncedReduceEntropy = debounce(() => {
+      queue.add(reduceEntropy).catch(onEnd)
+    }, 0)
+
     const onClockChanged = (newClock) => {
       debug('%s: clock changed to %j', this._peerId(), newClock)
       this._clocks.setFor(this._peerId(), newClock)
-      queue.add(reduceEntropy).catch(onEnd)
+      debouncedReduceEntropy()
     }
 
     this._store.on('clock changed', onClockChanged)
