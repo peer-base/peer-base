@@ -42,9 +42,9 @@ module.exports = class PullProtocol {
         let states
         let delta
         if (deltaRecord) {
-          const [previousClock, author] = deltaRecord
+          const [previousClock, authorClock] = deltaRecord
           delta = deltaRecord[2]
-          clock = vectorclock.increment(previousClock, author)
+          clock = vectorclock.incrementAll(previousClock, authorClock)
         } else if (newState) {
           clock = newState[0]
           states = newState[1]
@@ -70,11 +70,13 @@ module.exports = class PullProtocol {
               debug('%s: setting %s to lazy mode (1)', this._peerId(), remotePeerId)
               output.push(encode([null, true]))
             } else {
+              debug('%s: store does not contain clock', this._peerId(), clock)
               let saved
               if (states) {
                 debug('%s: saving states', this._peerId(), states)
                 saved = await this._store.saveStates([clock, states])
               } else if (delta) {
+                debug('%s: saving delta', this._peerId(), deltaRecord)
                 saved = await this._store.saveDelta(deltaRecord)
               }
               if (!saved) {

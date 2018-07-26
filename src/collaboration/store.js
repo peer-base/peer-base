@@ -36,6 +36,10 @@ module.exports = class CollaborationStore extends EventEmitter {
     this._shareds.push(shared)
   }
 
+  findShared (name) {
+    return this._shareds.find((shared) => shared.name === name)
+  }
+
   stop () {
     // TO DO
   }
@@ -64,12 +68,23 @@ module.exports = class CollaborationStore extends EventEmitter {
       [this.getLatestClock(), this.getStates()])
   }
 
-  saveDelta ([previousClock, author, delta]) {
+  saveDelta ([previousClock, authorClock, delta]) {
     return this._queue.add(async () => {
-      debug('%s: save delta: %j', this._id, [previousClock, author, delta])
+      debug('%s: save delta: %j', this._id, [previousClock, authorClock, delta])
+
+      // console.log('%s: saveDelta currentClock = %j\npreviousClock = %j,\nauthorClock = %j',
+      //   this._id,
+      //   await this.getLatestClock(),
+      //   previousClock,
+      //   authorClock)
+
       if (!previousClock) {
         previousClock = await this.getLatestClock()
-        author = (await this._ipfs.id()).id
+      }
+
+      if (!authorClock) {
+        authorClock = {}
+        authorClock[(await this._ipfs.id()).id] = 1
       }
 
       if (!await this._contains(previousClock)) {
@@ -77,7 +92,7 @@ module.exports = class CollaborationStore extends EventEmitter {
         return false
       }
 
-      const nextClock = vectorclock.merge(await this.getLatestClock(), vectorclock.increment(previousClock, author))
+      const nextClock = vectorclock.merge(await this.getLatestClock(), vectorclock.incrementAll(previousClock, authorClock))
       debug('%s: next clock is', this._id, nextClock)
 
       if (await this._contains(nextClock)) {
@@ -88,7 +103,7 @@ module.exports = class CollaborationStore extends EventEmitter {
       const seq = this._seq = this._seq + 1
       const deltaKey = '/d:' + leftpad(seq.toString(16), 20)
 
-      const deltaRecord = [previousClock, author, delta]
+      const deltaRecord = [previousClock, authorClock, delta]
 
       debug('%s: saving delta %j = %j', this._id, deltaKey, deltaRecord)
 
@@ -216,8 +231,8 @@ module.exports = class CollaborationStore extends EventEmitter {
         if (flowing) {
           return callback(null, entireDelta)
         }
-        const [previousClock, author] = entireDelta
-        const thisDeltaClock = vectorclock.increment(previousClock, author)
+        const [previousClock, authorClock] = entireDelta
+        const thisDeltaClock = vectorclock.incrementAll(previousClock, authorClock)
         const comparison = vectorclock.compare(thisDeltaClock, since)
         if (comparison < 0) {
           return callback(null, null)
@@ -240,6 +255,46 @@ module.exports = class CollaborationStore extends EventEmitter {
       }),
       pull.filter(Boolean) // only allow non-null values
     )
+  }
+
+  deltaBatch (since = {}) {
+    return new Promise((resolve, reject) => {
+      pull(
+        this.deltaStream(since),
+        pull.reduce(
+          (acc, delta) => {
+            const encodedDelta = delta[2]
+            const [forName] = decode(encodedDelta)
+            const shared = this.findShared(forName)
+            if (!shared) {
+              reject(new Error('could not find share for name', forName))
+              return
+            }
+            return shared.join(acc, delta)
+          },
+          this._shareds[0].initial(),
+          (err, deltaBatch) => {
+            if (err) {
+              return reject(err)
+            }
+
+            deltaBatch
+              .then(async (batch) => {
+                for (let collabKey of batch.keys()) {
+                  const collab = batch.get(collabKey)
+                  const [name, type, clock, authorClock, state] = collab
+                  const shared = this.findShared(collabKey)
+                  const finalBatch = [clock, authorClock, encode([name, type, await shared.signAndEncrypt(encode(state))])]
+                  batch.set(collabKey, finalBatch)
+                }
+
+                resolve(batch)
+              })
+              .catch((err) => reject(err))
+          }
+        )
+      )
+    })
   }
 
   contains (clock) {
