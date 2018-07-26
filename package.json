@@ -32,7 +32,7 @@
     "datastore-core": "~0.4.0",
     "debug": "^3.1.0",
     "delay": "^3.0.0",
-    "delta-crdts": "~0.2.5",
+    "delta-crdts": "^0.2.6",
     "interface-datastore": "~0.4.2",
     "ipfs": "git+https://git@github.com/pgte/js-ipfs.git#feat/libp2p-dynamic-modules-2",
     "leftpad": "0.0.1",

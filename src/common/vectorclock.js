@@ -65,3 +65,13 @@ exports.isFirstImmediateToSecond = (first, second) => {
 
   return diff === 1
 }
+
+exports.incrementAll = (_clock, authorClock) => {
+  const clock = Object.assign({}, _clock)
+  Object.keys(authorClock).forEach((author) => {
+    let current = clock[author] || 0
+    current += authorClock[author]
+    clock[author] = current
+  })
+  return clock
+}

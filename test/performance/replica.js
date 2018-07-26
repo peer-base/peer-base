@@ -78,7 +78,9 @@ const start = async () => {
           inboundConnectedPeers: collaboration.inboundConnectedPeers(),
           ouboundConnectedPeers: collaboration.outboundConnectedPeers(),
           vertices: Array.from(collaboration.shared.state()[2]).length,
-          clock: collaboration.vectorClock()
+          clock: collaboration.vectorClock(),
+          value: collaboration.shared.value()
+          // state: collaboration.shared.state()
         })
         if (l === workerData.expectedLength) {
           console.log('stopping...')

@@ -3,6 +3,7 @@
 const debug = require('debug')('peer-star:collaboration:shared')
 const EventEmitter = require('events')
 const Queue = require('p-queue')
+const debounce = require('lodash.debounce')
 
 const encode = require('../common/encode')
 const decode = require('../common/decode')
@@ -14,7 +15,24 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   const shared = new EventEmitter()
   const crdt = type(id)
   let state = crdt.initial()
+  let deltaBuffer = crdt.initial()
   let clock = await store.getLatestClock()
+
+  const saveDeltaBuffer = debounce(() => {
+    queue.add(async () => {
+      const namedDelta = [name, type.typeName, await signAndEncrypt(encode(deltaBuffer))]
+      debug('%s: named delta: ', id, namedDelta)
+      // reset the delta buffer
+      deltaBuffer = crdt.initial()
+      clock = vectorclock.increment(clock, id)
+      debug('%s: clock before save delta:', id, clock)
+      const newClock = await store.saveDelta([null, null, encode(namedDelta)])
+      if (newClock) {
+        debug('%s: NEW clock after save delta:', id, newClock)
+        clock = vectorclock.merge(clock, newClock)
+      }
+    }).catch((err) => shared.emit('error', err))
+  })
 
   // Populate shared methods
 
@@ -23,17 +41,10 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     const mutator = crdt.mutators[mutatorName]
     shared[mutatorName] = (...args) => {
       const delta = mutator(state, ...args)
-      clock = vectorclock.increment(clock, id)
       apply(delta, true)
 
-      queue.add(async () => {
-        const namedDelta = [name, type.typeName, await signAndEncrypt(encode(delta))]
-        debug('%s: named delta: ', id, namedDelta)
-        const newClock = await store.saveDelta([null, null, encode(namedDelta)])
-        if (newClock) {
-          clock = vectorclock.merge(clock, newClock)
-        }
-      }).catch((err) => shared.emit('error', err))
+      deltaBuffer = crdt.join(deltaBuffer, delta)
+      saveDeltaBuffer()
     }
   })
 
@@ -81,25 +92,22 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   shared.join = async (_acc, delta) => {
     const acc = await _acc
     debug('%s: shared.join', id, delta, acc)
-    const [previousClock, author, encodedDelta] = delta
+    const [previousClock, authorClock, encodedDelta] = delta
     const [forName, type, encryptedDelta] = decode(encodedDelta)
     debug('%s: shared.join [forName, type, encryptedDelta] = ', [forName, type, encryptedDelta])
     if (forName !== name) {
       throw new Error('delta name does not match:', forName)
     }
     if (!acc.has(name)) {
-      acc.set(name, [name, type, {}, null, crdt.initial()])
+      acc.set(name, [name, type, previousClock, {}, crdt.initial()])
     }
-    let [, , clock, previousAuthor, s1] = acc.get(name)
-    if (previousAuthor) {
-      clock = vectorclock.increment(clock, previousAuthor)
-    }
+    let [, , clock, previousAuthorClock, s1] = acc.get(name)
     const encodedState = await decryptAndVerify(encryptedDelta)
     const s2 = decode(encodedState)
 
-    const newClock = vectorclock.merge(clock, previousClock)
+    const newAuthorClock = vectorclock.incrementAll(previousAuthorClock, authorClock)
     const newState = crdt.join(s1, s2)
-    acc.set(name, [name, type, newClock, author, newState])
+    acc.set(name, [name, type, clock, newAuthorClock, newState])
 
     debug('%s: shared.join: new state is', id, newState)
 

@@ -13,7 +13,7 @@ const PeerStar = require('../../')
 
 const ignoreWorkerStdErr = false
 const enableDebug = true
-const peerCount = 10
+const peerCount = 5 // 10
 const duration = 20000
 const collaborationName = 'array'
 const opsPerSecond = 1

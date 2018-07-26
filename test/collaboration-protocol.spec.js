@@ -254,6 +254,17 @@ describe('collaboration protocol', function () {
   it('puller eventually got the new state', () => {
     expect(puller.shared.value()).to.equal('abcde')
   })
+
+  it('concurrencly, puller and pusher push new data', () => {
+    pusher.shared.add('g')
+    pusher2.shared.add('f')
+  })
+
+  it('waits a bit', (done) => setTimeout(done, 500))
+
+  it('puller eventually got the new state', () => {
+    expect(puller.shared.value()).to.equal('abcdefg')
+  })
 })
 
 function fakePeerInfoFor (id) {

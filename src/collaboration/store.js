@@ -68,12 +68,23 @@ module.exports = class CollaborationStore extends EventEmitter {
       [this.getLatestClock(), this.getStates()])
   }
 
-  saveDelta ([previousClock, author, delta]) {
+  saveDelta ([previousClock, authorClock, delta]) {
     return this._queue.add(async () => {
-      debug('%s: save delta: %j', this._id, [previousClock, author, delta])
+      debug('%s: save delta: %j', this._id, [previousClock, authorClock, delta])
+
+      // console.log('%s: saveDelta currentClock = %j\npreviousClock = %j,\nauthorClock = %j',
+      //   this._id,
+      //   await this.getLatestClock(),
+      //   previousClock,
+      //   authorClock)
+
       if (!previousClock) {
         previousClock = await this.getLatestClock()
-        author = (await this._ipfs.id()).id
+      }
+
+      if (!authorClock) {
+        authorClock = {}
+        authorClock[(await this._ipfs.id()).id] = 1
       }
 
       if (!await this._contains(previousClock)) {
@@ -81,7 +92,7 @@ module.exports = class CollaborationStore extends EventEmitter {
         return false
       }
 
-      const nextClock = vectorclock.merge(await this.getLatestClock(), vectorclock.increment(previousClock, author))
+      const nextClock = vectorclock.merge(await this.getLatestClock(), vectorclock.incrementAll(previousClock, authorClock))
       debug('%s: next clock is', this._id, nextClock)
 
       if (await this._contains(nextClock)) {
@@ -92,7 +103,7 @@ module.exports = class CollaborationStore extends EventEmitter {
       const seq = this._seq = this._seq + 1
       const deltaKey = '/d:' + leftpad(seq.toString(16), 20)
 
-      const deltaRecord = [previousClock, author, delta]
+      const deltaRecord = [previousClock, authorClock, delta]
 
       debug('%s: saving delta %j = %j', this._id, deltaKey, deltaRecord)
 
@@ -220,8 +231,8 @@ module.exports = class CollaborationStore extends EventEmitter {
         if (flowing) {
           return callback(null, entireDelta)
         }
-        const [previousClock, author] = entireDelta
-        const thisDeltaClock = vectorclock.increment(previousClock, author)
+        const [previousClock, authorClock] = entireDelta
+        const thisDeltaClock = vectorclock.incrementAll(previousClock, authorClock)
         const comparison = vectorclock.compare(thisDeltaClock, since)
         if (comparison < 0) {
           return callback(null, null)
@@ -252,8 +263,8 @@ module.exports = class CollaborationStore extends EventEmitter {
         this.deltaStream(since),
         pull.reduce(
           (acc, delta) => {
-            const [previousClock, author, encodedDelta] = delta
-            const [forName, type, encryptedDelta] = decode(encodedDelta)
+            const encodedDelta = delta[2]
+            const [forName] = decode(encodedDelta)
             const shared = this.findShared(forName)
             if (!shared) {
               reject(new Error('could not find share for name', forName))
@@ -271,9 +282,9 @@ module.exports = class CollaborationStore extends EventEmitter {
               .then(async (batch) => {
                 for (let collabKey of batch.keys()) {
                   const collab = batch.get(collabKey)
-                  const [name, type, clock, author, state] = collab
+                  const [name, type, clock, authorClock, state] = collab
                   const shared = this.findShared(collabKey)
-                  const finalBatch = [clock, author, encode([name, type, await shared.signAndEncrypt(encode(state))])]
+                  const finalBatch = [clock, authorClock, encode([name, type, await shared.signAndEncrypt(encode(state))])]
                   batch.set(collabKey, finalBatch)
                 }
 
