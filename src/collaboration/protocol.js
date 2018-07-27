@@ -4,7 +4,6 @@ const debug = require('debug')('peer-star:collaboration:protocol')
 const EventEmitter = require('events')
 const pull = require('pull-stream')
 
-const Clocks = require('./clocks')
 const PushProtocol = require('./push-protocol')
 const PullProtocol = require('./pull-protocol')
 

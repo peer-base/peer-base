@@ -209,8 +209,6 @@ module.exports = class CollaborationStore extends EventEmitter {
     let since = Object.assign({}, _since)
     debug('%s: delta stream since %j', this._id, since)
 
-    let flowing = false
-
     return pull(
       this._store.query({
         prefix: '/d:'

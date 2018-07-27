@@ -65,15 +65,10 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
       const [forName, typeName, encryptedState] = decode(encodedDelta)
       debug('%s: shared.apply %j', id, remoteClock, forName)
       if (forName === name) {
-        // if (!containsClock(remoteClock)) {
-          const encodedState = await decryptAndVerify(encryptedState)
-          const newState = decode(encodedState)
-          // clock = vectorclock.merge(clock, remoteClock)
-          apply(newState)
-          debug('%s state after apply:', id, state)
-        // } else {
-        //   debug('%s: already contains clock %j', id, remoteClock)
-        // }
+        const encodedState = await decryptAndVerify(encryptedState)
+        const newState = decode(encodedState)
+        apply(newState)
+        debug('%s state after apply:', id, state)
         if (!keys.public || keys.write) {
           return [name, encode([name, forName && type.typeName, await signAndEncrypt(encode(state))])]
         }
@@ -144,23 +139,6 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     debug('%s: new state after join is', id, state)
     shared.emit('state changed', fromSelf)
     return state
-  }
-
-  function containsClock (someClock) {
-    debug('%s: containsClock ? %j', id, someClock)
-    // debug('%s: current clock is %j', id, clock)
-    const comparison = vectorclock.compare(clock, someClock)
-    let contains
-    if (comparison < 0) {
-      contains = false
-    }
-    if (comparison > 0) {
-      contains = true
-    }
-    contains = vectorclock.isIdentical(someClock, clock)
-
-    debug('%s: containsClock %j ?: %j', id, someClock, contains)
-    return contains
   }
 
   function signAndEncrypt (data) {
