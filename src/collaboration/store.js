@@ -64,41 +64,34 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   getClockAndStates () {
-    return Promise.all(
-      [this.getLatestClock(), this.getStates()])
+    return this._queue.add(() => Promise.all(
+      [this.getLatestClock(), this.getStates()]))
   }
 
   saveDelta ([previousClock, authorClock, delta]) {
     return this._queue.add(async () => {
       debug('%s: save delta: %j', this._id, [previousClock, authorClock, delta])
 
-      // console.log('%s: saveDelta currentClock = %j\npreviousClock = %j,\nauthorClock = %j',
-      //   this._id,
-      //   await this.getLatestClock(),
-      //   previousClock,
-      //   authorClock)
-
+      let currentClock
       if (!previousClock) {
-        previousClock = await this.getLatestClock()
+        previousClock = currentClock = await this.getLatestClock()
       }
 
       if (!authorClock) {
         authorClock = {}
-        authorClock[(await this._ipfs.id()).id] = 1
+        authorClock[this._id] = 1
       }
 
-      if (!await this._contains(previousClock)) {
-        debug('%s: previous vector (%j) clock is not contained in store, bailing out.', this._id, previousClock)
+      if (!currentClock) {
+        currentClock = await this.getLatestClock()
+      }
+
+      if (!vectorclock.isIdentical(previousClock, currentClock)) {
         return false
       }
 
-      const nextClock = vectorclock.merge(await this.getLatestClock(), vectorclock.incrementAll(previousClock, authorClock))
+      const nextClock = vectorclock.merge(currentClock, vectorclock.incrementAll(previousClock, authorClock))
       debug('%s: next clock is', this._id, nextClock)
-
-      if (await this._contains(nextClock)) {
-        debug('%s: next clock (%j) is already contained in store, bailing out.', this._id, nextClock)
-        return false
-      }
 
       const seq = this._seq = this._seq + 1
       const deltaKey = '/d:' + leftpad(seq.toString(16), 20)
@@ -146,8 +139,7 @@ module.exports = class CollaborationStore extends EventEmitter {
       const latest = await this.getLatestClock()
       debug('%s: latest vector clock:', this._id, latest)
       if (!clock) {
-        const id = (await this._ipfs.id()).id
-        clock = vectorclock.increment(latest, id)
+        clock = vectorclock.increment(latest, this._id)
         debug('%s: new vector clock is:', this._id, clock)
       } else {
         if (await this._contains(clock)) {
@@ -213,7 +205,8 @@ module.exports = class CollaborationStore extends EventEmitter {
     }, new Map())
   }
 
-  deltaStream (since = {}) {
+  deltaStream (_since = {}) {
+    let since = Object.assign({}, _since)
     debug('%s: delta stream since %j', this._id, since)
 
     let flowing = false
@@ -228,29 +221,12 @@ module.exports = class CollaborationStore extends EventEmitter {
         return d
       }),
       pull.asyncMap((entireDelta, callback) => {
-        if (flowing) {
-          return callback(null, entireDelta)
-        }
         const [previousClock, authorClock] = entireDelta
-        const thisDeltaClock = vectorclock.incrementAll(previousClock, authorClock)
-        const comparison = vectorclock.compare(thisDeltaClock, since)
-        if (comparison < 0) {
-          return callback(null, null)
-        }
-        if (comparison > 0) {
-          if (vectorclock.isFirstDirectChildOfSecond(thisDeltaClock, since)) {
-            flowing = true
-            return callback(null, entireDelta)
-          } else {
-            return callback(null, null)
-          }
-        }
-        // they're concurrent
-        if (vectorclock.isFirstImmediateToSecond(thisDeltaClock, since)) {
-          flowing = true
-          return callback(null, entireDelta)
+        if (vectorclock.isIdentical(previousClock, since)) {
+          since = vectorclock.incrementAll(previousClock, authorClock)
+          callback(null, entireDelta)
         } else {
-          return callback(null, null)
+          callback(null, null)
         }
       }),
       pull.filter(Boolean) // only allow non-null values
@@ -258,6 +234,7 @@ module.exports = class CollaborationStore extends EventEmitter {
   }
 
   deltaBatch (since = {}) {
+    debug('%s: delta batch since %j', this._id, since)
     return new Promise((resolve, reject) => {
       pull(
         this.deltaStream(since),

@@ -13,6 +13,7 @@ const crypto = require('libp2p-crypto')
 const Store = require('../src/collaboration/store')
 const Shared = require('../src/collaboration/shared')
 const Protocol = require('../src/collaboration/protocol')
+const Clocks = require('../src/collaboration/clocks')
 const generateKeys = require('../src/keys/generate')
 
 const Type = require('./utils/fake-crdt')
@@ -65,7 +66,8 @@ describe('collaboration protocol', function () {
     const collaboration = { name: 'collaboration protocol test' }
     pusher.store = new Store(ipfs, collaboration, storeOptions)
     await pusher.store.start()
-    pusher.protocol = Protocol(ipfs, collaboration, pusher.store)
+    const clocks = new Clocks()
+    pusher.protocol = Protocol(ipfs, collaboration, pusher.store, null, clocks)
     pusher.shared = await Shared(null, 'pusher', Type, collaboration, pusher.store, keys)
     pusher.store.setShared(pusher.shared)
   })
@@ -83,7 +85,8 @@ describe('collaboration protocol', function () {
     const collaboration = { name: 'collaboration protocol test' }
     puller.store = new Store(ipfs, collaboration, storeOptions)
     await puller.store.start()
-    puller.protocol = Protocol(ipfs, collaboration, puller.store, {
+    const clocks = new Clocks()
+    puller.protocol = Protocol(ipfs, collaboration, puller.store, null, clocks, {
       receiveTimeout: 500
     })
     puller.shared = await Shared(null, 'puller', Type, collaboration, puller.store, keys)
@@ -134,7 +137,8 @@ describe('collaboration protocol', function () {
     const collaboration = { name: 'collaboration protocol test' }
     pusher2.store = new Store(ipfs, collaboration, storeOptions)
     await pusher2.store.start()
-    pusher2.protocol = Protocol(ipfs, collaboration, pusher2.store)
+    const clocks = new Clocks()
+    pusher2.protocol = Protocol(ipfs, collaboration, pusher2.store, null, clocks)
     pusher2.shared = await Shared(null, 'pusher 2', Type, collaboration, pusher2.store, keys)
     pusher2.store.setShared(pusher2.shared)
   })
@@ -192,7 +196,8 @@ describe('collaboration protocol', function () {
     }
     const collaboration = { name: 'collaboration protocol test' }
     pusher3.store = puller.store // same store as puller
-    pusher3.protocol = Protocol(ipfs, collaboration, pusher3.store)
+    const clocks = new Clocks()
+    pusher3.protocol = Protocol(ipfs, collaboration, pusher3.store, null, clocks)
     pusher3.shared = await Shared(null, 'pusher from puller', Type, collaboration, pusher3.store, keys)
     pusher3.store.setShared(pusher3.shared)
   })
@@ -210,7 +215,8 @@ describe('collaboration protocol', function () {
     const collaboration = { name: 'collaboration protocol test' }
     puller2.store = new Store(ipfs, collaboration, storeOptions)
     await puller2.store.start()
-    puller2.protocol = Protocol(ipfs, collaboration, puller2.store, {
+    const clocks = new Clocks()
+    puller2.protocol = Protocol(ipfs, collaboration, puller2.store, null, clocks, {
       receiveTimeout: 500
     })
     puller2.shared = await Shared(null, 'puller 2', Type, collaboration, puller2.store, keys)

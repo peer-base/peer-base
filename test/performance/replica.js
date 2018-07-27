@@ -10,7 +10,14 @@ const App = require('../utils/create-app')
 
 const start = async () => {
   console.log('starting peer...')
-  const peer = App({ maxThrottleDelayMS: 1000 })
+  const peer = App(
+    { maxThrottleDelayMS: 1000 },
+    {
+      // swarm: ['/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star']
+      // swarm: ['/dns4/ws-star2.sjc.dwebops.pub/tcp/443/wss/p2p-websocket-star'],
+      swarm: ['/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star']
+    }
+  )
   peer.app.on('error', (err) => {
     console.log('Error on app:', err)
   })
@@ -35,16 +42,35 @@ const start = async () => {
   // })
 
   setTimeout(() => {
+    let pushed = 0
     console.log('starting load...')
+    const id = collaboration.app.ipfs._peerInfo.id.toB58String()
     const intervalMS = 1000 / workerData.opsPerSecond
     const data = workerData.data
+
+    collaboration.on('state changed', () => {
+      // console.log('%s: state changed to', id, collaboration.shared.value())
+      const clock = collaboration.vectorClock()
+      // console.log('clock:', clock)
+      if (!clock.hasOwnProperty(id)) {
+        return;
+      }
+      const selfClock = clock[id]
+      if (selfClock !== pushed) {
+        // console.error('%s: self clock should be %d and is ', id, pushed, selfClock)
+        // throw new Error('Clock mismatch')
+      }
+    })
+
     const interval = setInterval(() => {
       const datum = data.shift()
-      process.stdout.write('' + datum)
-      process.stdout.write('.')
+      // process.stdout.write('' + datum)
+      // process.stdout.write('.')
       if (!data.length) {
         stop()
       }
+      // console.log('%s: pushing', id, datum)
+      pushed ++
       collaboration.shared.push(datum)
     }, intervalMS)
 
@@ -80,7 +106,6 @@ const start = async () => {
           vertices: Array.from(collaboration.shared.state()[2]).length,
           clock: collaboration.vectorClock(),
           value: collaboration.shared.value()
-          // state: collaboration.shared.state()
         })
         if (l === workerData.expectedLength) {
           console.log('stopping...')

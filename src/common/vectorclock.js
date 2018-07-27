@@ -41,6 +41,17 @@ exports.isFirstDirectChildOfSecond = (first, second) => {
   return diff === 1
 }
 
+exports.isInFirstEqualToSecond = (first, second) => {
+  for (let key of Object.keys(first)) {
+    if (first[key] !== second[key]) {
+      console.log('isInFirstEqualToSecond %j / %j ? ', first, second, false)
+      return false
+    }
+  }
+  console.log('isInFirstEqualToSecond %j / %j ? ', first, second, true)
+  return true
+}
+
 exports.doesSecondHaveFirst = (first, second) => {
   for (let key of Object.keys(first)) {
     if ((second[key] || 0) < first[key]) {
@@ -56,7 +67,7 @@ exports.isFirstImmediateToSecond = (first, second) => {
     const firstValue = first[key]
     const secondValue = second[key] || 0
     if (secondValue < firstValue) {
-      diff += first[key] - (second[key] || 0)
+      diff += firstValue - secondValue
       if (diff > 1) {
         return false
       }

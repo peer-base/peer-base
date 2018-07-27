@@ -16,7 +16,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   const crdt = type(id)
   let state = crdt.initial()
   let deltaBuffer = crdt.initial()
-  let clock = await store.getLatestClock()
+  // let clock = await store.getLatestClock()
 
   const saveDeltaBuffer = debounce(() => {
     queue.add(async () => {
@@ -24,13 +24,14 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
       debug('%s: named delta: ', id, namedDelta)
       // reset the delta buffer
       deltaBuffer = crdt.initial()
-      clock = vectorclock.increment(clock, id)
-      debug('%s: clock before save delta:', id, clock)
-      const newClock = await store.saveDelta([null, null, encode(namedDelta)])
-      if (newClock) {
-        debug('%s: NEW clock after save delta:', id, newClock)
-        clock = vectorclock.merge(clock, newClock)
-      }
+      // clock = vectorclock.increment(clock, id)
+      // debug('%s: clock before save delta:', id, clock)
+      // const newClock =
+      await store.saveDelta([null, null, encode(namedDelta)])
+      // if (newClock) {
+      //   debug('%s: NEW clock after save delta:', id, newClock)
+      //   clock = vectorclock.merge(clock, newClock)
+      // }
     }).catch((err) => shared.emit('error', err))
   })
 
@@ -64,15 +65,15 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
       const [forName, typeName, encryptedState] = decode(encodedDelta)
       debug('%s: shared.apply %j', id, remoteClock, forName)
       if (forName === name) {
-        if (!containsClock(remoteClock)) {
+        // if (!containsClock(remoteClock)) {
           const encodedState = await decryptAndVerify(encryptedState)
           const newState = decode(encodedState)
-          clock = vectorclock.merge(clock, remoteClock)
+          // clock = vectorclock.merge(clock, remoteClock)
           apply(newState)
           debug('%s state after apply:', id, state)
-        } else {
-          debug('%s: already contains clock %j', id, remoteClock)
-        }
+        // } else {
+        //   debug('%s: already contains clock %j', id, remoteClock)
+        // }
         if (!keys.public || keys.write) {
           return [name, encode([name, forName && type.typeName, await signAndEncrypt(encode(state))])]
         }
@@ -147,7 +148,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
 
   function containsClock (someClock) {
     debug('%s: containsClock ? %j', id, someClock)
-    debug('%s: current clock is %j', id, clock)
+    // debug('%s: current clock is %j', id, clock)
     const comparison = vectorclock.compare(clock, someClock)
     let contains
     if (comparison < 0) {

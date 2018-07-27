@@ -15,7 +15,7 @@ const eqSet = require('../common/eq-set')
 const setDiff = require('../common/set-diff')
 
 module.exports = class Membership extends EventEmitter {
-  constructor (ipfs, globalConnectionManager, app, collaboration, store, options) {
+  constructor (ipfs, globalConnectionManager, app, collaboration, store, clocks, options) {
     super()
 
     this._ipfs = ipfs
@@ -34,6 +34,7 @@ module.exports = class Membership extends EventEmitter {
       this._ring,
       this._collaboration,
       store,
+      clocks,
       this._options)
 
     this._gossipNow = this._gossipNow.bind(this)

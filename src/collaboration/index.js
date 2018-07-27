@@ -6,6 +6,7 @@ const Store = require('./store')
 const Shared = require('./shared')
 const CRDT = require('./crdt')
 const Gossip = require('./gossip')
+const Clocks = require('./clocks')
 const deriveCreateCipherFromKeys = require('../keys/derive-cipher-from-keys')
 
 const defaultOptions = {
@@ -30,6 +31,7 @@ class Collaboration extends EventEmitter {
     this._options = Object.assign({}, defaultOptions, options)
     this._parentCollab = parentCollab
     this._gossips = new Set()
+    this._clocks = new Clocks(this._ipfs._peerInfo.id.toB58String())
 
     if (!this._options.keys) {
       this._options.keys = {}
@@ -41,7 +43,7 @@ class Collaboration extends EventEmitter {
 
     this._store = this._options.store || new Store(ipfs, this, this._options)
 
-    this._membership = this._options.membership || new Membership(ipfs, globalConnectionManager, app, this, this._store, this._options)
+    this._membership = this._options.membership || new Membership(ipfs, globalConnectionManager, app, this, this._store, this._clocks, this._options)
     this._membership.on('changed', () => {
       this.emit('membership changed', this._membership.peers())
     })
@@ -131,9 +133,13 @@ class Collaboration extends EventEmitter {
     const name = this._storeName()
     this.shared = await Shared(name, id, this._type, this, this._store, this._options.keys)
     this.shared.on('error', (err) => this.emit('error', err))
+    this._store.on('clock changed', (clock) => {
+      this._clocks.setFor(id, clock)
+    })
     this.shared.on('state changed', (fromSelf) => {
       this.emit('state changed', fromSelf)
     })
+    this._clocks.setFor(id, await this._store.getLatestClock())
     this._store.setShared(this.shared, name)
 
     await Array.from(this._subs.values()).map((sub) => sub.start())
