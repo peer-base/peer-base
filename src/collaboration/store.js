@@ -87,6 +87,9 @@ module.exports = class CollaborationStore extends EventEmitter {
       }
 
       if (!vectorclock.isIdentical(previousClock, currentClock)) {
+        debug('%s: did not save because previous clock and current clock are not identical', this._id)
+        debug('%s previous clock:', this._id, previousClock)
+        debug('%s current clock:', this._id, currentClock)
         return false
       }
 

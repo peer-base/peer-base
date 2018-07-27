@@ -23,7 +23,6 @@ class Protocol extends EventEmitter {
     this._store = store
     this._clocks = clocks
     this._options = Object.assign({}, defaultOptions, options)
-    this._streamsFor = new Map()
     this._pushProtocol = new PushProtocol(ipfs, store, this._clocks, keys, this._options)
     this._pullProtocol = new PullProtocol(ipfs, store, this._clocks, keys, this._options)
 
@@ -42,15 +41,12 @@ class Protocol extends EventEmitter {
         return this.emit('error', err)
       }
 
-      this._incrementStreamsFor(peerInfo)
-
       this.emit('inbound connection', peerInfo)
 
       pull(
         conn,
         this._pullProtocol.forPeer(peerInfo),
         passthrough((err) => {
-          this._decrementStreamsFor(peerInfo)
           if (err && err.message !== 'underlying socket has been closed') {
             console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
             debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
@@ -65,13 +61,10 @@ class Protocol extends EventEmitter {
   dialerFor (peerInfo, conn) {
     this.emit('outbound connection', peerInfo)
 
-    this._incrementStreamsFor(peerInfo)
-
     pull(
       conn,
       this._pushProtocol.forPeer(peerInfo),
       passthrough((err) => {
-        this._decrementStreamsFor(peerInfo)
         if (err && err.message !== 'underlying socket has been closed') {
           console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
@@ -92,20 +85,6 @@ class Protocol extends EventEmitter {
       this._cachedPeerId = this._ipfs._peerInfo.id.toB58String()
     }
     return this._cachedPeerId
-  }
-
-  _incrementStreamsFor (peerInfo) {
-    const peerId = peerInfo.id.toB58String()
-    this._streamsFor.set(peerId, (this._streamsFor.get(peerId) || 0) + 1)
-  }
-
-  _decrementStreamsFor (peerInfo) {
-    const peerId = peerInfo.id.toB58String()
-    let count = this._streamsFor.get(peerId) || 0
-    count = Math.max(count - 1, 0)
-    if (!count) {
-      this._clocks.takeDown(peerId)
-    }
   }
 }
 
