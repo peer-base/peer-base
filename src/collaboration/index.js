@@ -15,7 +15,8 @@ const defaultOptions = {
   debounceResetConnectionsMS: 1000,
   maxDeltaRetention: 1000,
   deltaTrimTimeoutMS: 1000,
-  resetConnectionIntervalMS: 6000
+  resetConnectionIntervalMS: 6000,
+  maxUnreachableBeforeEviction: 10
 }
 
 module.exports = (...args) => new Collaboration(...args)

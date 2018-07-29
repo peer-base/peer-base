@@ -2,11 +2,14 @@
 
 const debug = require('debug')('peer-star:collaboration:connection-manager')
 const debounce = require('lodash.debounce')
+const EventEmitter = require('events')
 const PeerSet = require('../common/peer-set')
 const Protocol = require('./protocol')
 
-module.exports = class ConnectionManager {
+module.exports = class ConnectionManager extends EventEmitter {
   constructor (ipfs, globalConnectionManager, ring, collaboration, store, clocks, options) {
+    super()
+
     this._ipfs = ipfs
     this._globalConnectionManager = globalConnectionManager
     this._options = options
@@ -16,6 +19,7 @@ module.exports = class ConnectionManager {
     }
 
     this._stopped = true
+    this._unreachables = new Map()
 
     this._ring = ring
     this._ring.on('changed', this._onRingChange.bind(this))
@@ -112,11 +116,13 @@ module.exports = class ConnectionManager {
           try {
             const connection = await this._globalConnectionManager.connect(
               peerInfo, this._protocol.name())
+            this._unreachables.delete(peerInfo.id.toB58String())
             this._protocol.dialerFor(peerInfo, connection)
             connection.once('closed', () => {
               this._ring.remove(peerInfo)
             })
           } catch (err) {
+            this._peerUnreachable(peerInfo)
             this._ring.remove(peerInfo)
             console.log('error connecting:', err.message)
             debug('error connecting:', err)
@@ -132,12 +138,23 @@ module.exports = class ConnectionManager {
           } catch (err) {
             debug('error hanging up:', err)
           }
+          this._unreachables.delete(peerInfo.id.toB58String())
         }
       }
     }).catch((err) => {
       console.error('error resetting connections:', err.message)
       debug('error resetting connections:', err)
     })
+  }
+
+  _peerUnreachable (peerInfo) {
+    const peerId = peerInfo.id.toB58String()
+    let count = (this._unreachables.get(peerId) || 0) + 1
+    this._unreachables.set(peerId, count)
+    if (this._options.maxUnreachableBeforeEviction <= count) {
+      this._unreachables.delete(peerId)
+      this.emit('should evict', peerInfo)
+    }
   }
 }
 
