@@ -11,15 +11,20 @@ const { fork } = require('child_process')
 
 const PeerStar = require('../../')
 
+const server = process.argv[3] || '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star'
+const peerCount = Number(process.argv[4]) || 10
+
 const ignoreWorkerStdErr = false
-const enableDebug = true
-const peerCount = 7 // 10
-const duration = 10000
+const enableDebug = false
+const duration = 20000
 const collaborationName = 'array'
 const opsPerSecond = 1
 
+console.log('Going to use websocket-star server at address %s', server)
+console.log('Going to use %d replicas', peerCount)
+
 describe('performance tests - one collaboration, many peers', function () {
-  this.timeout(duration * 10)
+  this.timeout(duration * 100)
 
   const expectedLength = peerCount * opsPerSecond * Math.round(duration / 1000)
 
@@ -29,7 +34,8 @@ describe('performance tests - one collaboration, many peers', function () {
     opsPerSecond,
     collaborationName,
     expectedLength,
-    enableDebug
+    enableDebug,
+    server
   }
 
   before(async () => {
@@ -41,6 +47,7 @@ describe('performance tests - one collaboration, many peers', function () {
   })
 
   it('starts replicas', (done) => {
+    let started = Date.now()
     const workerResults = []
     for(let i = 0; i < peerCount; i++) {
       ((i) => {
@@ -63,6 +70,11 @@ describe('performance tests - one collaboration, many peers', function () {
           workerResults.push(message)
           if (workerResults.length === peerCount) {
             testWorkerResults()
+            const stopped = Date.now()
+            const elapsedSeconds = Math.round((stopped - started) / 1000)
+            setTimeout(() => {
+              console.log('Convergence for %d replicas reached in %d seconds', peerCount, elapsedSeconds)
+            }, 3000)
             done()
           }
         })
