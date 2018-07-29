@@ -4,7 +4,10 @@ const PeerStar = require('../../')
 
 const args = process.argv[2]
 const workerData = JSON.parse(args)
-console.log('workerData:', workerData)
+
+if (workerData.enableDebug) {
+  console.log('workerData:', workerData)
+}
 
 const App = require('../utils/create-app')
 
@@ -13,9 +16,10 @@ const start = async () => {
   const peer = App(
     { maxThrottleDelayMS: 1000 },
     {
+      swarm: [workerData.server]
       // swarm: ['/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star']
-      // swarm: ['/dns4/ws-star2.sjc.dwebops.pub/tcp/443/wss/p2p-websocket-star'],
-      swarm: ['/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star']
+      // swarm: ['/dns4/ws-star2.sjc.dwebops.pub/tcp/443/wss/p2p-websocket-star']
+      // swarm: ['/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star']
     }
   )
   peer.app.on('error', (err) => {
@@ -45,15 +49,15 @@ const start = async () => {
     let pushed = 0
     console.log('starting load...')
     const id = collaboration.app.ipfs._peerInfo.id.toB58String()
-    const intervalMS = 1000 / workerData.opsPerSecond
     const data = workerData.data
+    let interval
 
     collaboration.on('state changed', () => {
       // console.log('%s: state changed to', id, collaboration.shared.value())
       const clock = collaboration.vectorClock()
       // console.log('clock:', clock)
       if (!clock.hasOwnProperty(id)) {
-        return;
+        return
       }
       const selfClock = clock[id]
       if (selfClock !== pushed) {
@@ -62,17 +66,22 @@ const start = async () => {
       }
     })
 
-    const interval = setInterval(() => {
-      const datum = data.shift()
-      // process.stdout.write('' + datum)
-      // process.stdout.write('.')
-      if (!data.length) {
-        stop()
-      }
-      // console.log('%s: pushing', id, datum)
-      pushed ++
-      collaboration.shared.push(datum)
-    }, intervalMS)
+    if (data) {
+      const intervalMS = 1000 / workerData.opsPerSecond
+      interval = setInterval(() => {
+        const datum = data.shift()
+        // process.stdout.write('' + datum)
+        // process.stdout.write('.')
+        if (!data.length) {
+          stop()
+        }
+        // console.log('%s: pushing', id, datum)
+        pushed++
+        collaboration.shared.push(datum)
+      }, intervalMS)
+    } else {
+      stop()
+    }
 
     function stop () {
       console.log('cooling down...')
@@ -90,25 +99,29 @@ const start = async () => {
       }
 
       function pollForFinalDataLength () {
-        if (workerData.enablDebug && ((Date.now() - stopStarted) > 5000) && !debugEnabled) {
+        if (workerData.enableDebug && ((Date.now() - stopStarted) > 5000) && !debugEnabled) {
           console.log('%s: ENABLING DEBUGGING', workerData.workerId)
           debugEnabled = true
           PeerStar.debug.enable('peer-star:collaboration:*')
         }
         const l = collaboration.shared.value().length
-        console.log('%s: current length: %d', workerData.workerId, l)
-        console.log('%s: collaboration:', workerData.workerId, {
-          peerId: collaboration.app.ipfs._peerInfo.id.toB58String(),
-          inboundConnectionCount: collaboration.inboundConnectionCount(),
-          outboundConnectionCount: collaboration.outboundConnectionCount(),
-          inboundConnectedPeers: collaboration.inboundConnectedPeers(),
-          ouboundConnectedPeers: collaboration.outboundConnectedPeers(),
-          vertices: Array.from(collaboration.shared.state()[2]).length,
-          clock: collaboration.vectorClock(),
-          value: collaboration.shared.value()
-        })
+        if (workerData.enableDebug) {
+          console.log('%s: current length: %d', workerData.workerId, l)
+          console.log('%s: collaboration:', workerData.workerId, {
+            peerId: collaboration.app.ipfs._peerInfo.id.toB58String(),
+            inboundConnectionCount: collaboration.inboundConnectionCount(),
+            outboundConnectionCount: collaboration.outboundConnectionCount(),
+            inboundConnectedPeers: collaboration.inboundConnectedPeers(),
+            ouboundConnectedPeers: collaboration.outboundConnectedPeers(),
+            vertices: Array.from(collaboration.shared.state()[2]).length,
+            clock: collaboration.vectorClock()
+          })
+        }
+
         if (l === workerData.expectedLength) {
           console.log('stopping...')
+          debugEnabled = false
+          PeerStar.debug.disable()
           process.send(collaboration.shared.value())
           return true
         }
