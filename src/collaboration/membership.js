@@ -38,8 +38,10 @@ module.exports = class Membership extends EventEmitter {
       this._options)
 
     this._gossipNow = this._gossipNow.bind(this)
-    this._ring.on('removed', (peerInfo) => {
+
+    this._connectionManager.on('should evict', (peerInfo) => {
       const peerId = peerInfo.id.toB58String()
+      console.log('%s: evicting %s', this._id, peerId)
       this._memberCRDT.remove(peerId)
       this._members.delete(peerId)
       this.emit('peer left', peerInfo)
@@ -56,6 +58,7 @@ module.exports = class Membership extends EventEmitter {
   async _startPeerInfo () {
     if (this._ipfs._peerInfo) {
       const peerId = this._ipfs._peerInfo.id.toB58String()
+      this._id = peerId
       this._memberCRDT = AWORSet(peerId)
       this._memberCRDT.add(peerId)
       this._members.add(peerId)

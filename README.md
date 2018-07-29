@@ -13,6 +13,7 @@ Peer-Star App support for real-time collaborative DApps built on top of IPFS
 
 * [Code structure](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/CODE-STRUCTURE.md)
 * [Protocol](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/PROTOCOL.md)
+* [Performance tests](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/PERFORMANCE-TESTS.md)
 
 ## Install
 
