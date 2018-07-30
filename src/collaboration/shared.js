@@ -35,6 +35,10 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     }).catch((err) => shared.emit('error', err))
   })
 
+  // Change emitter
+  const voidChangeEmitter = new VoidChangeEmitter()
+  const changeEmitter = new ChangeEmitter(shared)
+
   // Populate shared methods
 
   // shared mutators
@@ -44,7 +48,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
       const delta = mutator(state, ...args)
       apply(delta, true)
 
-      deltaBuffer = crdt.join(deltaBuffer, delta)
+      deltaBuffer = crdt.join.call(voidChangeEmitter, deltaBuffer, delta)
       saveDeltaBuffer()
     }
   })
@@ -102,7 +106,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     const s2 = decode(encodedState)
 
     const newAuthorClock = vectorclock.incrementAll(previousAuthorClock, authorClock)
-    const newState = crdt.join(s1, s2)
+    const newState = crdt.join.call(voidChangeEmitter, s1, s2)
     acc.set(name, [name, type, clock, newAuthorClock, newState])
 
     debug('%s: shared.join: new state is', id, newState)
@@ -135,8 +139,14 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
 
   function apply (s, fromSelf) {
     debug('%s: apply ', id, s)
-    state = crdt.join(state, s)
+    state = crdt.join.call(changeEmitter, state, s)
     debug('%s: new state after join is', id, state)
+    try {
+      changeEmitter.emitAll()
+    } catch (err) {
+      console.error('Error caught while emitting changes:', err)
+    }
+
     shared.emit('state changed', fromSelf)
     return state
   }
@@ -196,4 +206,28 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
         .catch(reject)
     })
   }
+}
+
+class ChangeEmitter {
+  constructor (client) {
+    this._client = client
+    this._events = []
+  }
+
+  changed (event) {
+    this._events.push(event)
+  }
+
+  emitAll () {
+    const events = this._events
+    this._events = []
+    events.forEach((event) => {
+      this._client.emit('change', event)
+    })
+  }
+}
+
+class VoidChangeEmitter {
+  changed (event) {}
+  emitAll () {}
 }
