@@ -14,6 +14,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   const applyQueue = new Queue({ concurrency: 1 })
   const shared = new EventEmitter()
   const crdt = type(id)
+  let clock = {}
   let state = crdt.initial()
   let deltaBuffer = crdt.initial()
   // let clock = await store.getLatestClock()
@@ -27,7 +28,10 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
       // clock = vectorclock.increment(clock, id)
       // debug('%s: clock before save delta:', id, clock)
       // const newClock =
-      await store.saveDelta([null, null, encode(namedDelta)])
+      const newClock = await store.saveDelta([null, null, encode(namedDelta)])
+      if (newClock) {
+        clock = vectorclock.merge(clock, newClock)
+      }
       // if (newClock) {
       //   debug('%s: NEW clock after save delta:', id, newClock)
       //   clock = vectorclock.merge(clock, newClock)
@@ -61,6 +65,10 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   shared.value = () => crdt.value(state)
 
   shared.apply = (remoteClock, encodedDelta) => {
+    if (vectorclock.compare(remoteClock, clock) < 0) {
+      debug('%s: apply: remote clock is already contained in clock')
+      return
+    }
     debug('%s: apply', id, remoteClock, encodedDelta)
     if (!Buffer.isBuffer(encodedDelta)) {
       throw new Error('encoded delta should have been buffer')
@@ -68,6 +76,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     return applyQueue.add(async () => {
       const [forName, typeName, encryptedState] = decode(encodedDelta)
       debug('%s: shared.apply %j', id, remoteClock, forName)
+      clock = vectorclock.merge(clock, remoteClock)
       if (forName === name) {
         const encodedState = await decryptAndVerify(encryptedState)
         const newState = decode(encodedState)
