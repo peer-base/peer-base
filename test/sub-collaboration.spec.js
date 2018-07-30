@@ -25,7 +25,7 @@ describe('sub-collaboration', function () {
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
+        const app = App({ maxThrottleDelayMS: 0 })
         swarm.push(app)
         return app.start()
       })
