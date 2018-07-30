@@ -14,6 +14,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   const applyQueue = new Queue({ concurrency: 1 })
   const shared = new EventEmitter()
   const crdt = type(id)
+  let clock = {}
   let state = crdt.initial()
   let deltaBuffer = crdt.initial()
   // let clock = await store.getLatestClock()
@@ -27,13 +28,20 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
       // clock = vectorclock.increment(clock, id)
       // debug('%s: clock before save delta:', id, clock)
       // const newClock =
-      await store.saveDelta([null, null, encode(namedDelta)])
+      const newClock = await store.saveDelta([null, null, encode(namedDelta)])
+      if (newClock) {
+        clock = vectorclock.merge(clock, newClock)
+      }
       // if (newClock) {
       //   debug('%s: NEW clock after save delta:', id, newClock)
       //   clock = vectorclock.merge(clock, newClock)
       // }
     }).catch((err) => shared.emit('error', err))
   })
+
+  // Change emitter
+  const voidChangeEmitter = new VoidChangeEmitter()
+  const changeEmitter = new ChangeEmitter(shared)
 
   // Populate shared methods
 
@@ -44,7 +52,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
       const delta = mutator(state, ...args)
       apply(delta, true)
 
-      deltaBuffer = crdt.join(deltaBuffer, delta)
+      deltaBuffer = crdt.join.call(voidChangeEmitter, deltaBuffer, delta)
       saveDeltaBuffer()
     }
   })
@@ -57,6 +65,10 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   shared.value = () => crdt.value(state)
 
   shared.apply = (remoteClock, encodedDelta) => {
+    if (vectorclock.compare(remoteClock, clock) < 0) {
+      debug('%s: apply: remote clock is already contained in clock')
+      return
+    }
     debug('%s: apply', id, remoteClock, encodedDelta)
     if (!Buffer.isBuffer(encodedDelta)) {
       throw new Error('encoded delta should have been buffer')
@@ -64,6 +76,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     return applyQueue.add(async () => {
       const [forName, typeName, encryptedState] = decode(encodedDelta)
       debug('%s: shared.apply %j', id, remoteClock, forName)
+      clock = vectorclock.merge(clock, remoteClock)
       if (forName === name) {
         const encodedState = await decryptAndVerify(encryptedState)
         const newState = decode(encodedState)
@@ -102,7 +115,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     const s2 = decode(encodedState)
 
     const newAuthorClock = vectorclock.incrementAll(previousAuthorClock, authorClock)
-    const newState = crdt.join(s1, s2)
+    const newState = crdt.join.call(voidChangeEmitter, s1, s2)
     acc.set(name, [name, type, clock, newAuthorClock, newState])
 
     debug('%s: shared.join: new state is', id, newState)
@@ -135,8 +148,14 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
 
   function apply (s, fromSelf) {
     debug('%s: apply ', id, s)
-    state = crdt.join(state, s)
+    state = crdt.join.call(changeEmitter, state, s)
     debug('%s: new state after join is', id, state)
+    try {
+      changeEmitter.emitAll()
+    } catch (err) {
+      console.error('Error caught while emitting changes:', err)
+    }
+
     shared.emit('state changed', fromSelf)
     return state
   }
@@ -196,4 +215,28 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
         .catch(reject)
     })
   }
+}
+
+class ChangeEmitter {
+  constructor (client) {
+    this._client = client
+    this._events = []
+  }
+
+  changed (event) {
+    this._events.push(event)
+  }
+
+  emitAll () {
+    const events = this._events
+    this._events = []
+    events.forEach((event) => {
+      this._client.emit('change', event)
+    })
+  }
+}
+
+class VoidChangeEmitter {
+  changed (event) {}
+  emitAll () {}
 }

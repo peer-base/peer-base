@@ -8,7 +8,6 @@ const expect = chai.expect
 const crypto = require('libp2p-crypto')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
-require('./utils/fake-crdt')
 const A_BIT = 19000
 
 describe('collaboration', function () {
@@ -43,7 +42,7 @@ describe('collaboration', function () {
 
   it('can be created', async () => {
     collaborations = await Promise.all(
-      swarm.map((peer) => peer.app.collaborate('test collaboration', 'fake', collaborationOptions)))
+      swarm.map((peer) => peer.app.collaborate('test collaboration', 'gset', collaborationOptions)))
     expect(collaborations.length).to.equal(peerCount)
   })
 
@@ -62,7 +61,7 @@ describe('collaboration', function () {
 
   it('adding another peer', async () => {
     const peer = App({ maxThrottleDelayMS: 1000 })
-    const collaboration = await peer.app.collaborate('test collaboration', 'fake', collaborationOptions)
+    const collaboration = await peer.app.collaborate('test collaboration', 'gset', collaborationOptions)
     swarm.push(peer)
     collaborations.push(collaboration)
     await peer.app.start()
@@ -81,9 +80,19 @@ describe('collaboration', function () {
   //   })
   // })
 
-  it('can push operation', async () => {
-    const collaboration = await swarm[0].app.collaborate('test collaboration', 'fake', collaborationOptions)
-    await collaboration.shared.add('a')
+  it('can push operation', (done) => {
+    let pendingChanges = collaborations.length
+    collaborations.forEach((collaboration, idx) => {
+      collaboration.shared.once('change', (change) => {
+        expect(change).to.deep.equal({add: 'a'})
+        pendingChanges--
+        if (!pendingChanges) {
+          done()
+        }
+      })
+    })
+    const collaboration = collaborations[0]
+    collaboration.shared.add('a')
   })
 
   it('waits a bit', (done) => {
@@ -92,10 +101,10 @@ describe('collaboration', function () {
 
   it('all replicas in sync', async () => {
     const collaborations = await Promise.all(
-      swarm.map(async (peer) => peer.app.collaborate('test collaboration', 'fake', collaborationOptions)))
+      swarm.map(async (peer) => peer.app.collaborate('test collaboration', 'gset', collaborationOptions)))
 
     await Promise.all(collaborations.map(async (collab) => {
-      expect(collab.shared.value()).to.equal('a')
+      expect(collab.shared.value()).to.deep.equal(new Set(['a']))
     }))
   })
 
