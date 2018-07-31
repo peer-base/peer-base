@@ -4,12 +4,24 @@ const IpfsAPI = require('ipfs-api')
 
 module.exports = startLanDiscovery
 
-function startLanDiscovery (ipfs, appTransport) {
-  ipfs.once('ready', () => {
+const IPFS_RELAY_ADDR = '/dns4/relay.decentralizedweb.net/tcp/4004/wss/ipfs/QmPdHHgEr1gKbMuhiBf6545BL7mxaKbmCKbaJE7yY4CkBg'
+//'/ip4/10.7.0.55/tcp/4004/ws/ipfs/QmQJPPKEd1a1zLrsDzmzKMnbkkNNmCziUMsXvvkLbjPg1c'
+
+function startLanDiscovery (ipfs, appTransport, options) {
+  if ((typeof options.relayWSAddr) !== 'string') {
+    throw new Error('need options.ipfs.relay.relayWSAddr (multiaddr string)')
+  }
+  if ((typeof options.apiAddr) !== 'string') {
+    throw new Error('need options.ipfs.relay.apiAddr (multiaddr string)')
+  }
+
+  const onceIPFSStarted = () => {
     ipfs.id().then((peerInfo) => {
       const myId = peerInfo.id
 
-      const remoteIPFS = IpfsAPI('localhost', 5001)
+      const remoteIPFS = IpfsAPI(options.apiAddr)
+        //'/dns4//tcp/5001', { protocol: 'http' })
+
 
       scheduleLanPoll()
 
@@ -19,7 +31,7 @@ function startLanDiscovery (ipfs, appTransport) {
             .then(() => {
               scheduleLanPoll()
             }).catch((err) => {
-              console.error(err)
+              console.error(err.message)
               scheduleLanPoll()
             })
         }, 5000)
@@ -27,7 +39,7 @@ function startLanDiscovery (ipfs, appTransport) {
 
       function doLanPoll () {
         return new Promise((resolve, reject) => {
-          ipfs.swarm.connect('/ip4/127.0.0.1/tcp/4004/ws/ipfs/QmQJPPKEd1a1zLrsDzmzKMnbkkNNmCziUMsXvvkLbjPg1c', (err) => {
+          ipfs.swarm.connect(options.relayWSAddr, (err) => {
             if (err) {
               return reject(err)
             }
@@ -53,5 +65,11 @@ function startLanDiscovery (ipfs, appTransport) {
         })
       }
     })
-  })
+  }
+
+  if (ipfs.isOnline()) {
+    onceIPFSStarted()
+  } else {
+    ipfs.once('ready', onceIPFSStarted)
+  }
 }

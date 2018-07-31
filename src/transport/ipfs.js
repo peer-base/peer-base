@@ -4,11 +4,11 @@ const IPFS = require('ipfs')
 const WebSocketStar = require('libp2p-websocket-star')
 const WebSockets = require('libp2p-websockets')
 const AppTransport = require('./app-transport')
-const LanDiscovery = require('./ipfs-lan-discovery')
+const Relay = require('./ipfs-relay')
 
 module.exports = (app, options) => {
   const ipfs = new IPFS({
-    repo: options && options.ipfs && options.ipfs.repo,
+    repo: options && options.repo,
     EXPERIMENTAL: {
       pubsub: true
     },
@@ -20,9 +20,10 @@ module.exports = (app, options) => {
     },
     config: {
       Addresses: {
-        Swarm: (options && options.ipfs && options.ipfs.swarm) || [
-          '/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star'
-        ]
+        Swarm:
+          (options && options.swarm) || [
+            '/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star'
+          ]
       },
       Bootrtrap: []
       // Bootstrap: [
@@ -43,6 +44,14 @@ module.exports = (app, options) => {
     ipfs.config.get().then((config) => {
       console.log('IPFS config:', config)
     })
+    // options.ipfs.swarm.forEach((addr) => {
+    //   console.log('connecting to', addr)
+    //   ipfs.swarm.connect(addr, (err) => {
+    //     if (err) {
+    //       ipfs.emit('error', err)
+    //     }
+    //   })
+    // })
   })
 
   return ipfs
@@ -57,7 +66,10 @@ module.exports = (app, options) => {
     appTransport.on('outbound peer disconnected', (peerInfo) => app.emit('outbound peer disconnected', peerInfo))
     appTransport.on('inbound peer disconnected', (peerInfo) => app.emit('inbound peer disconnected', peerInfo))
 
-    LanDiscovery(ipfs, appTransport)
+    if (options && options.relay) {
+      console.log('starting relay client with options:', options.relay)
+      Relay(ipfs, appTransport, options.relay)
+    }
 
     return {
       transport: [ appTransport, WebSockets ],

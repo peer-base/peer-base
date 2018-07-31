@@ -199,7 +199,6 @@ class Collaboration extends EventEmitter {
   }
 
   deliverRemoteMembership (membership) {
-    console.log('remote membership delivered', membership)
     return this._membership.deliverRemoteMembership(membership)
   }
 
