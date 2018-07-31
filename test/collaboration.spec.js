@@ -61,10 +61,10 @@ describe('collaboration', function () {
 
   it('adding another peer', async () => {
     const peer = App({ maxThrottleDelayMS: 1000 })
-    const collaboration = await peer.app.collaborate('test collaboration', 'gset', collaborationOptions)
     swarm.push(peer)
-    collaborations.push(collaboration)
     await peer.app.start()
+    const collaboration = await peer.app.collaborate('test collaboration', 'gset', collaborationOptions)
+    collaborations.push(collaboration)
   })
 
   it('waits a bit for membership to propagate', (done) => {

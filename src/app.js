@@ -45,16 +45,20 @@ class App extends EventEmitter {
         }
       }
       this.ipfs.on('error', onError)
-      this.ipfs.once('ready', () => {
-        this.ipfs.removeListener('error', onError)
-        resolve()
-      })
       if (this.ipfs.isOnline()) {
+        this.ipfs.on('error', (err) => this._handleIPFSError(err))
         resolve()
       } else {
-        this.ipfs.once('ready', resolve)
+        this.ipfs.once('ready', () => {
+          this.ipfs.removeListener('error', onError)
+          this.ipfs.on('error', (err) => this._handleIPFSError(err))
+          resolve()
+        })
       }
-    }).then(() => this._peerCountGuess.start())
+    }).then(() => {
+      console.log('app started')
+      this._peerCountGuess.start()
+    })
 
     return this._starting
   }

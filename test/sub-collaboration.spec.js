@@ -97,14 +97,14 @@ describe('sub-collaboration', function () {
 
   it('can create another replica', async () => {
     const peer = App({ maxThrottleDelayMS: 1000 })
-    const collaboration = await peer.app.collaborate('test sub-collaboration', 'fake', collaborationOptions)
-    swarm.push(peer)
-    collaborations.push(collaboration)
     await peer.app.start()
+    swarm.push(peer)
+    const collaboration = await peer.app.collaborate('test sub-collaboration', 'fake', collaborationOptions)
+    collaborations.push(collaboration)
   })
 
   it('waits a bit', (done) => {
-    setTimeout(done, A_BIT)
+    setTimeout(done, A_BIT * 2)
   })
 
   it('root collaboration still has same value', () => {

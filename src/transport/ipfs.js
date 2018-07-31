@@ -7,16 +7,10 @@ const AppTransport = require('./app-transport')
 const Relay = require('./ipfs-relay')
 
 module.exports = (app, options) => {
-  const ipfs = new IPFS({
+  const ipfsOptions = {
     repo: options && options.repo,
     EXPERIMENTAL: {
       pubsub: true
-    },
-    relay: {
-      enabled: true, // enable relay dialer/listener (STOP)
-      hop: {
-        enabled: true // make this node a relay (HOP)
-      }
     },
     config: {
       Addresses: {
@@ -35,21 +29,17 @@ module.exports = (app, options) => {
       // ]
     },
     libp2p: { modules }
-  })
+  }
 
-  ipfs.once('ready', () => {
-    ipfs.config.get().then((config) => {
-      console.log('IPFS config:', config)
-    })
-    // options.ipfs.swarm.forEach((addr) => {
-    //   console.log('connecting to', addr)
-    //   ipfs.swarm.connect(addr, (err) => {
-    //     if (err) {
-    //       ipfs.emit('error', err)
-    //     }
-    //   })
-    // })
-  })
+  if (options.relay) {
+    ipfsOptions.relay = {
+      enabled: true, // enable relay dialer/listener (STOP)
+      hop: {
+        enabled: true // make this node a relay (HOP)
+      }
+    }
+  }
+  const ipfs = new IPFS(ipfsOptions)
 
   return ipfs
 
@@ -64,7 +54,6 @@ module.exports = (app, options) => {
     appTransport.on('inbound peer disconnected', (peerInfo) => app.emit('inbound peer disconnected', peerInfo))
 
     if (options && options.relay) {
-      console.log('starting relay client with options:', options.relay)
       Relay(ipfs, appTransport, options.relay)
     }
 
