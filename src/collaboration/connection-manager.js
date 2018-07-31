@@ -36,9 +36,6 @@ module.exports = class ConnectionManager extends EventEmitter {
 
     this._protocol.on('inbound connection closed', (peerInfo) => {
       this._inboundConnections.delete(peerInfo)
-      if (!this._outboundConnections.has(peerInfo)) {
-        this._ring.remove(peerInfo)
-      }
     })
 
     this._protocol.on('outbound connection', (peerInfo) => {
@@ -47,9 +44,6 @@ module.exports = class ConnectionManager extends EventEmitter {
 
     this._protocol.on('outbound connection closed', (peerInfo) => {
       this._outboundConnections.delete(peerInfo)
-      if (!this._inboundConnections.has(peerInfo)) {
-        this._ring.remove(peerInfo)
-      }
     })
 
     this._protocol.on('error', (err) => {
@@ -118,13 +112,12 @@ module.exports = class ConnectionManager extends EventEmitter {
               peerInfo, this._protocol.name())
             this._unreachables.delete(peerInfo.id.toB58String())
             this._protocol.dialerFor(peerInfo, connection)
-            connection.once('closed', () => {
-              this._ring.remove(peerInfo)
-            })
+            // connection.once('closed', () => {
+            //   this._ring.remove(peerInfo)
+            // })
           } catch (err) {
             this._peerUnreachable(peerInfo)
-            this._ring.remove(peerInfo)
-            console.log('error connecting:', err.message)
+            // this._ring.remove(peerInfo)
             debug('error connecting:', err)
           }
         }
@@ -153,6 +146,7 @@ module.exports = class ConnectionManager extends EventEmitter {
     this._unreachables.set(peerId, count)
     if (this._options.maxUnreachableBeforeEviction <= count) {
       this._unreachables.delete(peerId)
+      this._ring.remove(peerInfo)
       this.emit('should evict', peerInfo)
     }
   }

@@ -44,6 +44,9 @@ Options (are not required):
 * `ipfs`: object with:
   * `repo`: IPFS repo path or repo object
   * `swarm`: ipfs swarm addresses (array of string)
+  * `relay`: an (optional) object containing the following attributes:
+    * apiAddr: the multiaddress for the API server of the relay
+    * relayWSAddr: the multiaddress for the relay websocket server address
 * samplingIntervalMS: (defaults to `1000`): membership gossip frequency heuristic sampling interval
 * targetGlobalMembershipGossipFrequencyMS: (defaults to `1000`): target global membership gossip frequency, in ms.
 * urgencyFrequencyMultiplier: (defaults to `10`): urgency multiplier when someone is wrong about membership
@@ -317,6 +320,13 @@ await collaboration.stop()
 ```js
 await app.stop()
 ```
+
+## IPFS Circuit Relay support
+
+Peer-star-app supports using a circuit relay peer. For that you need to set up a go-ipfs node with circuit relay enabled. On your peer-star-app options, you can then pass in `options.ipfs.relay` with an object with the following attributes:
+
+* `relayWSAddr`: the multiaddress for the websocket server of the relay server
+* `apiAddr`: the multiaddress for the relay server API address (which we need for polling the known peers)
 
 # Run example app
 

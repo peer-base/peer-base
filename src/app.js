@@ -14,8 +14,7 @@ class App extends EventEmitter {
   constructor (name, options) {
     super()
     this.name = name
-    this.ipfs = IPFS(this, options)
-    this.ipfs.on('error', (err) => this.emit('error', err))
+    this._options = options
     this._peerCountGuess = new PeerCountGuess(this, options && options.peerCountGuess)
     this._collaborations = new Map()
     this._starting = null
@@ -27,7 +26,29 @@ class App extends EventEmitter {
     if (this._starting) {
       return this._starting
     }
+
     this._starting = new Promise((resolve, reject) => {
+      let replacing = false
+      this.ipfs = IPFS(this, this._options && this._options.ipfs)
+      const onError = (err) => {
+        if (err.message === 'websocket error') {
+          if (!replacing) {
+            replacing = true
+            this.ipfs.removeListener('error', onError)
+            this._options.ipfs.swarm = []
+            this.ipfs = IPFS(this, this._options && this._options.ipfs)
+            this.ipfs.on('error', (err) => this._handleIPFSError(err))
+            this.ipfs.once('ready', resolve)
+          }
+        } else {
+          alert(err.message)
+        }
+      }
+      this.ipfs.on('error', onError)
+      this.ipfs.once('ready', () => {
+        this.ipfs.removeListener('error', onError)
+        resolve()
+      })
       if (this.ipfs.isOnline()) {
         resolve()
       } else {
@@ -106,6 +127,11 @@ class App extends EventEmitter {
           })
       }
     })
+  }
+
+  _handleIPFSError (err) {
+    console.error(err)
+    alert(err.message)
   }
 
   async stop () {

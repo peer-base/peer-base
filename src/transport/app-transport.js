@@ -94,6 +94,10 @@ class AppTransport extends EventEmitter {
     return this._outboundConnections.has(peerInfo)
   }
 
+  hasPeer (peerInfo) {
+    return this._ring.has(peerInfo)
+  }
+
   _maybeStart () {
     if (!this._started) {
       this._started = true
