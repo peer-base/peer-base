@@ -321,6 +321,13 @@ await collaboration.stop()
 await app.stop()
 ```
 
+## IPFS Circuit Relay support
+
+Peer-star-app supports using a circuit relay peer. For that you need to set up a go-ipfs node with circuit relay enabled. On your peer-star-app options, you can then pass in `options.ipfs.relay` with an object with the following attributes:
+
+* `relayWSAddr`: the multiaddress for the websocket server of the relay server
+* `apiAddr`: the multiaddress for the relay server API address (which we need for polling the known peers)
+
 # Run example app
 
 Clone this repo.
