@@ -16,7 +16,7 @@ module.exports = (app, options) => {
       Addresses: {
         Swarm: (options && options.swarm) || ['/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star']
       },
-      Bootrtrap: []
+      Bootstrap: options.bootstrap || []
       // Bootstrap: [
       //   '/dns4/ams-1.bootstrap.libp2p.io/tcp/443/wss/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd',
       //   '/dns4/lon-1.bootstrap.libp2p.io/tcp/443/wss/ipfs/QmSoLMeWqB7YGVLJN3pNLQpmmEk35v6wYtsMGLzSr5QBU3',

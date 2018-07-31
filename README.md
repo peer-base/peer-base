@@ -44,6 +44,7 @@ Options (are not required):
 * `ipfs`: object with:
   * `repo`: IPFS repo path or repo object
   * `swarm`: ipfs swarm addresses (array of string)
+  * `bootstrap`: IPFS Bootstrap nodes (array of multiaddresses)
   * `relay`: an (optional) object containing the following attributes:
     * apiAddr: the multiaddress for the API server of the relay
     * relayWSAddr: the multiaddress for the relay websocket server address
