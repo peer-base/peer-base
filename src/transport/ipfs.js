@@ -20,10 +20,7 @@ module.exports = (app, options) => {
     },
     config: {
       Addresses: {
-        Swarm:
-          (options && options.swarm) || [
-            '/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star'
-          ]
+        Swarm: (options && options.swarm) || ['/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star']
       },
       Bootrtrap: []
       // Bootstrap: [

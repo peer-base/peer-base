@@ -4,9 +4,6 @@ const IpfsAPI = require('ipfs-api')
 
 module.exports = startLanDiscovery
 
-const IPFS_RELAY_ADDR = '/dns4/relay.decentralizedweb.net/tcp/4004/wss/ipfs/QmPdHHgEr1gKbMuhiBf6545BL7mxaKbmCKbaJE7yY4CkBg'
-//'/ip4/10.7.0.55/tcp/4004/ws/ipfs/QmQJPPKEd1a1zLrsDzmzKMnbkkNNmCziUMsXvvkLbjPg1c'
-
 function startLanDiscovery (ipfs, appTransport, options) {
   if ((typeof options.relayWSAddr) !== 'string') {
     throw new Error('need options.ipfs.relay.relayWSAddr (multiaddr string)')
@@ -20,8 +17,6 @@ function startLanDiscovery (ipfs, appTransport, options) {
       const myId = peerInfo.id
 
       const remoteIPFS = IpfsAPI(options.apiAddr)
-        //'/dns4//tcp/5001', { protocol: 'http' })
-
 
       scheduleLanPoll()
 
