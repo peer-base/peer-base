@@ -29,16 +29,20 @@ class App extends EventEmitter {
 
     this._starting = new Promise((resolve, reject) => {
       let replacing = false
-      this.ipfs = IPFS(this, this._options && this._options.ipfs)
+      const ipfsOptions = (this._options && this._options.ipfs) || {}
+      this.ipfs = IPFS(this, ipfsOptions)
       const onError = (err) => {
         if (err.message === 'websocket error') {
-          if (!replacing) {
+          if (!replacing && ipfsOptions.relay) {
+            alert('You seam to be having some issues connecting to ' + JSON.stringify(ipfsOptions && ipfsOptions.swarm) + '. Downgrading to no swarm setup. Please refresh if that\'s not working for you.')
             replacing = true
             this.ipfs.removeListener('error', onError)
             this._options.ipfs.swarm = []
             this.ipfs = IPFS(this, this._options && this._options.ipfs)
             this.ipfs.on('error', (err) => this._handleIPFSError(err))
             this.ipfs.once('ready', resolve)
+          } else {
+            alert(err.message)
           }
         } else {
           alert(err.message)
