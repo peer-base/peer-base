@@ -8,8 +8,8 @@ function startLanDiscovery (ipfs, appTransport, options) {
   if ((typeof options.relayWSAddr) !== 'string') {
     throw new Error('need options.ipfs.relay.relayWSAddr (multiaddr string)')
   }
-  if ((typeof options.apiAddr) !== 'string') {
-    throw new Error('need options.ipfs.relay.apiAddr (multiaddr string)')
+  if (!options.apiAddr) {
+    throw new Error('need options.ipfs.relay.apiAddr')
   }
 
   const onceIPFSStarted = () => {
