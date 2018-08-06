@@ -34,7 +34,7 @@
     "delay": "^3.0.0",
     "delta-crdts": "^0.2.8",
     "interface-datastore": "~0.4.2",
-    "ipfs": "git+https://git@github.com/pgte/js-ipfs.git#feat/libp2p-dynamic-modules-2",
+    "ipfs": "git+https://git@github.com/pgte/js-ipfs.git#feat/libp2p-dynamic-modules-3",
     "ipfs-api": "^22.2.4",
     "leftpad": "0.0.1",
     "libp2p-bootstrap": "^0.9.3",
