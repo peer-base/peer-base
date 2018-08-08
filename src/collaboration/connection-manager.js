@@ -112,9 +112,12 @@ module.exports = class ConnectionManager extends EventEmitter {
               peerInfo, this._protocol.name())
             this._unreachables.delete(peerInfo.id.toB58String())
             this._protocol.dialerFor(peerInfo, connection)
-            // connection.once('closed', () => {
-            //   this._ring.remove(peerInfo)
-            // })
+            this.emit('connected', peerInfo)
+            connection.once('closed', () => {
+              setTimeout(() => {
+                this.emit('disconnected', peerInfo)
+              }, 0)
+            })
           } catch (err) {
             this._peerUnreachable(peerInfo)
             // this._ring.remove(peerInfo)
