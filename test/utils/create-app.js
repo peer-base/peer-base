@@ -8,7 +8,8 @@ module.exports = (transportOptions, ipfsOptions) => {
 
   ipfsOptions = Object.assign({
       repo,
-      swarm: [ '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star' ]
+      swarm: [ '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star' ],
+      bootstrap: require('./bootstrap-nodes')
     }, ipfsOptions)
 
   const app = PeerStar('peer star test app', {

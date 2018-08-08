@@ -11,7 +11,8 @@ module.exports = (app, options) => {
   const ipfsOptions = {
     repo: options && options.repo,
     EXPERIMENTAL: {
-      pubsub: true
+      pubsub: true,
+      dht: true
     },
     config: {
       Addresses: {

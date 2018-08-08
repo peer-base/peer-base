@@ -8,6 +8,7 @@ const debounce = require('lodash.debounce')
 const encode = require('../common/encode')
 const decode = require('../common/decode')
 const vectorclock = require('../common/vectorclock')
+const signAndEncrypt = require('../common/sign-and-encrypt')
 
 module.exports = async (name, id, type, collaboration, store, keys) => {
   const queue = new Queue({ concurrency: 1 })
@@ -27,7 +28,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
       const jointDelta = deltas.reduce(
         (D, d) => crdt.join.call(voidChangeEmitter, D, d),
         crdt.initial())
-      const namedDelta = [name, type.typeName, await signAndEncrypt(encode(jointDelta))]
+      const namedDelta = [name, type.typeName, await signAndEncrypt(keys, encode(jointDelta))]
       debug('%s: named delta: ', id, namedDelta)
       // clock = vectorclock.increment(clock, id)
       // debug('%s: clock before save delta:', id, clock)
@@ -84,7 +85,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
         }
         debug('%s state after apply:', id, state)
         if (!keys.public || keys.write) {
-          return [name, encode([name, forName && type.typeName, await signAndEncrypt(encode(state))])]
+          return [name, encode([name, forName && type.typeName, await signAndEncrypt(keys, encode(state))])]
         }
       } else if (typeName) {
         const sub = await collaboration.sub(forName, typeName)
@@ -127,7 +128,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   shared.signAndEncrypt = async (message) => {
     let encrypted
     if (!keys.public || keys.write) {
-      encrypted = await signAndEncrypt(message)
+      encrypted = await signAndEncrypt(keys, message)
     } else {
       encrypted = message
     }
@@ -159,33 +160,6 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
 
     shared.emit('state changed', fromSelf)
     return state
-  }
-
-  function signAndEncrypt (data) {
-    return new Promise((resolve, reject) => {
-      if (!keys.write) {
-        return resolve(data)
-      }
-      keys.write.sign(data, (err, signature) => {
-        if (err) {
-          return reject(err)
-        }
-
-        const toEncrypt = encode([data, signature])
-
-        keys.cipher()
-          .then((cipher) => {
-            cipher.encrypt(toEncrypt, (err, encrypted) => {
-              if (err) {
-                return reject(err)
-              }
-
-              resolve(encrypted)
-            })
-          })
-          .catch(reject)
-      })
-    })
   }
 
   function decryptAndVerify (encrypted) {

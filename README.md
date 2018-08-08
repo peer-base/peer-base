@@ -310,6 +310,17 @@ Example:
 collaboration.shared.push('some element')
 ```
 
+### `await collaboration.save()`
+
+Saves the collaboration state into the DHT. Returns the id of the DHT record (Buffer).
+
+### `await collaboration.restore(name)`
+
+Restores the collaboration state from the DHT. Returns the name of the DHT record. If such a DHT record exists, decrypts it and merges the saved state into the local state.
+
+Throws an error if a restore from that name can't be completed.
+
+
 ### Stop collaboration
 
 ```js

@@ -8,6 +8,7 @@ const CRDT = require('./crdt')
 const Gossip = require('./gossip')
 const Clocks = require('./clocks')
 const deriveCreateCipherFromKeys = require('../keys/derive-cipher-from-keys')
+const DHT = require('./dht')
 
 const defaultOptions = {
   preambleByteCount: 2,
@@ -58,6 +59,8 @@ class Collaboration extends EventEmitter {
     }
 
     this._subs = new Map()
+
+    this._dht = new DHT(this._ipfs, this, this._options.keys)
   }
 
   async start () {
@@ -200,6 +203,14 @@ class Collaboration extends EventEmitter {
 
   deliverRemoteMembership (membership) {
     return this._membership.deliverRemoteMembership(membership)
+  }
+
+  save () {
+    return this._dht.save()
+  }
+
+  restore (seed) {
+    return this._dht.restore(seed)
   }
 
   _storeName () {
