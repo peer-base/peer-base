@@ -43,9 +43,13 @@ class Protocol extends EventEmitter {
 
       this.emit('inbound connection', peerInfo)
 
+      const peerId = peerInfo.id.toB58String()
+
       pull(
         conn,
+        this.observeInbound(peerId),
         this._pullProtocol.forPeer(peerInfo),
+        this.observeOutbound(peerId),
         passthrough((err) => {
           if (err && err.message !== 'underlying socket has been closed') {
             console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
@@ -60,10 +64,13 @@ class Protocol extends EventEmitter {
 
   dialerFor (peerInfo, conn) {
     this.emit('outbound connection', peerInfo)
+    const peerId = peerInfo.id.toB58String()
 
     pull(
       conn,
+      this.observeInbound(peerId),
       this._pushProtocol.forPeer(peerInfo),
+      this.observeOutbound(peerId),
       passthrough((err) => {
         if (err && err.message !== 'underlying socket has been closed') {
           console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
@@ -78,6 +85,20 @@ class Protocol extends EventEmitter {
   vectorClock (_peerId) {
     const peerId = _peerId || this._ipfs._peerInfo.id.toB58String()
     return this._clocks.getFor(peerId)
+  }
+
+  observeInbound (peerId) {
+    return pull.map((d) => {
+      this.emit('inbound message', { fromPeer: peerId, size: d.length })
+      return d
+    })
+  }
+
+  observeOutbound (peerId) {
+    return pull.map((d) => {
+      this.emit('outbound message', { toPeer: peerId, size: d.length })
+      return d
+    })
   }
 
   _peerId () {

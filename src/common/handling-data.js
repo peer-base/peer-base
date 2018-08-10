@@ -11,7 +11,12 @@ module.exports = function handlingData (dataHandler) {
       dataHandler(err)
     }
 
-    dataHandler(null, message)
+    try {
+      dataHandler(null, message)
+    } catch (err) {
+      dataHandler(err)
+    }
+
     return true
   }
 }

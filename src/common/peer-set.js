@@ -1,9 +1,15 @@
 'use strict'
 
 class PeerSet extends Set {
-  constructor () {
+  constructor (peerSet) {
     super()
     this._idMap = new Map()
+
+    if (peerSet) {
+      for (let peerInfo of peerSet.values()) {
+        this.add(peerInfo)
+      }
+    }
   }
 
   add (peerInfo) {

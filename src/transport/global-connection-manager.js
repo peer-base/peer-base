@@ -71,7 +71,11 @@ module.exports = class GlobalConnectionManager {
   disconnect (peerInfo, protocol) {
     // TODO
     const peerId = peerInfo.id.toB58String()
-    this._peerCollaborations.get(peerId).delete(protocol)
+    const collaborations = this._peerCollaborations.get(peerId)
+    if (collaborations) {
+      collaborations.delete(protocol)
+    }
+
     // TODO: maybe GC peer conn
     this.maybeHangUp(peerInfo)
   }

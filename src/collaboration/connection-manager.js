@@ -76,12 +76,48 @@ module.exports = class ConnectionManager extends EventEmitter {
     this._globalConnectionManager.unhandle(this._protocol.name())
   }
 
+  observe (observer) {
+    const onConnectionChange = () => {
+      observer.setInboundPeers(peerIdSetFromPeerSet(this._inboundConnections))
+      observer.setOutboundPeers(peerIdSetFromPeerSet(this._inboundConnections))
+    }
+
+    this._protocol.on('inbound connection', onConnectionChange)
+    this._protocol.on('inbound connection closed', onConnectionChange)
+    this._protocol.on('outbound connection', onConnectionChange)
+    this._protocol.on('outbound connection closed', onConnectionChange)
+
+    const onInboundMessage = ({fromPeer, size}) => {
+      observer.inboundMessage(fromPeer, size)
+    }
+    this._protocol.on('inbound message', onInboundMessage)
+
+    const onOutboundMessage = ({toPeer, size}) => {
+      observer.outboundMessage(toPeer, size)
+    }
+    this._protocol.on('outbound message', onOutboundMessage)
+
+    // return unbind function
+    return () => {
+      this._protocol.removeListener('inbound connection', onConnectionChange)
+      this._protocol.removeListener('inbound connection closed', onConnectionChange)
+      this._protocol.removeListener('outbound connection', onConnectionChange)
+      this._protocol.removeListener('outbound connection closed', onConnectionChange)
+      this._protocol.removeListener('inbound message', onInboundMessage)
+      this._protocol.removeListener('outbound message', onOutboundMessage)
+    }
+  }
+
   outboundConnectionCount () {
     return this._outboundConnections.size
   }
 
   outboundConnectedPeers () {
     return Array.from(this._outboundConnections.values()).map(peerInfoToPeerId)
+  }
+
+  outboundConnectedPeerInfos () {
+    return new PeerSet(this._outboundConnections)
   }
 
   inboundConnectionCount () {
@@ -112,9 +148,12 @@ module.exports = class ConnectionManager extends EventEmitter {
               peerInfo, this._protocol.name())
             this._unreachables.delete(peerInfo.id.toB58String())
             this._protocol.dialerFor(peerInfo, connection)
-            // connection.once('closed', () => {
-            //   this._ring.remove(peerInfo)
-            // })
+            this.emit('connected', peerInfo)
+            connection.once('closed', () => {
+              setTimeout(() => {
+                this.emit('disconnected', peerInfo)
+              }, 0)
+            })
           } catch (err) {
             this._peerUnreachable(peerInfo)
             // this._ring.remove(peerInfo)
@@ -154,4 +193,8 @@ module.exports = class ConnectionManager extends EventEmitter {
 
 function peerInfoToPeerId (peerInfo) {
   return peerInfo.id.toB58String()
+}
+
+function peerIdSetFromPeerSet (peerSet) {
+  return new Set(Array.from(peerSet.values()).map((peerInfo) => peerInfo.id.toB58String()))
 }
