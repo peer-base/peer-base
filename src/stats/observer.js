@@ -8,7 +8,6 @@ if (process.browser && !process.hrtime) {
   process.hrtime = require('browser-process-hrtime')
 }
 
-
 class Observer extends EventEmitter {
   constructor (options) {
     super()
