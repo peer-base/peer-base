@@ -16,6 +16,7 @@ class CollaborationStats extends EventEmitter {
     this._ipfs = ipfs
     this._membership = membership
     this._options = Object.assign({}, defaultOptions, options)
+    this._started = false
 
     this._onMembershipChanged = this._onMembershipChanged.bind(this)
     this._onTimeoutsInterval = this._onTimeoutsInterval.bind(this)
@@ -28,23 +29,57 @@ class CollaborationStats extends EventEmitter {
     this._peerStats = new Map()
   }
 
+  on (...args) {
+    super.on(...args)
+    this._maybeEnable()
+  }
+
+  removeListener (...args) {
+    super.removeListener(...args)
+    this._maybeDisable()
+  }
+
+  _maybeEnable () {
+    if (this.listenerCount('peer updated')) {
+      this._enable()
+    }
+  }
+
+  _maybeDisable () {
+    if (!this.listenerCount('peer updated')) {
+      this._disable()
+    }
+  }
+
+  _enable () {
+    this._connectionManager.enablePulling()
+  }
+
+  _disable () {
+    this._connectionManager.disablePulling()
+  }
+
   start () {
-    this._membership.on('changed', this._onMembershipChanged)
-    this._observer.on('stats updated', this._onStatsUpdated)
-    this._timeoutsInterval = setInterval(this._onTimeoutsInterval, this._options.timeoutScanIntervalMS)
-    this._connectionManager.start()
-    this._observer.start()
+    if (!this._started) {
+      this._started = true
+      this._membership.on('changed', this._onMembershipChanged)
+      this._observer.on('stats updated', this._onStatsUpdated)
+      this._timeoutsInterval = setInterval(this._onTimeoutsInterval, this._options.timeoutScanIntervalMS)
+      this._connectionManager.start()
+    }
   }
 
   stop () {
-    this._observer.removeListener('stats updated', this._onStatsUpdated)
-    this._observer.stop()
-    this._membership.removeListener('changed', this._onMembershipChanged)
-    if (this._timeoutsInterval) {
-      clearInterval(this._timeoutsInterval)
-      this._timeoutsInterval = null
+    if (this._started) {
+      this._started = false
+      this._observer.removeListener('stats updated', this._onStatsUpdated)
+      this._membership.removeListener('changed', this._onMembershipChanged)
+      if (this._timeoutsInterval) {
+        clearInterval(this._timeoutsInterval)
+        this._timeoutsInterval = null
+      }
+      this._connectionManager.stop()
     }
-    this._connectionManager.stop()
   }
 
   forPeer (peerId) {
@@ -55,7 +90,7 @@ class CollaborationStats extends EventEmitter {
     const currentStats = this.forPeer(peerId)
     if (currentStats && (currentStats.t < stats.t)) {
       stats.localTime = Date.now()
-      this._peerStats = stats
+      this._peerStats.set(peerId, stats)
       this.emit('peer updated', peerId, stats, fromPeerId)
       this.emit(peerId, stats, fromPeerId)
     }
@@ -79,7 +114,7 @@ class CollaborationStats extends EventEmitter {
 
   _onTimeoutsInterval () {
     const now = Date.now()
-    for (const [peerId, stats] of this._peerStats) {
+    for (let [peerId, stats] of this._peerStats) {
       const shouldHaveArrived = (stats.localTime || 0) + this._options.timeoutMS
       if (shouldHaveArrived < now) {
         // peer timed out, we need recent stats on this one

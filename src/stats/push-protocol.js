@@ -14,7 +14,7 @@ class StatsPushProtocol {
 
   forPeer (peerInfo) {
     const remotePeerId = peerInfo.id.toB58String()
-    debug('%s: pull protocol to %s', this._peerId(), remotePeerId)
+    debug('%s: push protocol to %s', this._peerId(), remotePeerId)
     const wantPeers = new Set()
     let ended = false
 
@@ -33,12 +33,17 @@ class StatsPushProtocol {
     this._stats.on('peer updated', onPeerStats)
 
     const onNewData = (data) => {
-      const [adds = [], removes = []] = data
-      for (let peerId of removes) {
-        wantPeers.delete(peerId)
+      let [adds, removes] = data
+      if (removes) {
+        for (let peerId of removes) {
+          wantPeers.delete(peerId)
+        }
       }
-      for (let peerId of adds) {
-        wantPeers.add(peerId)
+
+      if (adds) {
+        for (let peerId of adds) {
+          wantPeers.add(peerId)
+        }
       }
     }
 

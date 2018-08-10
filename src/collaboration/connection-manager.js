@@ -84,6 +84,10 @@ module.exports = class ConnectionManager extends EventEmitter {
     return Array.from(this._outboundConnections.values()).map(peerInfoToPeerId)
   }
 
+  outboundConnectedPeerInfos () {
+    return new PeerSet(this._outboundConnections)
+  }
+
   inboundConnectionCount () {
     return this._inboundConnections.size
   }

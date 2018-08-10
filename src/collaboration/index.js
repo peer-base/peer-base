@@ -8,6 +8,7 @@ const CRDT = require('./crdt')
 const Gossip = require('./gossip')
 const Clocks = require('./clocks')
 const deriveCreateCipherFromKeys = require('../keys/derive-cipher-from-keys')
+const Stats = require('../stats')
 
 const defaultOptions = {
   preambleByteCount: 2,
@@ -58,6 +59,14 @@ class Collaboration extends EventEmitter {
     }
 
     this._subs = new Map()
+
+    this.stats = new Stats(
+      ipfs,
+      this,
+      this._membership.connectionManager,
+      this._membership,
+      globalConnectionManager,
+      this._options.stats)
   }
 
   async start () {
@@ -67,7 +76,6 @@ class Collaboration extends EventEmitter {
 
     this._starting = this._start()
     await this._starting
-    await Promise.all(Array.from(this._subs.values()).map((sub) => sub.start()))
   }
 
   async sub (name, type) {
@@ -142,11 +150,14 @@ class Collaboration extends EventEmitter {
     })
     this._clocks.setFor(id, await this._store.getLatestClock())
     this._store.setShared(this.shared, name)
+    this.stats.start()
 
     await Array.from(this._subs.values()).map((sub) => sub.start())
   }
 
   async stop () {
+    this.stats.stop()
+
     try {
       await Promise.all(Array.from(this._subs.values()).map((sub) => sub.stop()))
     } catch (err) {

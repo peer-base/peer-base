@@ -2,14 +2,17 @@
 
 const debug = require('debug')('peer-star:collaboration:stats:protocol')
 const pull = require('pull-stream')
+const EventEmitter = require('events')
 const PushProtocol = require('./push-protocol')
 const PullProtocol = require('./pull-protocol')
 
-class StatsProtocol {
+class StatsProtocol extends EventEmitter {
   constructor (ipfs, collaboration, stats) {
+    super()
     this._collaboration = collaboration
     this._pushProtocol = new PushProtocol(ipfs, stats)
     this._pullProtocol = new PullProtocol(ipfs, stats)
+    this._pullerCount = 0
   }
 
   name () {
@@ -24,6 +27,7 @@ class StatsProtocol {
         return this.emit('error', err)
       }
 
+      this.emit('puller count changed', ++this._pullerCount)
       pull(
         conn,
         this._pushProtocol.forPeer(peerInfo),
@@ -32,7 +36,7 @@ class StatsProtocol {
             console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
             debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           }
-          this.emit('inbound connection closed', peerInfo)
+          this.emit('puller count changed', --this._pullerCount)
         }),
         conn
       )
@@ -40,8 +44,6 @@ class StatsProtocol {
   }
 
   dialerFor (peerInfo, conn) {
-    this.emit('outbound connection', peerInfo)
-
     pull(
       conn,
       this._pullProtocol.forPeer(peerInfo),
@@ -50,7 +52,6 @@ class StatsProtocol {
           console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
         }
-        this.emit('outbound connection closed', peerInfo)
       }),
       conn
     )

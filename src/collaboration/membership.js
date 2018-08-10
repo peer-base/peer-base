@@ -28,7 +28,7 @@ module.exports = class Membership extends EventEmitter {
     this._someoneHasMembershipWrong = false
 
     this._ring = Ring(this._options.preambleByteCount)
-    this._connectionManager = new ConnectionManager(
+    this.connectionManager = new ConnectionManager(
       ipfs,
       globalConnectionManager,
       this._ring,
@@ -39,7 +39,7 @@ module.exports = class Membership extends EventEmitter {
 
     this._gossipNow = this._gossipNow.bind(this)
 
-    this._connectionManager.on('should evict', (peerInfo) => {
+    this.connectionManager.on('should evict', (peerInfo) => {
       const peerId = peerInfo.id.toB58String()
       console.log('%s: evicting %s', this._id, peerId)
       this._memberCRDT.remove(peerId)
@@ -64,7 +64,7 @@ module.exports = class Membership extends EventEmitter {
       this._members.add(peerId)
       this._diasSet = DiasSet(
         this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
-      return this._connectionManager.start(this._diasSet)
+      return this.connectionManager.start(this._diasSet)
     } else {
       return new Promise((resolve, reject) => {
         this._ipfs.once('ready', () => {
@@ -77,7 +77,7 @@ module.exports = class Membership extends EventEmitter {
   stop () {
     this._membershipGossipFrequencyHeuristic.stop()
     this._membershipGossipFrequencyHeuristic.removeListener('gossip now', this._gossipNow)
-    this._connectionManager.stop()
+    this.connectionManager.stop()
   }
 
   peerCount () {
@@ -89,23 +89,23 @@ module.exports = class Membership extends EventEmitter {
   }
 
   outboundConnectionCount () {
-    return this._connectionManager.outboundConnectionCount()
+    return this.connectionManager.outboundConnectionCount()
   }
 
   outboundConnectedPeers () {
-    return this._connectionManager.outboundConnectedPeers()
+    return this.connectionManager.outboundConnectedPeers()
   }
 
   inboundConnectionCount () {
-    return this._connectionManager.inboundConnectionCount()
+    return this.connectionManager.inboundConnectionCount()
   }
 
   inboundConnectedPeers () {
-    return this._connectionManager.inboundConnectedPeers()
+    return this.connectionManager.inboundConnectedPeers()
   }
 
   vectorClock (peerId) {
-    return this._connectionManager.vectorClock(peerId)
+    return this.connectionManager.vectorClock(peerId)
   }
 
   needsUrgentBroadcast () {

@@ -12,26 +12,48 @@ class CollaborationStatsConnectionManager {
     this._onConnectionsChanged = this._onConnectionsChanged.bind(this)
 
     this._connectedTo = new PeerSet()
+    this._pullingEnabled = false
 
     this._protocol = new Protocol(ipfs, collaboration, stats)
+    this._protocol.on('puller count changed', (pullerCount) => {
+      if (pullerCount) {
+        this.enablePulling()
+      } else {
+        this.disablePulling()
+      }
+    })
   }
 
   start () {
-    this._collabConnectionManager.on('connected', this._onConnectionsChanged)
-    this._collabConnectionManager.on('disconnected', this._onConnectionsChanged)
     this._startHandler()
-    this._syncConnections()
+  }
+
+  enablePulling () {
+    if (!this._pullingEnabled) {
+      debug('enabling pulling...')
+      this._pullingEnabled = true
+      this._collabConnectionManager.on('connected', this._onConnectionsChanged)
+      this._collabConnectionManager.on('disconnected', this._onConnectionsChanged)
+      this._syncConnections()
+    }
+  }
+
+  disablePulling () {
+    if (this._pullingEnabled) {
+      debug('disabling pulling...')
+      this._pullingEnabled = false
+      this._collabConnectionManager.removeListener('connected', this._onConnectionsChanged)
+      this._collabConnectionManager.removeListener('disconnected', this._onConnectionsChanged)
+    }
   }
 
   stop () {
-    this._collabConnectionManager.removeListener('connected', this._onConnectionsChanged)
-    this._collabConnectionManager.removeListener('disconnected', this._onConnectionsChanged)
     this._stopHandler()
     this._disconnectAll()
   }
 
   _startHandler () {
-    this._globalConnectionManager.handle(this._protocol.name(), this._protocol.handler)
+    this._globalConnectionManager.handle(this._protocol.name(), this._protocol.handler.bind(this._protocol))
   }
 
   _stopHandler () {
@@ -39,17 +61,20 @@ class CollaborationStatsConnectionManager {
   }
 
   _onConnectionsChanged () {
+    if (!this._pullingEnabled) {
+      return
+    }
     this._syncConnections().catch((err) => {
-      debug('error in stats connection manager:', err.message)
+      debug('error in stats connection manager:', err)
       console.error('error in stats connection manager:', err.message)
     })
   }
 
   async _syncConnections () {
-    const outboundConnections = this._collabConnectionManager.outboundConnectedPeers()
+    const outboundConnections = this._collabConnectionManager.outboundConnectedPeerInfos()
 
     // connect stats to peers we're connected to
-    for (let peer of outboundConnections) {
+    for (let peer of outboundConnections.values()) {
       if (!this._connectedTo.has(peer)) {
         const connection = await this._globalConnectionManager.connect(
           peer, this._protocol.name())
@@ -61,7 +86,7 @@ class CollaborationStatsConnectionManager {
       }
     }
 
-    for (let peer of this._connectedTo) {
+    for (let peer of this._connectedTo.values()) {
       if (!outboundConnections.has(peer)) {
         this._globalConnectionManager.disconnect(peer, this._protocol.name())
       }
@@ -69,7 +94,7 @@ class CollaborationStatsConnectionManager {
   }
 
   _disconnectAll () {
-    for (let peer of this._connectedTo) {
+    for (let peer of this._connectedTo.values()) {
       this._globalConnectionManager.disconnect(peer, this._protocol.name())
     }
   }
