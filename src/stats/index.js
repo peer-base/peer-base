@@ -1,5 +1,6 @@
 'use strict'
 
+const debug = require('debug')('peer-star:collaboration:stats')
 const EventEmitter = require('events')
 const ConnectionManager = require('./connection-manager')
 const Observer = require('./observer')
@@ -17,6 +18,7 @@ class CollaborationStats extends EventEmitter {
     this._membership = membership
     this._options = Object.assign({}, defaultOptions, options)
     this._started = false
+    this._enabled = false
 
     this._onMembershipChanged = this._onMembershipChanged.bind(this)
     this._onTimeoutsInterval = this._onTimeoutsInterval.bind(this)
@@ -52,18 +54,26 @@ class CollaborationStats extends EventEmitter {
   }
 
   _enable () {
-    this._connectionManager.enablePulling()
+    if (!this._enabled) {
+      this._enabled = true
+      this._connectionManager.enablePulling()
+      this._observer.on('stats updated', this._onStatsUpdated)
+    }
   }
 
   _disable () {
-    this._connectionManager.disablePulling()
+    if (this._enabled) {
+      this._enabled = false
+      this._connectionManager.disablePulling()
+      this._observer.removeListener('stats updated', this._onStatsUpdated)
+    }
   }
 
   start () {
     if (!this._started) {
+      debug('starting stats...')
       this._started = true
       this._membership.on('changed', this._onMembershipChanged)
-      this._observer.on('stats updated', this._onStatsUpdated)
       this._timeoutsInterval = setInterval(this._onTimeoutsInterval, this._options.timeoutScanIntervalMS)
       this._connectionManager.start()
     }
@@ -71,6 +81,8 @@ class CollaborationStats extends EventEmitter {
 
   stop () {
     if (this._started) {
+      debug('stopping stats...')
+      this._disable()
       this._started = false
       this._observer.removeListener('stats updated', this._onStatsUpdated)
       this._membership.removeListener('changed', this._onMembershipChanged)

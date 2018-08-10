@@ -16,6 +16,7 @@ class CollaborationStatsConnectionManager {
 
     this._protocol = new Protocol(ipfs, collaboration, stats)
     this._protocol.on('puller count changed', (pullerCount) => {
+      debug('%s: puller count changed to %d', ipfs._peerInfo.id.toB58String(), pullerCount)
       if (pullerCount) {
         this.enablePulling()
       } else {
@@ -48,6 +49,7 @@ class CollaborationStatsConnectionManager {
   }
 
   stop () {
+    this.disablePulling()
     this._stopHandler()
     this._disconnectAll()
   }

@@ -1,5 +1,6 @@
 'use strict'
 
+const debug = require('debug')('peer-star:collaboration')
 const EventEmitter = require('events')
 const Membership = require('./membership')
 const Store = require('./store')
@@ -150,12 +151,13 @@ class Collaboration extends EventEmitter {
     })
     this._clocks.setFor(id, await this._store.getLatestClock())
     this._store.setShared(this.shared, name)
-    this.stats.start()
 
+    this.stats.start()
     await Array.from(this._subs.values()).map((sub) => sub.start())
   }
 
   async stop () {
+    debug('stopping collaboration %s', this.name)
     this.stats.stop()
 
     try {

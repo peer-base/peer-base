@@ -1,5 +1,6 @@
 'use strict'
 
+const debug = require('debug')('peer-star:collaboration:stats:observer')
 const EventEmitter = require('events')
 
 class Observer extends EventEmitter {
@@ -23,6 +24,7 @@ class Observer extends EventEmitter {
 
   start () {
     if (!this._started) {
+      debug('starting...')
       this._started = true
       this._interval = setInterval(this._poll, this._options.updateFrequency)
     }
@@ -35,10 +37,13 @@ class Observer extends EventEmitter {
   }
 
   stop () {
-    this._started = false
-    if (this._interval) {
-      clearInterval(this._interval)
-      this._interval = null
+    if (this._started) {
+      debug('stopping...')
+      this._started = false
+      if (this._interval) {
+        clearInterval(this._interval)
+        this._interval = null
+      }
     }
   }
 
