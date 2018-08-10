@@ -27,7 +27,7 @@ class CollaborationStats extends EventEmitter {
     this._connectionManager = new ConnectionManager(
       ipfs, collaboration, collabConnectionManager, globalConnectionManager, this)
 
-    this._observer = new Observer(this._options)
+    this.observer = new Observer(this._options)
     this._peerStats = new Map()
   }
 
@@ -57,7 +57,7 @@ class CollaborationStats extends EventEmitter {
     if (!this._enabled) {
       this._enabled = true
       this._connectionManager.enablePulling()
-      this._observer.on('stats updated', this._onStatsUpdated)
+      this.observer.on('stats updated', this._onStatsUpdated)
     }
   }
 
@@ -65,7 +65,7 @@ class CollaborationStats extends EventEmitter {
     if (this._enabled) {
       this._enabled = false
       this._connectionManager.disablePulling()
-      this._observer.removeListener('stats updated', this._onStatsUpdated)
+      this.observer.removeListener('stats updated', this._onStatsUpdated)
     }
   }
 
@@ -84,7 +84,7 @@ class CollaborationStats extends EventEmitter {
       debug('stopping stats...')
       this._disable()
       this._started = false
-      this._observer.removeListener('stats updated', this._onStatsUpdated)
+      this.observer.removeListener('stats updated', this._onStatsUpdated)
       this._membership.removeListener('changed', this._onMembershipChanged)
       if (this._timeoutsInterval) {
         clearInterval(this._timeoutsInterval)
@@ -101,6 +101,7 @@ class CollaborationStats extends EventEmitter {
   setFor (peerId, stats, fromPeerId) {
     const currentStats = this.forPeer(peerId)
     if (currentStats && (currentStats.t < stats.t)) {
+      debug('%s: set for %s', this._peerId(), peerId, stats)
       stats.localTime = Date.now()
       this._peerStats.set(peerId, stats)
       this.emit('peer updated', peerId, stats, fromPeerId)
@@ -110,6 +111,7 @@ class CollaborationStats extends EventEmitter {
 
   _onMembershipChanged () {
     const peers = this._membership.peers()
+
     for (let peerId of peers) {
       if (!this._peerStats.has(peerId)) {
         this._peerStats.set(peerId, { t: 0 })

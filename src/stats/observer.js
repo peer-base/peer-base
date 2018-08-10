@@ -2,12 +2,31 @@
 
 const debug = require('debug')('peer-star:collaboration:stats:observer')
 const EventEmitter = require('events')
+const FrequencyCounter = require('frequency-counter')
+
+if (process.browser && !process.hrtime) {
+  process.hrtime = require('browser-process-hrtime')
+}
+
 
 class Observer extends EventEmitter {
   constructor (options) {
     super()
     this._options = options
     this._started = false
+    this._stats = {
+      connections: {
+        inbound: new Set(),
+        outbound: new Set()
+      },
+      traffic: {
+        total: {
+          inbound: new FrequencyCounter(),
+          outbound: new FrequencyCounter()
+        },
+        perPeer: new Map()
+      }
+    }
 
     this._poll = this._poll.bind(this)
   }
@@ -36,6 +55,26 @@ class Observer extends EventEmitter {
     }
   }
 
+  setInboundPeers (peers) {
+    this._stats.connections.inbound = peers
+  }
+
+  setOutboundPeers (peers) {
+    this._stats.connections.outbound = peers
+  }
+
+  inboundMessage (fromPeer, size) {
+    this._stats.traffic.total.inbound.inc(size)
+    const counters = this._ensureTrafficCountersFor(fromPeer)
+    counters.inbound.inc(size)
+  }
+
+  outboundMessage (toPeer, size) {
+    this._stats.traffic.total.outbound.inc(size)
+    const counters = this._ensureTrafficCountersFor(toPeer)
+    counters.outbound.inc(size)
+  }
+
   stop () {
     if (this._started) {
       debug('stopping...')
@@ -54,10 +93,40 @@ class Observer extends EventEmitter {
   }
 
   _poll () {
-    const newStats = {
-      t: Date.now()
+    const trafficPerPeer = new Map()
+    const stats = {
+      t: Date.now(),
+      connections: this._stats.connections,
+      traffic: {
+        total: {
+          in: this._stats.traffic.total.inbound.freq(),
+          out: this._stats.traffic.total.outbound.freq()
+        },
+        perPeer: trafficPerPeer
+      }
     }
-    this.emit('stats updated', newStats)
+
+    for (let [peer, freq] of this._stats.traffic.perPeer) {
+      trafficPerPeer.set(peer, {
+        in: freq.inbound.freq(),
+        out: freq.outbound.freq()
+      })
+    }
+
+    this.emit('stats updated', stats)
+  }
+
+  _ensureTrafficCountersFor (peerId) {
+    let counters = this._stats.traffic.perPeer.get(peerId)
+    if (!counters) {
+      counters = {
+        inbound: new FrequencyCounter(),
+        outbound: new FrequencyCounter()
+      }
+      this._stats.traffic.perPeer.set(peerId, counters)
+    }
+
+    return counters
   }
 }
 

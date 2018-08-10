@@ -76,6 +76,38 @@ module.exports = class ConnectionManager extends EventEmitter {
     this._globalConnectionManager.unhandle(this._protocol.name())
   }
 
+  observe (observer) {
+    const onConnectionChange = () => {
+      observer.setInboundPeers(peerIdSetFromPeerSet(this._inboundConnections))
+      observer.setOutboundPeers(peerIdSetFromPeerSet(this._inboundConnections))
+    }
+
+    this._protocol.on('inbound connection', onConnectionChange)
+    this._protocol.on('inbound connection closed', onConnectionChange)
+    this._protocol.on('outbound connection', onConnectionChange)
+    this._protocol.on('outbound connection closed', onConnectionChange)
+
+    const onInboundMessage = ({fromPeer, size}) => {
+      observer.inboundMessage(fromPeer, size)
+    }
+    this._protocol.on('inbound message', onInboundMessage)
+
+    const onOutboundMessage = ({toPeer, size}) => {
+      observer.outboundMessage(toPeer, size)
+    }
+    this._protocol.on('outbound message', onOutboundMessage)
+
+    // return unbind function
+    return () => {
+      this._protocol.removeListener('inbound connection', onConnectionChange)
+      this._protocol.removeListener('inbound connection closed', onConnectionChange)
+      this._protocol.removeListener('outbound connection', onConnectionChange)
+      this._protocol.removeListener('outbound connection closed', onConnectionChange)
+      this._protocol.removeListener('inbound message', onInboundMessage)
+      this._protocol.removeListener('outbound message', onOutboundMessage)
+    }
+  }
+
   outboundConnectionCount () {
     return this._outboundConnections.size
   }
@@ -161,4 +193,8 @@ module.exports = class ConnectionManager extends EventEmitter {
 
 function peerInfoToPeerId (peerInfo) {
   return peerInfo.id.toB58String()
+}
+
+function peerIdSetFromPeerSet (peerSet) {
+  return new Set(Array.from(peerSet.values()).map((peerInfo) => peerInfo.id.toB58String()))
 }

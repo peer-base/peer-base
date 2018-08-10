@@ -153,12 +153,18 @@ class Collaboration extends EventEmitter {
     this._store.setShared(this.shared, name)
 
     this.stats.start()
+    this._unregisterObserver = this._membership.connectionManager.observe(this.stats.observer)
+
     await Array.from(this._subs.values()).map((sub) => sub.start())
   }
 
   async stop () {
     debug('stopping collaboration %s', this.name)
     this.stats.stop()
+
+    if (this._unregisterObserver) {
+      this._unregisterObserver()
+    }
 
     try {
       await Promise.all(Array.from(this._subs.values()).map((sub) => sub.stop()))
