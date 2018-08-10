@@ -35,7 +35,10 @@ class CollaborationStatsConnectionManager {
       this._pullingEnabled = true
       this._collabConnectionManager.on('connected', this._onConnectionsChanged)
       this._collabConnectionManager.on('disconnected', this._onConnectionsChanged)
-      this._syncConnections()
+      this._syncConnections().catch((err) => {
+        debug('error syncing connections:', err)
+        console.error('error syncing connections:', err.message)
+      })
     }
   }
 
