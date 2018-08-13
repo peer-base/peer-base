@@ -1,5 +1,6 @@
 import React from 'react';
 import Collaboration from './Collaboration'
+import Network from './Network'
 
 class GCounterCollaboration extends Collaboration {
   constructor (props) {
@@ -24,6 +25,7 @@ class GCounterCollaboration extends Collaboration {
         <p>Have {this.state.peers.size} peers for this collaboration (myself included)</p>
         <p>Outbound connection count: {this.state.outboundConnectionCount}</p>
         <p>Inbound connection count: {this.state.inboundConnectionCount}</p>
+        <Network collaboration={this._collab} />
       </div>
     );
   }
