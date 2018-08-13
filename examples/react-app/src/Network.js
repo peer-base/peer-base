@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import peerColor from './lib/peer-color'
 const d3 = require('d3')
 
 class Network extends Component {
@@ -32,7 +33,6 @@ class Network extends Component {
 
   async initSimulation (collaboration) {
     const id = (await collaboration.app.ipfs.id()).id
-    const color = d3.scaleOrdinal(d3.schemeCategory20)
 
     let nodes = [{id, me: true, index: 0}]
     let links = []
@@ -58,7 +58,7 @@ class Network extends Component {
       // Apply the general update pattern to the nodes.
       node = node.data(nodes, function(d) { return d.id;});
       node.exit().remove();
-      node = node.enter().append("circle").attr("fill", function(d) { return color(d.id); }).attr("r", 8).merge(node);
+      node = node.enter().append("circle").attr("fill", (d) => peerColor(d.id)).attr("r", 8).merge(node);
 
       // Apply the general update pattern to the links.
       link = link.data(links, function(d) { return d.source.id + "-" + d.target.id; });
