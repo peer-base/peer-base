@@ -50,20 +50,20 @@ class Network extends Component {
       .alphaTarget(1)
       .on('tick', ticked)
 
-    let g = svg.append("g").attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
-    let link = g.append("g").attr("stroke", "#000").attr("stroke-width", 1.5).selectAll(".link")
-    let node = g.append("g").attr("stroke", "#fff").attr("stroke-width", 1.5).selectAll(".node")
+    let g = svg.append('g').attr('transform', 'translate(' + width / 2 + ',' + height / 2 + ')')
+    let link = g.append('g').attr('stroke', '#000').attr('stroke-width', 1.5).selectAll('.link')
+    let node = g.append('g').attr('stroke', '#fff').attr('stroke-width', 1.5).selectAll('.node')
 
     const restart = () => {
       // Apply the general update pattern to the nodes.
       node = node.data(nodes, function(d) { return d.id;});
       node.exit().remove();
-      node = node.enter().append("circle").attr("fill", (d) => peerColor(d.id)).attr("r", 8).merge(node);
+      node = node.enter().append('circle').attr('fill', (d) => peerColor(d.id)).attr("r", 8).merge(node);
 
       // Apply the general update pattern to the links.
-      link = link.data(links, function(d) { return d.source.id + "-" + d.target.id; });
+      link = link.data(links, function(d) { return d.source.id + '-' + d.target.id; });
       link.exit().remove();
-      link = link.enter().append("line").merge(link);
+      link = link.enter().append('line').merge(link);
 
       // Update and restart the simulation.
       simulation.nodes(nodes);
