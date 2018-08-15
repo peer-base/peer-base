@@ -1,16 +1,17 @@
-import React, { Component } from 'react';
+import { Component } from 'react';
 import PropTypes from 'prop-types'
 import { keys as Keys } from 'peer-star-app'
 
 class Collaboration extends Component {
+  state = {
+    value: undefined,
+    peers: new Set(),
+    inboundConnectionCount: 0,
+    outboundConnectionCount: 0
+  }
+
   constructor (props) {
     super(props)
-    this.state = {
-      value: undefined,
-      peers: new Set(),
-      inboundConnectionCount: 0,
-      outboundConnectionCount: 0
-    }
 
     console.log('props.match:', props.match)
 

@@ -1,15 +1,17 @@
 import peerColor from './peer-color'
+import EventEmitter from 'events'
 const d3 = require('d3')
 
 export default async function initVisualization (collaboration, graph) {
   const id = (await collaboration.app.ipfs.id()).id
+  const emitter = new EventEmitter()
 
   let nodes = [{id, me: true}]
   let links = []
 
   const svg = d3.select(graph)
-  const width = +svg.attr('width')
-  const height = +svg.attr('height')
+  const bbox = svg.node().getBoundingClientRect()
+  const {width, height} = bbox
   console.log('width:', width)
   console.log('height:', height)
 
@@ -30,12 +32,22 @@ export default async function initVisualization (collaboration, graph) {
     node.exit().remove();
     node = node.enter()
       .append('circle')
+        // .data('id', (d) => d.id)
+        .attr('class', 'node')
+        .attr('id', (d) => d.id)
         .attr('fill', (d) => peerColor(d.id))
-        .attr("r", 8).merge(node)
+        .attr('r', (node) => node.me ? 16 : 8).merge(node)
+        .on('click', function () {
+          node.attr('stroke', '#fff')
+          const selection = d3.select(this)
+          console.log('selection:', selection)
+          selection.attr('stroke', '#000')
+          emitter.emit('selected peer', this.id)
+        })
         .call(d3.drag()
-          .on("start", dragStarted)
-          .on("drag", dragged)
-          .on("end", dragEnded))
+          .on('start', dragStarted)
+          .on('drag', dragged)
+          .on('end', dragEnded))
 
     // Apply the general update pattern to the links.
     link = link.data(links, function(d) { return d.source.id + '-' + d.target.id; });
@@ -56,6 +68,7 @@ export default async function initVisualization (collaboration, graph) {
     if (changed) {
       restart()
     }
+    emitter.emit('peer stats updated', { peerId, stats })
   }
 
   collaboration.stats.on('peer updated', onPeerStatsUpdated)
@@ -72,10 +85,8 @@ export default async function initVisualization (collaboration, graph) {
       }
     }
     links = links.filter((link) => {
-      console.log('LINK:', link)
       const has = peers.has(link.source.id) && peers.has(link.target.id)
       if (!has) {
-        console.log('REMOVINGT LINK from', link.source, link.target)
         changed = true
       }
       return has
@@ -90,11 +101,13 @@ export default async function initVisualization (collaboration, graph) {
 
   collaboration.on('membership changed', onMembershipChanged)
 
-  return () => {
-    collaboration.stats.removeListener('peer updated', onPeerStatsUpdated)
-    collaboration.removeListener('membership changed', onMembershipChanged)
-    simulation.removeListener('tick', ticked)
-  }
+  return Object.assign(emitter, {
+    stop: () => {
+      collaboration.stats.removeListener('peer updated', onPeerStatsUpdated)
+      collaboration.removeListener('membership changed', onMembershipChanged)
+      simulation.on('tick', null)
+    }
+  })
 
   function ticked () {
     if (!node) {
@@ -134,12 +147,12 @@ export default async function initVisualization (collaboration, graph) {
     let changed = false
     const found = nodes.find((node) => node.id === peerId)
     if (!found) {
-      changed = true
-      nodes.push({id: peerId})
+      return false
     }
 
     for(let connectedToPeerId of stats.connections.outbound) {
-      const link = links.find((link) => link.source === peerId && link.target === connectedToPeerId)
+      console.log('links:', links)
+      const link = links.find((link) => link.source.id === peerId && link.target.id === connectedToPeerId)
       if (!link) {
         const targetExists = nodes.find((node) => node.id === connectedToPeerId)
         if (targetExists) {
@@ -148,6 +161,13 @@ export default async function initVisualization (collaboration, graph) {
           const outboundTraffic = (peerTraffic && peerTraffic.out) || 0
           console.log('outboundTraffic:', outboundTraffic)
           links.push({source: peerId, target: connectedToPeerId, traffic: outboundTraffic})
+        }
+      } else {
+        const peerTraffic = stats.traffic.perPeer.get(connectedToPeerId)
+        const outboundTraffic = (peerTraffic && peerTraffic.out) || 0
+        if (outboundTraffic !== link.traffic) {
+          link.traffic = outboundTraffic
+          changed = true
         }
       }
     }
