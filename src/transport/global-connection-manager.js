@@ -46,6 +46,10 @@ module.exports = class GlobalConnectionManager {
           return reject(err)
         }
 
+        if (!conn) {
+          return reject(new Error('could not connect'))
+        }
+
         const retConn = Object.assign(new EventEmitter(), {
           sink: conn.sink,
           source: pull(
