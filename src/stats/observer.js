@@ -24,6 +24,13 @@ class Observer extends EventEmitter {
           outbound: new FrequencyCounter()
         },
         perPeer: new Map()
+      },
+      messages: {
+        total: {
+          inbound: new FrequencyCounter(),
+          outbound: new FrequencyCounter()
+        },
+        perPeer: new Map()
       }
     }
 
@@ -64,14 +71,22 @@ class Observer extends EventEmitter {
 
   inboundMessage (fromPeer, size) {
     this._stats.traffic.total.inbound.inc(size)
-    const counters = this._ensureTrafficCountersFor(fromPeer)
-    counters.inbound.inc(size)
+    const tCounters = this._ensureTrafficCountersFor(fromPeer)
+    tCounters.inbound.inc(size)
+
+    this._stats.messages.total.inbound.inc(1)
+    const mCounters = this._ensureMessageCountersFor(fromPeer)
+    mCounters.inbound.inc(1)
   }
 
   outboundMessage (toPeer, size) {
     this._stats.traffic.total.outbound.inc(size)
-    const counters = this._ensureTrafficCountersFor(toPeer)
-    counters.outbound.inc(size)
+    const tCounters = this._ensureTrafficCountersFor(toPeer)
+    tCounters.outbound.inc(size)
+
+    this._stats.messages.total.outbound.inc(1)
+    const mCounters = this._ensureMessageCountersFor(toPeer)
+    mCounters.outbound.inc(1)
   }
 
   stop () {
@@ -93,6 +108,8 @@ class Observer extends EventEmitter {
 
   _poll () {
     const trafficPerPeer = new Map()
+    const messagesPerPeer = new Map()
+
     const stats = {
       t: Date.now(),
       connections: this._stats.connections,
@@ -102,11 +119,25 @@ class Observer extends EventEmitter {
           out: this._stats.traffic.total.outbound.freq()
         },
         perPeer: trafficPerPeer
+      },
+      messages: {
+        total: {
+          in: this._stats.messages.total.inbound.freq(),
+          out: this._stats.messages.total.outbound.freq()
+        },
+        perPeer: messagesPerPeer
       }
     }
 
     for (let [peer, freq] of this._stats.traffic.perPeer) {
       trafficPerPeer.set(peer, {
+        in: freq.inbound.freq(),
+        out: freq.outbound.freq()
+      })
+    }
+
+    for (let [peer, freq] of this._stats.messages.perPeer) {
+      messagesPerPeer.set(peer, {
         in: freq.inbound.freq(),
         out: freq.outbound.freq()
       })
@@ -123,6 +154,19 @@ class Observer extends EventEmitter {
         outbound: new FrequencyCounter()
       }
       this._stats.traffic.perPeer.set(peerId, counters)
+    }
+
+    return counters
+  }
+
+  _ensureMessageCountersFor (peerId) {
+    let counters = this._stats.messages.perPeer.get(peerId)
+    if (!counters) {
+      counters = {
+        inbound: new FrequencyCounter(),
+        outbound: new FrequencyCounter()
+      }
+      this._stats.messages.perPeer.set(peerId, counters)
     }
 
     return counters
