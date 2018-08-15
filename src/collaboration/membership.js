@@ -64,7 +64,7 @@ module.exports = class Membership extends EventEmitter {
       this._members.add(peerId)
       this._diasSet = DiasSet(
         this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
-      return this.connectionManager.start(this._diasSet)
+      await this.connectionManager.start(this._diasSet)
     } else {
       return new Promise((resolve, reject) => {
         this._ipfs.once('ready', () => {
