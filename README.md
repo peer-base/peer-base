@@ -218,6 +218,49 @@ const message = ['any', 'JSON', 'object']
 gossip.broadcast(message)
 ```
 
+## Collaboration stats
+
+You can observe some collaboration traffic and topology statistics by doing:
+
+```js
+collaboration.stats.on('peer updated', (peerId, stats) => {
+  console.log('peer %s updated its stats to:', peerId, stats)
+})
+```
+
+The `stats` object looks something like this:
+
+```js
+{
+  connections: {
+    inbound: new Set(<peerId>),
+    outbound: new Set(<peerId>)
+  },
+  traffic: {
+    total: {
+      in: <number>,
+      out: <number>
+    },
+    perPeer: new Map(
+      <peerId => {
+        in: <number>,
+        out: <number>
+      }>)
+  },
+  messages: {
+    total: {
+      in: <number>,
+      out: <number>
+    },
+    perPeer: new Map(
+      <peerId => {
+        in: <number>,
+        out: <number>
+      }>)
+  }
+}
+```
+
 
 ## App Events
 

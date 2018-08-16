@@ -32,6 +32,7 @@ class CollaborationStats extends EventEmitter {
   }
 
   on (...args) {
+    debug('on', ...args)
     super.on(...args)
     this._maybeEnable()
   }
@@ -42,7 +43,9 @@ class CollaborationStats extends EventEmitter {
   }
 
   _maybeEnable () {
-    if (this.listenerCount('peer updated')) {
+    const listenerCount = this.listenerCount('peer updated')
+    debug('maybeEnable: peer updated listener count is %d', listenerCount)
+    if (listenerCount) {
       this._enable()
     }
   }
@@ -55,6 +58,7 @@ class CollaborationStats extends EventEmitter {
 
   _enable () {
     if (!this._enabled) {
+      debug('enabling stats...')
       this._enabled = true
       this._connectionManager.enablePulling()
       this.observer.on('stats updated', this._onStatsUpdated)
@@ -63,6 +67,7 @@ class CollaborationStats extends EventEmitter {
 
   _disable () {
     if (this._enabled) {
+      debug('disabling stats...')
       this._enabled = false
       this._connectionManager.disablePulling()
       this.observer.removeListener('stats updated', this._onStatsUpdated)
@@ -76,6 +81,7 @@ class CollaborationStats extends EventEmitter {
       this._membership.on('changed', this._onMembershipChanged)
       this._timeoutsInterval = setInterval(this._onTimeoutsInterval, this._options.timeoutScanIntervalMS)
       this._connectionManager.start()
+      this._onMembershipChanged()
     }
   }
 
@@ -111,6 +117,7 @@ class CollaborationStats extends EventEmitter {
 
   _onMembershipChanged () {
     const peers = this._membership.peers()
+    debug('membership changed:', peers)
 
     for (let peerId of peers) {
       if (!this._peerStats.has(peerId)) {
@@ -138,6 +145,7 @@ class CollaborationStats extends EventEmitter {
   }
 
   _onStatsUpdated (stats) {
+    debug('%s: stats updated for self:', this._peerId(), stats)
     this.setFor(this._peerId(), stats, this._peerId())
   }
 

@@ -48,6 +48,7 @@ class Collaboration extends EventEmitter {
 
     this._membership = this._options.membership || new Membership(ipfs, globalConnectionManager, app, this, this._store, this._clocks, this._options)
     this._membership.on('changed', () => {
+      debug('membership changed')
       this.emit('membership changed', this._membership.peers())
     })
 

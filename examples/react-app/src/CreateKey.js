@@ -21,7 +21,9 @@ export default class CreateKey extends Component {
     }
 
     const keys = this.state.keys
-    this.state.keys = null
+    this.setState({
+      keys: null
+    })
     return (<Redirect to={`${this.props.match.url}/${this.state.name}/${Keys.uriEncode(keys)}`} />)
   }
 

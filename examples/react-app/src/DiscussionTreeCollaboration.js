@@ -1,6 +1,7 @@
 import React from 'react';
 import Collaboration from './Collaboration'
 import PeerStarApp from 'peer-star-app'
+import NetworkVis from 'peer-star-network-vis-react'
 import discussionTreeCrdt from './lib/discussion-tree-crdt'
 
 console.log(PeerStarApp.collaborationTypes)
@@ -42,6 +43,7 @@ class DiscussionTreeCollaboration extends Collaboration {
         <p>Have {this.state.peers.size} peers for this collaboration (myself included)</p>
         <p>Outbound connection count: {this.state.outboundConnectionCount}</p>
         <p>Inbound connection count: {this.state.inboundConnectionCount}</p>
+        <NetworkVis collaboration={this._collab} />
       </div>
     );
   }
