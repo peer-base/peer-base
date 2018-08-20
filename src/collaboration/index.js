@@ -37,6 +37,7 @@ class Collaboration extends EventEmitter {
     this._clocks = new Clocks(this._ipfs._peerInfo.id.toB58String())
 
     if (!this._options.keys) {
+      console.warn('No options.keys')
       this._options.keys = {}
     }
 
@@ -226,3 +227,5 @@ class Collaboration extends EventEmitter {
     return this._isRoot ? null : this.name
   }
 }
+
+module.exports.Collaboration = Collaboration
