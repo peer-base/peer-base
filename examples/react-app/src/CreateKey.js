@@ -20,11 +20,11 @@ export default class CreateKey extends Component {
       return (<p>Generating keys...</p>)
     }
 
-    const keys = this.state.keys
-    this.setState({
-      keys: null
-    })
-    return (<Redirect to={`${this.props.match.url}/${this.state.name}/${Keys.uriEncode(keys)}`} />)
+    return (<Redirect to={`${this.props.match.url}/${this.state.name}/${Keys.uriEncode(this.state.keys)}`} />)
+  }
+
+  shouldComponentupdate () {
+    return false
   }
 
 }

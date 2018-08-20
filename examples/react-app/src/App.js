@@ -6,11 +6,7 @@ import './App.css';
 import PeerStarApp from 'peer-star-app'
 
 import Home from './Home'
-import CreateKey from './CreateKey'
-import GCounterCollaboration from './GCounterCollaboration'
-import ArrayCollaboration from './ArrayCollaboration'
-import TextCollaboration from './TextCollaboration'
-import DiscussionTreeCollaboration from './DiscussionTreeCollaboration'
+import routes from './routes'
 
 class App extends Component {
   constructor () {
@@ -18,7 +14,6 @@ class App extends Component {
     this.state = {
       appPeerCountEstimate: 0
     }
-    this.onIncrementClick = this.onIncrementClick.bind(this)
 
     this._app = PeerStarApp('peer-star-counter-example-app', {
       ipfs: {
@@ -35,71 +30,8 @@ class App extends Component {
       })
   }
 
-  onIncrementClick () {
-    this._collab.shared.inc()
-  }
-
   render() {
-    const routes = [
-      {
-        path: '/counter/:name/:keys',
-        render: (props) => (
-          <GCounterCollaboration
-            match={props.match}
-            keys={props.match.params.keys}
-            app={this._app}
-            name={props.match.params.name} /> )
-      },
-      {
-        path: '/counter',
-        component: CreateKey,
-        exact: true
-      },
-      {
-        path: '/array/:name/:keys',
-        render: (props) => (
-          <ArrayCollaboration
-            match={props.match}
-            keys={props.match.params.keys}
-            app={this._app}
-            name={props.match.params.name} /> )
-      },
-      {
-        path: '/array',
-        component: CreateKey,
-        exact: true
-      },
-      {
-        path: '/text/:name/:keys',
-        render: (props) => (
-          <TextCollaboration
-            match={props.match}
-            keys={props.match.params.keys}
-            app={this._app}
-            name={props.match.params.name} /> )
-      },
-      {
-        path: '/text',
-        component: CreateKey,
-        exact: true
-      },
-      {
-        path: '/discussion/:name/:keys',
-        render: (props) => (
-          <DiscussionTreeCollaboration
-            match={props.match}
-            keys={props.match.params.keys}
-            app={this._app}
-            name={props.match.params.name} /> )
-      },
-      {
-        path: '/discussion',
-        component: CreateKey,
-        exact: true
-      }
-
-    ]
-
+    console.log('APP RENDER')
     return (
       <Router>
         <div className="App">
@@ -114,12 +46,15 @@ class App extends Component {
 
               <div>
                 <Route exact path="/" component={Home} />
-
-                {routes.map((route, i) => <Route key={i} {...route} />)}
+                {routes(this._app).map((route, i) => <Route key={i} {...route} />)}
               </div>
         </div>
       </Router>
     );
+  }
+
+  shouldComponentUpdate () {
+    return false
   }
 }
 

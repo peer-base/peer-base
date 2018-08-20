@@ -1,20 +1,59 @@
 import React from 'react';
-import Collaboration from './Collaboration'
 import Diff from 'fast-diff'
+import { withCollaboration, withCollaborationLiveValue } from 'peer-star-react'
 import NetworkVis from 'peer-star-network-vis-react'
+import CollaborationStats from './CollaborationStats'
 
-class TextCollaboration extends Collaboration {
+function LiveValue ({value}) {
+  return (
+    <div className="App-intro">
+      Value: <pre>{JSON.stringify(value)}</pre>
+    </div>
+  )
+}
+
+class TextCollaboration extends React.Component {
   constructor (props) {
-    super(Object.assign({}, props, { type: 'rga' }))
+    super(props)
+
+    this.state = {
+      value: ''
+    }
+
+    this.LiveValue = withCollaborationLiveValue(this.props.collaboration)(LiveValue)
+    this.NetworkVis = withCollaboration(this.props.collaboration)(NetworkVis)
+    this.Stats = withCollaboration(this.props.collaboration)(CollaborationStats)
+
     this.onTextChange = this.onTextChange.bind(this)
+    this.onValueChange = this.onValueChange.bind(this)
+    this.onRemoteChange = this.onRemoteChange.bind(this)
   }
 
   onTextChange (event) {
     this.applyChanges(event.target, event.target.value)
   }
 
+  onValueChange () {
+    const oldText = this.state.value
+    const newText = this.props.collaboration.shared.value().join('')
+    this.setState({value: newText})
+    this.onRemoteChange(oldText, newText)
+  }
+
+  componentDidMount () {
+    this.props.collaboration.on('state changed', this.onValueChange)
+    this.setState({
+      value: this.props.collaboration.shared.value().join('')
+    })
+  }
+
+  componentWillUnmount () {
+    this.props.collaboration.removeListener('state changed', this.onValueChange)
+  }
+
   applyChanges (target, newText) {
-    const oldText = (this.state.value && this.state.value.join('')) || ''
+    const { collaboration } = this.props
+    const oldText = this.state.value
     const diffs = Diff(oldText, newText)
     let pos = 0
     diffs.forEach((d) => {
@@ -23,22 +62,20 @@ class TextCollaboration extends Collaboration {
       } else if (d[0] === -1) { // DELETE
         const delText = d[1]
         for (let i = delText.length - 1; i >=0; i--) {
-          this._collab.shared.removeAt(pos + i)
+          collaboration.shared.removeAt(pos + i)
         }
       } else { // INSERT
         d[1].split('').forEach((c) => {
-          this._collab.shared.insertAt(pos, d[1])
+          collaboration.shared.insertAt(pos, d[1])
         })
         pos += d[1].length
       }
     })
   }
 
-  onValueChanged (oldText=[], newText) {
+  onRemoteChange (oldText, newText) {
     console.log('onValueChanged', oldText, newText)
     const textArea = this.refs.collaborativeTextArea
-    oldText = oldText.join('')
-    newText = newText.join('')
     if (textArea.value === newText) {
       console.log('value is the same', textArea.value)
       return
@@ -83,9 +120,7 @@ class TextCollaboration extends Collaboration {
       <div>
         <hr />
         <h1>Text</h1>
-        <div className="App-intro">
-          Value: <pre>{JSON.stringify(this.state.value)}</pre>
-        </div>
+        <this.LiveValue />
 
         <div>
           <textarea
@@ -94,10 +129,8 @@ class TextCollaboration extends Collaboration {
             onChange={this.onTextChange} />
         </div>
 
-        <p>Have {this.state.peers.size} peers for this collaboration (myself included)</p>
-        <p>Outbound connection count: {this.state.outboundConnectionCount}</p>
-        <p>Inbound connection count: {this.state.inboundConnectionCount}</p>
-        <NetworkVis collaboration={this._collab} />
+        <this.Stats />
+        <this.NetworkVis />
       </div>
     );
   }

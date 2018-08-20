@@ -1,15 +1,28 @@
 import React from 'react';
-import Collaboration from './Collaboration'
 import PeerStarApp from 'peer-star-app'
 import NetworkVis from 'peer-star-network-vis-react'
 import discussionTreeCrdt from './lib/discussion-tree-crdt'
+import CollaborationStats from './CollaborationStats'
+import { withCollaboration, withCollaborationLiveValue } from 'peer-star-react'
 
-console.log(PeerStarApp.collaborationTypes)
 PeerStarApp.collaborationTypes.define('discussion-tree', discussionTreeCrdt)
 
-class DiscussionTreeCollaboration extends Collaboration {
+function LiveValue ({value}) {
+  return (
+    <div className="App-intro" style={{textAlign: 'left'}}>
+      Value: <pre>{JSON.stringify(value, null, '\t')}</pre>
+    </div>
+  )
+}
+
+class DiscussionTreeCollaboration extends React.Component {
   constructor (props) {
     super(Object.assign({}, props, { type: 'discussion-tree' }))
+
+    this.LiveValue = withCollaborationLiveValue(this.props.collaboration)(LiveValue)
+    this.NetworkVis = withCollaboration(this.props.collaboration)(NetworkVis)
+    this.Stats = withCollaboration(this.props.collaboration)(CollaborationStats)
+
     this.onAddClick = this.onAddClick.bind(this)
   }
 
@@ -20,7 +33,7 @@ class DiscussionTreeCollaboration extends Collaboration {
       did: this.refs.did.value,
       signature: this.refs.signature.value
     }
-    this._collab.shared.add(message)
+    this.props.collaboration.shared.add(message)
   }
 
   render() {
@@ -28,9 +41,7 @@ class DiscussionTreeCollaboration extends Collaboration {
       <div>
         <hr />
         <h1>Discussion Tree</h1>
-        <div className="App-intro">
-          Value: <pre style={{textAlign: 'left'}}>{JSON.stringify(this.state.value, null, '  ')}</pre>
-        </div>
+        <this.LiveValue />
 
         <div>
           <input placeholder="cid" type="text" ref="cid" />
@@ -40,10 +51,8 @@ class DiscussionTreeCollaboration extends Collaboration {
           <button onClick={this.onAddClick}>add</button>
         </div>
 
-        <p>Have {this.state.peers.size} peers for this collaboration (myself included)</p>
-        <p>Outbound connection count: {this.state.outboundConnectionCount}</p>
-        <p>Inbound connection count: {this.state.inboundConnectionCount}</p>
-        <NetworkVis collaboration={this._collab} />
+        <this.Stats />
+        <this.NetworkVis />
       </div>
     );
   }

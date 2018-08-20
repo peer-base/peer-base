@@ -33,6 +33,7 @@
     "object-assign": "4.1.1",
     "peer-star-app": "file:../../",
     "peer-star-network-vis-react": "^0.1.2",
+    "peer-star-react": "^0.1.0",
     "postcss-flexbugs-fixes": "3.2.0",
     "postcss-loader": "2.0.8",
     "promise": "8.0.1",
