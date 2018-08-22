@@ -107,7 +107,10 @@ class AppPinner extends EventEmitter {
 
   _addCollaboration (name, type) {
     debug('adding collaboration %j of type %j', name, type)
-    const collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type)
+    const options = {
+      replicateOnly: true
+    }
+    const collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type, options)
     this._collaborations.set(name, collaboration)
 
     const onInnactivityTimeout = () => {

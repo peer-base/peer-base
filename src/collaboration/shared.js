@@ -9,7 +9,8 @@ const encode = require('../common/encode')
 const decode = require('../common/decode')
 const vectorclock = require('../common/vectorclock')
 
-module.exports = async (name, id, type, collaboration, store, keys) => {
+module.exports = async (name, id, type, collaboration, store, keys, _options) => {
+  const options = Object.assign({}, _options)
   const queue = new Queue({ concurrency: 1 })
   const applyQueue = new Queue({ concurrency: 1 })
   const shared = new EventEmitter()
@@ -68,7 +69,6 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   shared.value = () => crdt.value(state)
 
   shared.apply = (remoteClock, encodedDelta, isPartial) => {
-    console.log('applying remote clock', remoteClock)
     debug('%s: apply', id, remoteClock, encodedDelta)
     if (!Buffer.isBuffer(encodedDelta)) {
       throw new Error('encoded delta should have been buffer')
@@ -80,11 +80,10 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
         if (vectorclock.compare(remoteClock, clock) >= 0) {
           clock = vectorclock.merge(clock, remoteClock)
           const encodedState = await decryptAndVerify(encryptedState)
-          if (keys && keys.read) {
+          if (!options.replicateOnly) {
             const newState = decode(encodedState)
             apply(newState)
           } else if (!isPartial) {
-            console.log('GOT FULL STATE:', encodedState)
             state = encodedState
           }
         }
