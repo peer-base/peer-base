@@ -11,6 +11,9 @@
     "test:perf": "mocha test/performance/all.js",
     "pinner": "node bin/pinner"
   },
+  "bin": {
+    "pinner": "bin/pinner"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ipfs-shipyard/peer-star-app.git"
