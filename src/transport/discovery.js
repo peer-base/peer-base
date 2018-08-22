@@ -75,6 +75,10 @@ module.exports = class Discovery extends EventEmitter {
       return
     }
 
+    if (this._ring.has(peerInfo)) {
+      return
+    }
+
     debug('maybe discover peer %j', peerInfo)
 
     return new Promise((resolve, reject) => {
@@ -126,6 +130,8 @@ module.exports = class Discovery extends EventEmitter {
           return reject(err)
         }
 
+        debug('dialed %s', idB58Str)
+
         // we're connected to the peer
         // let's wait until we know the peer subscriptions
 
@@ -133,13 +139,16 @@ module.exports = class Discovery extends EventEmitter {
         let tryUntil = Date.now() + 5000 // TODO: this should go to config
 
         const pollPeer = () => {
+          debug('polling %s', idB58Str)
           this._ipfs.pubsub.peers(this._appTopic, (err, peers) => {
             if (err) {
               return reject(err)
             }
             if (peers.indexOf(idB58Str) >= 0) {
+              debug('peer %s is interested in app', idB58Str)
               resolve(true)
             } else {
+              debug('peer %s not subscribed to app', idB58Str)
               maybeSchedulePeerPoll()
             }
           })
@@ -147,6 +156,7 @@ module.exports = class Discovery extends EventEmitter {
 
         const maybeSchedulePeerPoll = () => {
           if (!this._stopped && (Date.now() < tryUntil)) {
+            debug('scheduling poll to %s in %d ms', idB58Str, pollTimeout)
             setTimeout(pollPeer, pollTimeout)
           } else {
             resolve(false)

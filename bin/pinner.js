@@ -1,0 +1,31 @@
+'use strict'
+
+if (!process.env.DEBUG) {
+  process.env.DEBUG = 'peer-star:pinner'
+}
+
+const Pinner = require('../src/pinner')
+
+const appName = process.argv[2]
+if (!appName) {
+  return console.error('need app name')
+}
+
+const options = {}
+
+const swarm = process.argv[3]
+if (swarm) {
+  console.log('using swarm', swarm)
+  options.ipfs = {
+    swarm: [swarm]
+  }
+}
+
+console.log('pinning app %s', appName)
+
+process.on('unhandledRejection', (err) => {
+  console.error(err)
+})
+
+const pinner = Pinner(appName, options)
+pinner.start()

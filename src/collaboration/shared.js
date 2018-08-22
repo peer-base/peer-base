@@ -67,7 +67,8 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   // shared value
   shared.value = () => crdt.value(state)
 
-  shared.apply = (remoteClock, encodedDelta) => {
+  shared.apply = (remoteClock, encodedDelta, isPartial) => {
+    console.log('applying remote clock', remoteClock)
     debug('%s: apply', id, remoteClock, encodedDelta)
     if (!Buffer.isBuffer(encodedDelta)) {
       throw new Error('encoded delta should have been buffer')
@@ -79,8 +80,13 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
         if (vectorclock.compare(remoteClock, clock) >= 0) {
           clock = vectorclock.merge(clock, remoteClock)
           const encodedState = await decryptAndVerify(encryptedState)
-          const newState = decode(encodedState)
-          apply(newState)
+          if (keys && keys.read) {
+            const newState = decode(encodedState)
+            apply(newState)
+          } else if (!isPartial) {
+            console.log('GOT FULL STATE:', encodedState)
+            state = encodedState
+          }
         }
         debug('%s state after apply:', id, state)
         if (!keys.public || keys.write) {
@@ -139,7 +145,11 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     if (encryptedStoreState) {
       const [, , encryptedState] = decode(encryptedStoreState)
       const storeState = decode(await decryptAndVerify(encryptedState))
-      apply(storeState, true)
+      if (keys && keys.read) {
+        apply(storeState, true)
+      } else {
+        state = storeState
+      }
     }
   } catch (err) {
     shared.emit('error', err)

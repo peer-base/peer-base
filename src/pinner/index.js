@@ -1,20 +1,21 @@
 'use strict'
 
+const debug = require('debug')('peer-star:pinner')
 const EventEmitter = require('events')
-const Collaboration = require('./collaboration')
-const IPFS = require('./transport/ipfs')
-const PeerCountGuess = require('./peer-count-guess')
-const decode = require('./common/decode')
+const Collaboration = require('../collaboration')
+const IPFS = require('../transport/ipfs')
+const PeerCountGuess = require('../peer-count-guess')
+const decode = require('../common/decode')
 
-module.exports = (appName, options) => {
-  return new App(appName, options)
+const defaultOptions = {
+  collaborationInnactivityTimeoutMS: 60000
 }
 
-class App extends EventEmitter {
+class AppPinner extends EventEmitter {
   constructor (name, options) {
     super()
     this.name = name
-    this._options = options
+    this._options = Object.assign({}, defaultOptions, options)
     this._peerCountGuess = new PeerCountGuess(this, options && options.peerCountGuess)
     this._collaborations = new Map()
     this._starting = null
@@ -31,30 +32,11 @@ class App extends EventEmitter {
       let replacing = false
       const ipfsOptions = (this._options && this._options.ipfs) || {}
       this.ipfs = IPFS(this, ipfsOptions)
-      const onError = (err) => {
-        if (err.message === 'websocket error') {
-          if (!replacing && ipfsOptions.relay) {
-            alert('You seam to be having some issues connecting to ' + JSON.stringify(ipfsOptions && ipfsOptions.swarm) + '. Downgrading to no swarm setup. Please refresh if that\'s not working for you.')
-            replacing = true
-            this.ipfs.removeListener('error', onError)
-            this._options.ipfs.swarm = []
-            this.ipfs = IPFS(this, this._options && this._options.ipfs)
-            this.ipfs.on('error', (err) => this._handleIPFSError(err))
-            this.ipfs.once('ready', resolve)
-          } else {
-            alert(err.message)
-          }
-        } else {
-          alert(err.message)
-        }
-      }
-      this.ipfs.on('error', onError)
       if (this.ipfs.isOnline()) {
         this.ipfs.on('error', (err) => this._handleIPFSError(err))
         resolve()
       } else {
         this.ipfs.once('ready', () => {
-          this.ipfs.removeListener('error', onError)
           this.ipfs.on('error', (err) => this._handleIPFSError(err))
           resolve()
         })
@@ -64,28 +46,6 @@ class App extends EventEmitter {
     })
 
     return this._starting
-  }
-
-  async collaborate (name, type, options) {
-    if (!type) {
-      throw new Error('need collaboration type')
-    }
-    let collaboration = this._collaborations.get(name)
-    if (!collaboration) {
-      if (!this._globalConnectionManager) {
-        // wait until we have a global connection manager
-        return new Promise((resolve, reject) => {
-          this.once('global connection manager', () => {
-            this.collaborate(name, type, options).then(resolve).catch(reject)
-          })
-        })
-      }
-      collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type, options)
-      this._collaborations.set(name, collaboration)
-      collaboration.once('stop', () => this._collaborations.delete(name))
-      await collaboration.start()
-    }
-    return collaboration
   }
 
   gossip (message) {
@@ -113,14 +73,15 @@ class App extends EventEmitter {
   }
 
   _onGossipMessage (message) {
+    debug('gossip message from %s', message.from)
     this.emit('gossip', message)
     this.ipfs.id().then((peerInfo) => {
       if (message.from === peerInfo.id) {
         return
       }
-      let collaborationName, membership
+      let collaborationName, membership, type
       try {
-        [collaborationName, membership] = decode(message.data)
+        [collaborationName, membership, type] = decode(message.data)
       } catch (err) {
         console.log('error parsing gossip message:', err)
         return
@@ -132,8 +93,51 @@ class App extends EventEmitter {
           .catch((err) => {
             console.error('error delivering remote membership:', err)
           })
+      } else {
+        debug('new collaboration %s of type %s', collaborationName, type)
+        if (type) {
+          const collaboration = this._addCollaboration(collaborationName, type)
+          collaboration.start().then(() => {
+            collaboration.deliverRemoteMembership(membership)
+          })
+        }
       }
     })
+  }
+
+  _addCollaboration (name, type) {
+    debug('adding collaboration %j of type %j', name, type)
+    const collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type)
+    this._collaborations.set(name, collaboration)
+
+    const onInnactivityTimeout = () => {
+      debug('collaboration %j timed out. Removing it...', name, type)
+      collaboration.removeListener('state changed', onStateChanged)
+      this._collaborations.delete(name)
+      collaboration.stop().catch((err) => {
+        console.error('error stopping collaboration ' + name + ':', err)
+      })
+    }
+
+    let activityTimeout
+
+    const resetActivityTimeout = () => {
+      if (activityTimeout) {
+        clearTimeout(activityTimeout)
+      }
+      setTimeout(onInnactivityTimeout, this._options.collaborationInnactivityTimeoutMS)
+    }
+
+    const onStateChanged = () => {
+      debug('state changed in collaboration %s', name)
+      resetActivityTimeout()
+    }
+
+    collaboration.on('state changed', onStateChanged)
+
+    resetActivityTimeout()
+
+    return collaboration
   }
 
   _handleIPFSError (err) {
@@ -154,4 +158,8 @@ class App extends EventEmitter {
     this._peerCountGuess.stop()
     await this.ipfs.stop()
   }
+}
+
+module.exports = (appName, options) => {
+  return new AppPinner(appName, options)
 }

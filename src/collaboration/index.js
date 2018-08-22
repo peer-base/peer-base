@@ -56,6 +56,7 @@ class Collaboration extends EventEmitter {
     if (!type) {
       throw new Error('need collaboration type')
     }
+    this.typeName = type
     this._type = CRDT(type)
     if (!this._type) {
       throw new Error('invalid collaboration type:' + type)

@@ -15,7 +15,7 @@ class App extends Component {
       appPeerCountEstimate: 0
     }
 
-    this._app = PeerStarApp('peer-star-counter-example-app', {
+    this._app = PeerStarApp('peer-star-example-app', {
       ipfs: {
         swarm: [ '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star' ]
       }
