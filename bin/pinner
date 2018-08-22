@@ -16,7 +16,7 @@ const options = {}
 
 const swarm = process.argv[3]
 if (swarm) {
-  console.log('using swarm', swarm)
+  console.log('using swarm address %j', swarm)
   options.ipfs = {
     swarm: [swarm]
   }
