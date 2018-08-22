@@ -9,7 +9,8 @@ const encode = require('../common/encode')
 const decode = require('../common/decode')
 const vectorclock = require('../common/vectorclock')
 
-module.exports = async (name, id, type, collaboration, store, keys) => {
+module.exports = async (name, id, type, collaboration, store, keys, _options) => {
+  const options = Object.assign({}, _options)
   const queue = new Queue({ concurrency: 1 })
   const applyQueue = new Queue({ concurrency: 1 })
   const shared = new EventEmitter()
@@ -67,7 +68,7 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
   // shared value
   shared.value = () => crdt.value(state)
 
-  shared.apply = (remoteClock, encodedDelta) => {
+  shared.apply = (remoteClock, encodedDelta, isPartial) => {
     debug('%s: apply', id, remoteClock, encodedDelta)
     if (!Buffer.isBuffer(encodedDelta)) {
       throw new Error('encoded delta should have been buffer')
@@ -79,8 +80,12 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
         if (vectorclock.compare(remoteClock, clock) >= 0) {
           clock = vectorclock.merge(clock, remoteClock)
           const encodedState = await decryptAndVerify(encryptedState)
-          const newState = decode(encodedState)
-          apply(newState)
+          if (!options.replicateOnly) {
+            const newState = decode(encodedState)
+            apply(newState)
+          } else if (!isPartial) {
+            state = encodedState
+          }
         }
         debug('%s state after apply:', id, state)
         if (!keys.public || keys.write) {
@@ -139,7 +144,11 @@ module.exports = async (name, id, type, collaboration, store, keys) => {
     if (encryptedStoreState) {
       const [, , encryptedState] = decode(encryptedStoreState)
       const storeState = decode(await decryptAndVerify(encryptedState))
-      apply(storeState, true)
+      if (keys && keys.read) {
+        apply(storeState, true)
+      } else {
+        state = storeState
+      }
     }
   } catch (err) {
     shared.emit('error', err)

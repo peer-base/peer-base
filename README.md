@@ -372,6 +372,16 @@ Peer-star-app supports using a circuit relay peer. For that you need to set up a
 * `relayWSAddr`: the multiaddress for the websocket server of the relay server
 * `apiAddr`: the multiaddress for the relay server API address (which we need for polling the known peers)
 
+# Pinner
+
+You can pin collaborations for peer-* apps without delegating keys. To install a pinner you can:
+
+```sh
+$ npm install -g peer-star-app
+$ pinner "app name" ["swarm address"]
+```
+
+
 # Run example app
 
 Clone this repo.
@@ -415,7 +425,7 @@ $ DEBUG=peer-star:* npm test
 
 For file-specific `DEBUG` values, see the source code and look for usages of the `debug` package.
 
-## Contribute
+# Contribute
 
 Peer-star app and the IPFS implementation in JavaScript is a work in progress. As such, there's a few things you can do right now to help out:
 
@@ -423,10 +433,10 @@ Peer-star app and the IPFS implementation in JavaScript is a work in progress. A
   * **Perform code reviews**. More eyes will help (a) speed the project along, (b) ensure quality, and (c) reduce possible future bugs.
   * **Add tests**. There can never be enough tests.
 
-### Want to hack on peer-star-app?
+## Want to hack on peer-star-app?
 
 [![](https://cdn.rawgit.com/jbenet/contribute-ipfs-gif/master/img/contribute.gif)](https://github.com/ipfs/community/blob/master/contributing.md)
 
-## License
+# License
 
 MIT

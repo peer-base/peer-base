@@ -8,7 +8,11 @@
     "test:node": "aegir test -t node",
     "test:browser": "aegir test -t browser",
     "lint": "standard src/**/*.js",
-    "test:perf": "mocha test/performance/all.js"
+    "test:perf": "mocha test/performance/all.js",
+    "pinner": "node bin/pinner"
+  },
+  "bin": {
+    "pinner": "bin/pinner"
   },
   "repository": {
     "type": "git",

@@ -18,7 +18,8 @@ const defaultOptions = {
   maxDeltaRetention: 1000,
   deltaTrimTimeoutMS: 1000,
   resetConnectionIntervalMS: 6000,
-  maxUnreachableBeforeEviction: 10
+  maxUnreachableBeforeEviction: 10,
+  replicateOnly: false
 }
 
 module.exports = (...args) => new Collaboration(...args)
@@ -56,6 +57,7 @@ class Collaboration extends EventEmitter {
     if (!type) {
       throw new Error('need collaboration type')
     }
+    this.typeName = type
     this._type = CRDT(type)
     if (!this._type) {
       throw new Error('invalid collaboration type:' + type)
@@ -143,7 +145,7 @@ class Collaboration extends EventEmitter {
     }
     const id = (await this._ipfs.id()).id
     const name = this._storeName()
-    this.shared = await Shared(name, id, this._type, this, this._store, this._options.keys)
+    this.shared = await Shared(name, id, this._type, this, this._store, this._options.keys, this._options)
     this.shared.on('error', (err) => this.emit('error', err))
     this._store.on('clock changed', (clock) => {
       this._clocks.setFor(id, clock)

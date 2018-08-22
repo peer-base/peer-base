@@ -25,7 +25,26 @@ module.exports = class PushProtocol {
     let ended = false
     let pushing = true
 
-    const pushDeltas = async () => {
+    const pushDeltaStream = async () => {
+      debug('%s: push deltas to %s', this._peerId(), remotePeerId)
+      const since = this._clocks.getFor(remotePeerId)
+      pull(
+        this._store.deltaStream(since),
+        pull.map((delta) => {
+          let [clock, authorClock] = delta
+          clock = vectorclock.incrementAll(clock, authorClock)
+          this._clocks.setFor(remotePeerId, clock)
+          output.push(encode([delta]))
+        }),
+        pull.onEnd((err) => {
+          if (err) {
+            onEnd(err)
+          }
+        })
+      )
+    }
+
+    const pushDeltaBatch = async () => {
       debug('%s: push deltas to %s', this._peerId(), remotePeerId)
       const since = this._clocks.getFor(remotePeerId)
       const batch = await this._store.deltaBatch(since)
@@ -38,6 +57,8 @@ module.exports = class PushProtocol {
         output.push(encode([collabBatch]))
       }
     }
+
+    const pushDeltas = this._keys && this._keys.read ? pushDeltaBatch : pushDeltaStream
 
     const updateRemote = async (myClock) => {
       debug('%s: updateRemote %s', this._peerId(), remotePeerId)
