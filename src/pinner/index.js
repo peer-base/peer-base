@@ -29,7 +29,6 @@ class AppPinner extends EventEmitter {
     }
 
     this._starting = new Promise((resolve, reject) => {
-      let replacing = false
       const ipfsOptions = (this._options && this._options.ipfs) || {}
       this.ipfs = IPFS(this, ipfsOptions)
       if (this.ipfs.isOnline()) {
