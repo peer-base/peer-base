@@ -137,7 +137,7 @@ const string = Keys.uriEncodeReadOnly(keys)
 ```js
 const Keys = require('peer-star-app').keys
 
-// options are optiona. defaults to:
+// options are optional. defaults to:
 const options = {
   keyLength: 32,
   ivLength: 16
