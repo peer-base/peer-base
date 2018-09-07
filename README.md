@@ -43,7 +43,7 @@ Options (are not required):
 
 * `ipfs`: object with:
   * `repo`: IPFS repo path or repo object
-  * `swarm`: ipfs swarm addresses (array of string)
+  * `swarm`: ipfs swarm addresses (array of strings)
   * `bootstrap`: IPFS Bootstrap nodes (array of multiaddresses)
   * `relay`: an (optional) object containing the following attributes:
     * apiAddr: the multiaddress for the API server of the relay
@@ -52,7 +52,7 @@ Options (are not required):
 * targetGlobalMembershipGossipFrequencyMS: (defaults to `1000`): target global membership gossip frequency, in ms.
 * urgencyFrequencyMultiplier: (defaults to `10`): urgency multiplier when someone is wrong about membership
 * transport: optional object containing:
-  * maxThrottleDelayMS: the maximum delay betweeen discovering a new peer and quering it to see whether they're interested in the app.
+  * maxThrottleDelayMS: the maximum delay betweeen discovering a new peer and querying it to see whether they're interested in the app.
 
 ## Start app
 
@@ -62,7 +62,7 @@ await app.start()
 
 ## js-IPFS node
 
-A peer-star app comes with [a js-ipfs node](https://github.com/ipfs/js-ipfs#readme). You can access through `app.ipfs`. Example:
+A peer-star app comes with [a js-ipfs node](https://github.com/ipfs/js-ipfs#readme). You can access it through `app.ipfs`. Example:
 
 ```js
 console.log(await app.ipfs.id())
