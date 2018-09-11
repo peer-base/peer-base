@@ -3,7 +3,7 @@
 const debug = require('debug')('peer-star:collaboration:shared')
 const EventEmitter = require('events')
 const Queue = require('p-queue')
-const debounce = require('lodash.debounce')
+const debounce = require('lodash/debounce')
 
 const encode = require('../common/encode')
 const decode = require('../common/decode')

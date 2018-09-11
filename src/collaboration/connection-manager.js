@@ -1,7 +1,7 @@
 'use strict'
 
 const debug = require('debug')('peer-star:collaboration:connection-manager')
-const debounce = require('lodash.debounce')
+const debounce = require('lodash/debounce')
 const EventEmitter = require('events')
 const PeerSet = require('../common/peer-set')
 const Protocol = require('./protocol')

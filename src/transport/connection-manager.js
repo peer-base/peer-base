@@ -1,7 +1,7 @@
 'use strict'
 
 const EventEmitter = require('events')
-const debounce = require('lodash.debounce')
+const debounce = require('lodash/debounce')
 
 const defaultOptions = {
   debounceResetConnectionsMS: 1000
