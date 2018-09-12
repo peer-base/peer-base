@@ -1,6 +1,6 @@
 {
   "name": "peer-star-app",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Peer-Star App support for real-time collaborative DApps built on top of IPFS",
   "main": "src/index.js",
   "scripts": {
