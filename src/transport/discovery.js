@@ -61,6 +61,9 @@ module.exports = class Discovery extends EventEmitter {
   _maybeDiscoverOneRandomPeer () {
     const peer = this._pickRandomPendingPeer()
     if (peer) {
+      if (this._ring.has(peer)) {
+        return
+      }
       return this._throttledMaybeDiscoverPeer(peer)
     }
   }
