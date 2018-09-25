@@ -34,7 +34,7 @@ class App extends EventEmitter {
       const onError = (err) => {
         if (err.message === 'websocket error') {
           if (!replacing && ipfsOptions.relay) {
-            alert('You seam to be having some issues connecting to ' + JSON.stringify(ipfsOptions && ipfsOptions.swarm) + '. Downgrading to no swarm setup. Please refresh if that\'s not working for you.')
+            alert('You seem to be having some issues connecting to ' + JSON.stringify(ipfsOptions && ipfsOptions.swarm) + '. Downgrading to no swarm setup. Please refresh if that\'s not working for you.')
             replacing = true
             this.ipfs.removeListener('error', onError)
             this._options.ipfs.swarm = []
@@ -80,10 +80,25 @@ class App extends EventEmitter {
           })
         })
       }
-      collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type, options)
-      this._collaborations.set(name, collaboration)
-      collaboration.once('stop', () => this._collaborations.delete(name))
-      await collaboration.start()
+
+      // If the collaboration has not yet been created
+      this._startingCollaborations = this._startingCollaborations || {}
+      if (!this._startingCollaborations[name]) {
+        // Create the collaboration inside a Promise that waits for it to start
+        // and then adds it to the Map
+        this._startingCollaborations[name] = new Promise((resolve, reject) => {
+          collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type, options)
+          collaboration.start().then(() => {
+            this._collaborations.set(name, collaboration)
+            collaboration.once('stop', () => this._collaborations.delete(name))
+            resolve()
+          })
+        })
+      }
+      // Wait for the collaboration to start
+      await this._startingCollaborations[name]
+      // It should now be in the map
+      collaboration = this._collaborations.get(name)
     }
     return collaboration
   }
