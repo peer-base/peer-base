@@ -80,26 +80,11 @@ class App extends EventEmitter {
           })
         })
       }
-
-      // If the collaboration has not yet been created
-      this._startingCollaborations = this._startingCollaborations || {}
-      if (!this._startingCollaborations[name]) {
-        // Create the collaboration inside a Promise that waits for it to start
-        // and then adds it to the Map
-        this._startingCollaborations[name] = new Promise((resolve, reject) => {
-          collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type, options)
-          collaboration.start().then(() => {
-            this._collaborations.set(name, collaboration)
-            collaboration.once('stop', () => this._collaborations.delete(name))
-            resolve()
-          })
-        })
-      }
-      // Wait for the collaboration to start
-      await this._startingCollaborations[name]
-      // It should now be in the map
-      collaboration = this._collaborations.get(name)
+      collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type, options)
+      this._collaborations.set(name, collaboration)
+      collaboration.once('stop', () => this._collaborations.delete(name))
     }
+    await collaboration.start()
     return collaboration
   }
 
