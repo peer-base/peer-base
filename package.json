@@ -80,7 +80,6 @@
     "./test/utils/repo.js": "./test/utils/repo-browser.js"
   },
   "pre-push": [
-    "lint",
-    "test"
+    "lint"
   ]
 }

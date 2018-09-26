@@ -10,7 +10,7 @@ const Repo = require('./utils/repo')
 require('./utils/fake-crdt')
 
 describe('app', function () {
-  this.timeout(10000)
+  this.timeout(30000)
   let repo
   let app
   let collaboration
@@ -47,15 +47,10 @@ describe('app', function () {
   })
 
   it('can get concurrently created collaboration shared', async () => {
-    const collabs = await Promise.all([
-      app.collaborate('collaboration name 2', 'fake', collaborationOptions).then(collab => {
-        expect(collab.shared).to.exist
-      }),
-      app.collaborate('collaboration name 2', 'fake', collaborationOptions).then(collab => {
-        expect(collab.shared).to.exist
-      })
-    ])
-    expect(collabs[0]).to.equal(collabs[1])
+    const collab1 = app.collaborate('collaboration name 2', 'fake', collaborationOptions)
+    const collab2 = app.collaborate('collaboration name 2', 'fake', collaborationOptions)
+    const res = await collab2
+    expect(res.shared).to.exist()
   })
 
   it('can be stopped', () => app.stop())
