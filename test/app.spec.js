@@ -10,7 +10,7 @@ const Repo = require('./utils/repo')
 require('./utils/fake-crdt')
 
 describe('app', function () {
-  this.timeout(30000)
+  this.timeout(10000)
   let repo
   let app
   let collaboration
