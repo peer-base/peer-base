@@ -35,7 +35,8 @@ class Ring extends EventEmitter {
       if (comparison === 0) {
         // found point
         const points = this._points
-        this._points = points.slice(0, i).concat(points.slice(i + 1))
+        const index = parseInt(i, 10)
+        this._points = points.slice(0, index).concat(points.slice(index + 1))
         this._contacts.delete(p.toString('hex'))
         this.emit('removed', peerInfo)
         this.emit('changed')
