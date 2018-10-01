@@ -23,24 +23,16 @@ module.exports = (bytes, peerInfo, preambleBytes) => {
     }
 
     const succ = ring.successorOf(peerInfo)
-    console.log('Jim', oneFifth, oneFourth, oneThird, oneHalf )
     add(succ)
-    console.log('Jim1', peers)
     add(ring.successorOf(succ))
-    console.log('Jim2', peers)
     add(ring.at(oneFifth))
-    console.log('Jim3', peers)
     add(ring.at(oneFourth))
-    console.log('Jim4', peers)
     add(ring.at(oneThird))
-    console.log('Jim5', peers)
     add(ring.successorOf(oneHalf))
-    console.log('Jim6', peers)
 
     return peers
 
     function add (peer) {
-      console.log('Jim add peer', peer)
       if (peer) addOrAddSuccessor(peer)
     }
 
@@ -49,7 +41,6 @@ module.exports = (bytes, peerInfo, preambleBytes) => {
         peers.add(peer)
       } else {
         if (peer === stop) return
-        process.stdout.write('.')
         addOrAddSuccessor(ring.successorOf(peer), stop || peer)
       }
     }
