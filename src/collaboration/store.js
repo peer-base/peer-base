@@ -337,7 +337,7 @@ module.exports = class CollaborationStore extends EventEmitter {
         }),
         pull.map((d) => d.key),
         pull.asyncMap((key, callback) => {
-          const thisSeq = Number(key.toString().substring(3))
+          const thisSeq = parseInt(key.toString().slice(-3), 16)
           if (thisSeq < first) {
             debug('%s: trimming delta with sequence %s', this._id, thisSeq)
             this._store.delete(key, callback)
