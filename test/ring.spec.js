@@ -57,6 +57,10 @@ describe('ring', () => {
     expect(r.at([1, 11]).id.toBytes()).to.deep.equal([1, 10])
   })
 
+  it('can get a point before start', () => {
+    expect(r.at([0, 1]).id.toBytes()).to.deep.equal([1, 10])
+  })
+
   it('can remove a point', () => {
     r.remove([1])
     expect(r.successorOf([1, 10]).id.toBytes()).to.deep.equal([1, 2])

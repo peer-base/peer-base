@@ -84,6 +84,7 @@ class Ring extends EventEmitter {
         last = p
       } else {
         // we're after the given point
+        if (!last) break
         return this._peerInfoFromPoint(last)
       }
     }
