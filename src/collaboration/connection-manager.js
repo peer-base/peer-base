@@ -79,7 +79,7 @@ module.exports = class ConnectionManager extends EventEmitter {
   observe (observer) {
     const onConnectionChange = () => {
       observer.setInboundPeers(peerIdSetFromPeerSet(this._inboundConnections))
-      observer.setOutboundPeers(peerIdSetFromPeerSet(this._inboundConnections))
+      observer.setOutboundPeers(peerIdSetFromPeerSet(this._outboundConnections))
     }
 
     this._protocol.on('inbound connection', onConnectionChange)
