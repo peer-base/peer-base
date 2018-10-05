@@ -9,6 +9,7 @@ module.exports = function handlingData (dataHandler) {
       message = decode(data)
     } catch (err) {
       dataHandler(err)
+      return true
     }
 
     try {
