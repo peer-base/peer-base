@@ -123,7 +123,8 @@ module.exports = class GlobalConnectionManager {
       return
     }
 
-    const dialedProtocols = this._peerCollaborations.get(peerInfo)
+    const peerId = peerInfo.id.toB58String()
+    const dialedProtocols = this._peerCollaborations.get(peerId)
     const canClose = !dialedProtocols || !dialedProtocols.size
     if (canClose) {
       debug('hanging up %s', peerInfo.id.toB58String())
