@@ -1,8 +1,7 @@
 'use strict'
 
 const EventEmitter = require('events')
-const encode = require('../common/encode')
-const decode = require('../common/decode')
+const { encode, decode } = require('delta-crdts-msgpack-codec')
 
 module.exports = async (...args) => {
   const gossip = new Gossip(...args)

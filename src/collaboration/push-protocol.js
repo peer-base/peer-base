@@ -6,7 +6,7 @@ const pushable = require('pull-pushable')
 const Queue = require('p-queue')
 const debounce = require('lodash/debounce')
 const handlingData = require('../common/handling-data')
-const encode = require('../common/encode')
+const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PushProtocol {

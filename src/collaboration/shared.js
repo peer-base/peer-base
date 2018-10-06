@@ -5,8 +5,7 @@ const EventEmitter = require('events')
 const Queue = require('p-queue')
 const debounce = require('lodash/debounce')
 
-const encode = require('../common/encode')
-const decode = require('../common/decode')
+const { encode, decode } = require('delta-crdts-msgpack-codec')
 const vectorclock = require('../common/vectorclock')
 
 module.exports = async (name, id, type, collaboration, store, keys, _options) => {
