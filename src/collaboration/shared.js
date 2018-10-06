@@ -8,14 +8,13 @@ const debounce = require('lodash/debounce')
 const { encode, decode } = require('delta-crdts-msgpack-codec')
 const vectorclock = require('../common/vectorclock')
 
-module.exports = async (name, id, type, collaboration, store, keys, _options) => {
+module.exports = async (name, id, crdtType, collaboration, store, keys, _options) => {
   const options = Object.assign({}, _options)
   const queue = new Queue({ concurrency: 1 })
   const applyQueue = new Queue({ concurrency: 1 })
   const shared = new EventEmitter()
-  const crdt = type(id)
   let clock = {}
-  let state = crdt.initial()
+  let state = crdtType.initial()
   let deltaBuffer = []
   // let clock = await store.getLatestClock()
 
@@ -25,9 +24,9 @@ module.exports = async (name, id, type, collaboration, store, keys, _options) =>
       // reset the delta buffer
       deltaBuffer = []
       const jointDelta = deltas.reduce(
-        (D, d) => crdt.join.call(voidChangeEmitter, D, d),
-        crdt.initial())
-      const namedDelta = [name, type.typeName, await signAndEncrypt(encode(jointDelta))]
+        (D, d) => crdtType.join.call(voidChangeEmitter, D, d),
+        crdtType.initial())
+      const namedDelta = [name, crdtType.typeName, await signAndEncrypt(encode(jointDelta))]
       debug('%s: named delta: ', id, namedDelta)
       // clock = vectorclock.increment(clock, id)
       // debug('%s: clock before save delta:', id, clock)
@@ -50,10 +49,10 @@ module.exports = async (name, id, type, collaboration, store, keys, _options) =>
   // Populate shared methods
 
   // shared mutators
-  Object.keys(crdt.mutators).forEach((mutatorName) => {
-    const mutator = crdt.mutators[mutatorName]
+  Object.keys(crdtType.mutators).forEach((mutatorName) => {
+    const mutator = crdtType.mutators[mutatorName]
     shared[mutatorName] = (...args) => {
-      const delta = mutator(state, ...args)
+      const delta = mutator(id, state, ...args)
       apply(delta, true)
       deltaBuffer.push(delta)
       saveDeltaBuffer()
@@ -65,7 +64,7 @@ module.exports = async (name, id, type, collaboration, store, keys, _options) =>
   shared.state = () => state
 
   // shared value
-  shared.value = () => crdt.value(state)
+  shared.value = () => crdtType.value(state)
 
   shared.apply = (remoteClock, encodedDelta, isPartial) => {
     debug('%s: apply', id, remoteClock, encodedDelta)
@@ -88,7 +87,7 @@ module.exports = async (name, id, type, collaboration, store, keys, _options) =>
         }
         debug('%s state after apply:', id, state)
         if (!keys.public || keys.write) {
-          return [name, encode([name, forName && type.typeName, await signAndEncrypt(encode(state))])]
+          return [name, encode([name, forName && crdtType.typeName, await signAndEncrypt(encode(state))])]
         }
       } else if (typeName) {
         const sub = await collaboration.sub(forName, typeName)
@@ -107,21 +106,21 @@ module.exports = async (name, id, type, collaboration, store, keys, _options) =>
     const acc = await _acc
     debug('%s: shared.join', id, delta, acc)
     const [previousClock, authorClock, encodedDelta] = delta
-    const [forName, type, encryptedDelta] = decode(encodedDelta)
-    debug('%s: shared.join [forName, type, encryptedDelta] = ', [forName, type, encryptedDelta])
+    const [forName, typeName, encryptedDelta] = decode(encodedDelta)
+    debug('%s: shared.join [forName, type, encryptedDelta] = ', [forName, typeName, encryptedDelta])
     if (forName !== name) {
       throw new Error('delta name does not match:', forName)
     }
     if (!acc.has(name)) {
-      acc.set(name, [name, type, previousClock, {}, crdt.initial()])
+      acc.set(name, [name, typeName, previousClock, {}, crdtType.initial()])
     }
     let [, , clock, previousAuthorClock, s1] = acc.get(name)
     const encodedState = await decryptAndVerify(encryptedDelta)
     const s2 = decode(encodedState)
 
     const newAuthorClock = vectorclock.incrementAll(previousAuthorClock, authorClock)
-    const newState = crdt.join.call(voidChangeEmitter, s1, s2)
-    acc.set(name, [name, type, clock, newAuthorClock, newState])
+    const newState = crdtType.join.call(voidChangeEmitter, s1, s2)
+    acc.set(name, [name, typeName, clock, newAuthorClock, newState])
 
     debug('%s: shared.join: new state is', id, newState)
 
@@ -157,7 +156,7 @@ module.exports = async (name, id, type, collaboration, store, keys, _options) =>
 
   function apply (s, fromSelf) {
     debug('%s: apply ', id, s)
-    state = crdt.join.call(changeEmitter, state, s)
+    state = crdtType.join.call(changeEmitter, state, s)
     debug('%s: new state after join is', id, state)
     try {
       changeEmitter.emitAll()

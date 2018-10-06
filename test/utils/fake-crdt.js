@@ -3,7 +3,7 @@
 const CRDT = require('delta-crdts')
 const uniq = require('lodash.uniq')
 
-const fake = module.exports = (id) => ({
+const fake = module.exports = {
   initial: () => new Set(),
   join (s1, s2) {
     const all = Array.from(s1).concat(Array.from(s2))
@@ -11,10 +11,10 @@ const fake = module.exports = (id) => ({
   },
   value: (s) => Array.from(s).sort().join(''),
   mutators: {
-    add: (s, str) => {
+    add: (id, s, str) => {
       return new Set(str)
     }
   }
-})
+}
 
 CRDT.define('fake', fake)
