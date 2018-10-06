@@ -5,7 +5,7 @@ const multihashing = require('multihashing')
 const PeerId = require('peer-id')
 const PeerInfo = require('peer-info')
 const bs58 = require('bs58')
-const AWORSet = require('delta-crdts')('aworset')
+const ORMap = require('delta-crdts')('ormap')
 const Ring = require('../common/ring')
 const DiasSet = require('../common/dias-peer-set')
 const ConnectionManager = require('./connection-manager')
@@ -23,7 +23,7 @@ module.exports = class Membership extends EventEmitter {
     this._collaboration = collaboration
     this._options = options
 
-    this._members = new Set()
+    this._members = new Map()
     this._membershipGossipFrequencyHeuristic = new MembershipGossipFrequencyHeuristic(app, this, options)
     this._someoneHasMembershipWrong = false
 
@@ -56,12 +56,19 @@ module.exports = class Membership extends EventEmitter {
   }
 
   async _startPeerInfo () {
-    if (this._ipfs._peerInfo) {
-      const peerId = this._ipfs._peerInfo.id.toB58String()
+    const pInfo = this._ipfs._peerInfo
+    if (pInfo) {
+      const peerId = pInfo.id.toB58String()
       this._id = peerId
-      this._memberCRDT = AWORSet(peerId)
-      this._memberCRDT.add(peerId)
-      this._members.add(peerId)
+
+      let address = pInfo.multiaddrs.toArray()[0]
+      if (address) {
+        address = address.toString()
+        this._memberCRDT = ORMap(peerId)
+        this._memberCRDT.applySub(peerId, 'mvreg', 'write', address)
+        this._members.set(peerId, address)
+      }
+
       this._diasSet = DiasSet(
         this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
       await this.connectionManager.start(this._diasSet)
@@ -85,7 +92,7 @@ module.exports = class Membership extends EventEmitter {
   }
 
   peers () {
-    return new Set(this._members)
+    return new Set(this._members.keys())
   }
 
   outboundConnectionCount () {
@@ -116,7 +123,9 @@ module.exports = class Membership extends EventEmitter {
     return this._ipfs.id()
       .then((peer) => peer.id)
       .then((id) => {
-        const isUrgent = !this._members.has(id)
+        const pInfo = this._ipfs._peerInfo
+        let address = pInfo.multiaddrs.toArray()[0]
+        const isUrgent = !this._members.has(id) || address && (this.members.get(id) !== address.toString())
         return isUrgent
       })
   }
@@ -154,7 +163,7 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _createMembershipSummaryHash () {
-    const membership = Buffer.from(JSON.stringify(Array.from(this._members).sort()))
+    const membership = Buffer.from(JSON.stringify(Array.from(this._members).sort(sortMembers)))
     return multihashing.digest(
       membership,
       'sha1').toString('base64')
@@ -174,8 +183,11 @@ module.exports = class Membership extends EventEmitter {
         if (this._memberCRDT) {
           this._memberCRDT.apply(remoteMembership)
           const members = this._memberCRDT.value()
-          if (!members.has(id)) {
-            this._memberCRDT.add(id)
+          const pInfo = this._ipfs._peerInfo
+          let address = pInfo.multiaddrs.toArray()[0]
+
+          if (address && !members.has(id)) {
+            this._memberCRDT.set(id, address.toString())
             this._someoneHasMembershipWrong = true
           }
 
@@ -207,4 +219,15 @@ module.exports = class Membership extends EventEmitter {
   _membershipTopic () {
     return this._collaboration.name
   }
+}
+
+function sortMembers (member1, member2) {
+  const [id1] = member1
+  const [id2] = member2
+  if (id1 < id2) {
+    return -1
+  } else if (id1 > id2) {
+    return 1
+  }
+  return 0
 }
