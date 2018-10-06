@@ -6,7 +6,7 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const handlingData = require('../../src/common/handling-data')
-const encode = require('../../src/common/encode')
+const { encode } = require('delta-crdts-msgpack-codec')
 
 describe('handling data', () => {
   it('correctly decodes data', (done) => {

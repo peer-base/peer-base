@@ -4,7 +4,7 @@ const debug = require('debug')('peer-star:collaboration:stats:pull-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const handlingData = require('../common/handling-data')
-const encode = require('../common/encode')
+const encode = require('delta-crdts-msgpack-codec').encode
 
 class StatsPushProtocol {
   constructor (ipfs, stats) {

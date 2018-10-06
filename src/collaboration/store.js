@@ -9,8 +9,7 @@ const vectorclock = require('../common/vectorclock')
 const leftpad = require('leftpad')
 const pull = require('pull-stream')
 
-const decode = require('../common/decode')
-const encode = require('../common/encode')
+const { encode, decode } = require('delta-crdts-msgpack-codec')
 
 module.exports = class CollaborationStore extends EventEmitter {
   constructor (ipfs, collaboration, options) {

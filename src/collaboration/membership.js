@@ -10,7 +10,7 @@ const Ring = require('../common/ring')
 const DiasSet = require('../common/dias-peer-set')
 const ConnectionManager = require('./connection-manager')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
-const encode = require('../common/encode')
+const { encode } = require('delta-crdts-msgpack-codec')
 const eqSet = require('../common/eq-set')
 const setDiff = require('../common/set-diff')
 
