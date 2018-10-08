@@ -420,5 +420,9 @@ function datastore (ipfs, collaboration) {
 }
 
 function isNotFoundError (err) {
-  return (err.message.indexOf('Key not found') >= 0 || err.message.indexOf('No value') >= 0)
+  return (
+    err.message.indexOf('Key not found') >= 0 ||
+    err.message.indexOf('No value') >= 0 ||
+    err.code === 'ERR_NOT_FOUND'
+  )
 }
