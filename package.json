@@ -69,7 +69,7 @@
     "dirty-chai": "^2.0.1",
     "execa": "~0.10.0",
     "hat": "0.0.3",
-    "ipfs-repo": "~0.22.1",
+    "ipfs-repo": "~0.24.0",
     "libp2p-websocket-star-rendezvous": "~0.2.3",
     "lodash.uniq": "^4.5.0",
     "pull-pair": "^1.1.0",
