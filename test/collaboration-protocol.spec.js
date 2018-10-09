@@ -16,7 +16,8 @@ const Protocol = require('../src/collaboration/protocol')
 const Clocks = require('../src/collaboration/clocks')
 const generateKeys = require('../src/keys/generate')
 
-const Type = require('./utils/fake-crdt')
+require('./utils/fake-crdt')
+const Type = require('../src/collaboration/crdt')('fake')
 
 const _storeOptions = {
   maxDeltaRetention: 0,
