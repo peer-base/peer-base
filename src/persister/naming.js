@@ -32,7 +32,7 @@ module.exports = class Naming {
       return
     }
 
-    // No key found, we need to export out key to pem and then import it into
+    // No key found, we need to export our key to pem and then import it into
     // ipfs
     debug('Key %s not found, generating pem for import', keyName)
     const pem = await new Promise((resolve, reject) => {
