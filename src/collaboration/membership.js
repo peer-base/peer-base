@@ -1,5 +1,6 @@
 'use strict'
 
+const debug = require('debug')('peer-star:collaboration:membership')
 const EventEmitter = require('events')
 const multihashing = require('multihashing')
 const PeerId = require('peer-id')
@@ -11,8 +12,7 @@ const DiasSet = require('../common/dias-peer-set')
 const ConnectionManager = require('./connection-manager')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
 const { encode } = require('delta-crdts-msgpack-codec')
-const eqSet = require('../common/eq-set')
-const setDiff = require('../common/set-diff')
+const deepEquals = require('deep-eql')
 
 module.exports = class Membership extends EventEmitter {
   constructor (ipfs, globalConnectionManager, app, collaboration, store, clocks, options) {
@@ -61,12 +61,11 @@ module.exports = class Membership extends EventEmitter {
       const peerId = pInfo.id.toB58String()
       this._id = peerId
 
-      let address = pInfo.multiaddrs.toArray()[0]
-      if (address) {
-        address = address.toString()
-        this._memberCRDT = ORMap(peerId)
-        this._memberCRDT.applySub(peerId, 'mvreg', 'write', address)
-        this._members.set(peerId, address)
+      this._memberCRDT = ORMap(peerId)
+      let addresses = pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
+      if (addresses.length) {
+        this._memberCRDT.applySub(peerId, 'mvreg', 'write', addresses)
+        this._members.set(peerId, pInfo)
       }
 
       this._diasSet = DiasSet(
@@ -93,6 +92,10 @@ module.exports = class Membership extends EventEmitter {
 
   peers () {
     return new Set(this._members.keys())
+  }
+
+  peerAddresses (peerId) {
+    return this._members.get(peerId)
   }
 
   outboundConnectionCount () {
@@ -124,9 +127,10 @@ module.exports = class Membership extends EventEmitter {
       .then((peer) => peer.id)
       .then((id) => {
         const pInfo = this._ipfs._peerInfo
-        let address = pInfo.multiaddrs.toArray()[0]
-        const isUrgent = !this._members.has(id) || address && (this.members.get(id) !== address.toString())
-        return isUrgent
+        let addresses = pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
+        const existingPeerInfo = this._members.get(id)
+        const existingAddresses = existingPeerInfo && existingPeerInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
+        return !existingAddresses || !deepEquals(existingAddresses, addresses)
       })
   }
 
@@ -181,35 +185,66 @@ module.exports = class Membership extends EventEmitter {
       .then((peer) => peer.id)
       .then((id) => {
         if (this._memberCRDT) {
+          let changed = false
+          debug('remote membership:', remoteMembership)
           this._memberCRDT.apply(remoteMembership)
-          const members = this._memberCRDT.value()
-          const pInfo = this._ipfs._peerInfo
-          let address = pInfo.multiaddrs.toArray()[0]
+          const members = new Map(Object.entries(this._memberCRDT.value()))
+          const oldMembers = new Set(this._members.keys())
+          debug('local members:', oldMembers)
 
-          if (address && !members.has(id)) {
-            this._memberCRDT.set(id, address.toString())
+          const pInfo = this._ipfs._peerInfo
+          let myAddresses = pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
+          const newAddresses = joinAddresses(members[id])
+
+          if ((myAddresses.length && !members.has(id)) || !deepEquals(newAddresses, myAddresses)) {
+            this._memberCRDT.applySub(id, 'mvreg', 'write', myAddresses)
             this._someoneHasMembershipWrong = true
           }
 
-          if (!eqSet(members, this._members)) {
-            const diff = setDiff(this._members, members)
+          for (let [peerId, addresses] of members) {
+            if (peerId === id) { continue }
+            addresses = joinAddresses(addresses)
+            debug('remote addresses for %s:', peerId, addresses)
 
-            for (let addedPeer of diff.added) {
-              if (addedPeer !== id) {
-                this._members.add(addedPeer)
-                this._ring.add(new PeerInfo(new PeerId(bs58.decode(addedPeer))))
-                this.emit('peer joined', addedPeer)
+            const oldPeerInfo = this._members.has(peerId) && this._members.get(peerId)
+            if (!oldPeerInfo) {
+              const peerInfo = new PeerInfo(new PeerId(bs58.decode(peerId)))
+              this._members.set(peerId, peerInfo)
+              this._ring.add(peerInfo)
+              changed = true
+              this.emit('peer joined', peerId)
+            } else {
+              const oldAddresses = oldPeerInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
+              debug('local addresses for %s:', peerId, oldAddresses)
+              for (let address of addresses) {
+                if (!oldPeerInfo.multiaddrs.has(address)) {
+                  changed = true
+                  oldPeerInfo.multiaddrs.add(address)
+                }
               }
-            }
 
-            for (let removedPeer of diff.removed) {
-              if (removedPeer !== id) {
-                this._members.delete(removedPeer)
-                this._ring.remove(new PeerInfo(new PeerId(bs58.decode(removedPeer))))
-                this.emit('peer left', removedPeer)
+              for (let address of oldAddresses) {
+                if (addresses.indexOf(address) < 0) {
+                  changed = true
+                  oldPeerInfo.multiaddrs.delete(address)
+                }
               }
+              this.emit('peer addresses changed', peerId, addresses)
             }
+          }
 
+          for (let oldMember of oldMembers) {
+            if (oldMember === id) { continue }
+            if (!members.has(oldMember)) {
+              this._members.delete(oldMember)
+              this._ring.remove(new PeerInfo(new PeerId(bs58.decode(oldMember))))
+              changed = true
+              this.emit('peer left', oldMember)
+            }
+          }
+
+          if (changed) {
+            debug('MEMBERSHIP CHANGED!')
             this.emit('changed')
           }
         }
@@ -230,4 +265,9 @@ function sortMembers (member1, member2) {
     return 1
   }
   return 0
+}
+
+function joinAddresses (addresses) {
+  debug('joinAddresses:', addresses)
+  return (Array.from(addresses || [])).reduce((acc, moreAddresses) => acc.concat(moreAddresses), [])
 }
