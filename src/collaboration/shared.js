@@ -7,6 +7,7 @@ const debounce = require('lodash/debounce')
 
 const { encode, decode } = require('delta-crdts-msgpack-codec')
 const vectorclock = require('../common/vectorclock')
+const sharedCrypto = require('../common/shared-crypto')
 
 module.exports = async (name, id, crdtType, collaboration, store, keys, _options) => {
   const options = Object.assign({}, _options)
@@ -169,59 +170,11 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   }
 
   function signAndEncrypt (data) {
-    return new Promise((resolve, reject) => {
-      if (!keys.write) {
-        return resolve(data)
-      }
-      keys.write.sign(data, (err, signature) => {
-        if (err) {
-          return reject(err)
-        }
-
-        const toEncrypt = encode([data, signature])
-
-        keys.cipher()
-          .then((cipher) => {
-            cipher.encrypt(toEncrypt, (err, encrypted) => {
-              if (err) {
-                return reject(err)
-              }
-
-              resolve(encrypted)
-            })
-          })
-          .catch(reject)
-      })
-    })
+    return sharedCrypto.signAndEncrypt(keys, data)
   }
 
-  function decryptAndVerify (encrypted) {
-    return new Promise((resolve, reject) => {
-      if (!keys.cipher && !keys.read) {
-        return resolve(encrypted)
-      }
-      keys.cipher()
-        .then((cipher) => cipher.decrypt(encrypted, (err, decrypted) => {
-          if (err) {
-            return reject(err)
-          }
-          const decoded = decode(decrypted)
-          const [encoded, signature] = decoded
-
-          keys.read.verify(encoded, signature, (err, valid) => {
-            if (err) {
-              return reject(err)
-            }
-
-            if (!valid) {
-              return reject(new Error('delta has invalid signature'))
-            }
-
-            resolve(encoded)
-          })
-        }))
-        .catch(reject)
-    })
+  function decryptAndVerify (data) {
+    return sharedCrypto.decryptAndVerify(keys, data)
   }
 }
 
