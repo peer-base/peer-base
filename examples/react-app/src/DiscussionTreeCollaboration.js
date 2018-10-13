@@ -17,7 +17,7 @@ function LiveValue ({value}) {
 
 class DiscussionTreeCollaboration extends React.Component {
   constructor (props) {
-    super(Object.assign({}, props, { type: 'discussion-tree' }))
+    super(props)
 
     this.LiveValue = withCollaborationLiveValue(this.props.collaboration)(LiveValue)
     this.NetworkVis = withCollaboration(this.props.collaboration)(NetworkVis)
