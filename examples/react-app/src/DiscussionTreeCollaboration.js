@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 import PeerStarApp from 'peer-star-app'
 import NetworkVis from 'peer-star-network-vis-react'
 import discussionTreeCrdt from './lib/discussion-tree-crdt'
@@ -7,9 +7,9 @@ import { withCollaboration, withCollaborationLiveValue } from 'peer-star-react'
 
 PeerStarApp.collaborationTypes.define('discussion-tree', discussionTreeCrdt)
 
-function LiveValue ({value}) {
+function LiveValue ({ value }) {
   return (
-    <div className="App-intro" style={{textAlign: 'left'}}>
+    <div className='App-intro' style={{ textAlign: 'left' }}>
       Value: <pre>{JSON.stringify(value, null, '\t')}</pre>
     </div>
   )
@@ -36,7 +36,7 @@ class DiscussionTreeCollaboration extends React.Component {
     this.props.collaboration.shared.add(message)
   }
 
-  render() {
+  render () {
     return (
       <div>
         <hr />
@@ -44,17 +44,17 @@ class DiscussionTreeCollaboration extends React.Component {
         <this.LiveValue />
 
         <div>
-          <input placeholder="cid" type="text" ref="cid" />
-          <input placeholder="parentCid" type="text" ref="parentCid" />
-          <input placeholder="did" type="text" ref="did" />
-          <input placeholder="signature" type="text" ref="signature" />
+          <input placeholder='cid' type='text' ref='cid' />
+          <input placeholder='parentCid' type='text' ref='parentCid' />
+          <input placeholder='did' type='text' ref='did' />
+          <input placeholder='signature' type='text' ref='signature' />
           <button onClick={this.onAddClick}>add</button>
         </div>
 
         <this.Stats />
         <this.NetworkVis />
       </div>
-    );
+    )
   }
 }
 

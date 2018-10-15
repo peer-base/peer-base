@@ -1,10 +1,10 @@
-import React from 'react';
+import React from 'react'
 import NetworkVis from 'peer-star-network-vis-react'
 import { withCollaboration, withCollaborationLiveValue } from 'peer-star-react'
 
-function LiveValue ({value}) {
+function LiveValue ({ value }) {
   return (
-    <div className="App-intro">
+    <div className='App-intro'>
       Value: <pre>{JSON.stringify(value)}</pre>
     </div>
   )
@@ -48,7 +48,7 @@ class ArrayCollaboration extends React.Component {
     }
   }
 
-  render() {
+  render () {
     const { collaboration } = this.props
     return (
       <div>
@@ -58,18 +58,18 @@ class ArrayCollaboration extends React.Component {
         <this.LiveValue />
 
         <div>
-          <input type="text" onChange={this.onTextChange} value={this.state.text} />
+          <input type='text' onChange={this.onTextChange} value={this.state.text} />
           <button onClick={this.onPushClick}>push</button>
         </div>
 
         <div>
-          <input type="text" onChange={this.onPosChange} value={this.state.pos} />
+          <input type='text' onChange={this.onPosChange} value={this.state.pos} />
           <button onClick={this.onRemoveClick}>removeAt</button>
         </div>
 
         <this.NetworkVis />
       </div>
-    );
+    )
   }
 }
 

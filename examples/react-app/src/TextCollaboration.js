@@ -1,12 +1,12 @@
-import React from 'react';
+import React from 'react'
 import Diff from 'fast-diff'
 import { withCollaboration, withCollaborationLiveValue } from 'peer-star-react'
 import NetworkVis from 'peer-star-network-vis-react'
 import CollaborationStats from './CollaborationStats'
 
-function LiveValue ({value}) {
+function LiveValue ({ value }) {
   return (
-    <div className="App-intro">
+    <div className='App-intro'>
       Value: <pre>{JSON.stringify(value)}</pre>
     </div>
   )
@@ -36,7 +36,7 @@ class TextCollaboration extends React.Component {
   onValueChange () {
     const oldText = this.state.value
     const newText = this.props.collaboration.shared.value().join('')
-    this.setState({value: newText})
+    this.setState({ value: newText })
     this.onRemoteChange(oldText, newText)
   }
 
@@ -61,7 +61,7 @@ class TextCollaboration extends React.Component {
         pos += d[1].length
       } else if (d[0] === -1) { // DELETE
         const delText = d[1]
-        for (let i = delText.length - 1; i >=0; i--) {
+        for (let i = delText.length - 1; i >= 0; i--) {
           collaboration.shared.removeAt(pos + i)
         }
       } else { // INSERT
@@ -115,7 +115,7 @@ class TextCollaboration extends React.Component {
     this.refs.collaborativeTextArea.selectionEnd = cursor.end
   }
 
-  render() {
+  render () {
     return (
       <div>
         <hr />
@@ -124,15 +124,15 @@ class TextCollaboration extends React.Component {
 
         <div>
           <textarea
-            style={{width: '100%', height: '200px'}}
-            ref="collaborativeTextArea"
+            style={{ width: '100%', height: '200px' }}
+            ref='collaborativeTextArea'
             onChange={this.onTextChange} />
         </div>
 
         <this.Stats />
         <this.NetworkVis />
       </div>
-    );
+    )
   }
 }
 

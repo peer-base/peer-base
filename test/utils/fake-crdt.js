@@ -1,7 +1,6 @@
 'use strict'
 
 const CRDT = require('delta-crdts')
-const uniq = require('lodash.uniq')
 
 const fake = module.exports = {
   initial: () => new Set(),

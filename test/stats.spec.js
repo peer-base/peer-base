@@ -5,8 +5,6 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const crypto = require('libp2p-crypto')
-const PeerStar = require('../')
 const App = require('./utils/create-app')
 const A_BIT = 5000
 
@@ -88,7 +86,8 @@ describe('stats', function () {
       expect(stats.traffic.total.out).to.be.at.least(1)
       expect(stats.traffic.perPeer).to.be.a('Map')
       expect(stats.traffic.perPeer.size).to.be.at.least(1)
-      for (let [peerId, traffic] of stats.traffic.perPeer) {
+      for (let peerStats of stats.traffic.perPeer) {
+        const traffic = peerStats[1]
         expect(traffic).to.be.an('object')
         expect(traffic.in).to.be.a('number')
         expect(traffic.out).to.be.a('number')

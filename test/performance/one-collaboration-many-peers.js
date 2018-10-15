@@ -6,7 +6,6 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const crypto = require('libp2p-crypto')
 const { fork } = require('child_process')
 
 const PeerStar = require('../../')
@@ -14,7 +13,6 @@ const PeerStar = require('../../')
 const server = process.argv[3] || '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star'
 const peerCount = Number(process.argv[4]) || 10
 
-const ignoreWorkerStdErr = false
 const enableDebug = false
 const duration = 20000
 const collaborationName = 'array'
@@ -29,7 +27,6 @@ describe('performance tests - one collaboration, many peers', function () {
   const expectedLength = peerCount * opsPerSecond * Math.round(duration / 1000)
 
   let workers = []
-  let opCount = 0
   const workerData = {
     opsPerSecond,
     collaborationName,
@@ -49,7 +46,7 @@ describe('performance tests - one collaboration, many peers', function () {
   it('starts replicas', (done) => {
     let started = Date.now()
     const workerResults = []
-    for(let i = 0; i < peerCount; i++) {
+    for (let i = 0; i < peerCount; i++) {
       ((i) => {
         const data = dataForWorker(i)
         const thisWorkerData = Object.assign({}, workerData, {
@@ -58,11 +55,11 @@ describe('performance tests - one collaboration, many peers', function () {
         })
         const worker = fork(
           path.join(__dirname, 'replica.js'), [
-          JSON.stringify(thisWorkerData)],
+            JSON.stringify(thisWorkerData)]
           // {
           //   // stdio: [0, 1, ignoreWorkerStdErr ? 'ignore' : 2, 'ipc']
           // }
-          )
+        )
 
         workers.push(worker)
         worker.on('message', (message) => {
@@ -98,13 +95,5 @@ function dataForWorker (n) {
     arr[i] = (n * opCount) + i + 1
   }
 
-  return arr
-}
-
-function array (opCount) {
-  const arr = new Array(opCount)
-  for (let i = 0; i < opCount; i++) {
-    arr[i] = i + 1
-  }
   return arr
 }

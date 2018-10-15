@@ -1,7 +1,7 @@
 import React from 'react'
 import { withCollaboration, withCollaborationMembership } from 'peer-star-react'
 
-function MembershipCount ({peers}) {
+function MembershipCount ({ peers }) {
   return (<p>Have {peers.size} peers for this collaboration (myself included)</p>)
 }
 
