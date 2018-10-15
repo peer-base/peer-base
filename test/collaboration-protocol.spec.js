@@ -7,7 +7,6 @@ const expect = chai.expect
 
 const pair = require('pull-pair')
 const MemoryDatastore = require('interface-datastore').MemoryDatastore
-const vectorclock = require('vectorclock')
 const crypto = require('libp2p-crypto')
 
 const Store = require('../src/collaboration/store')
@@ -21,7 +20,7 @@ const Type = require('../src/collaboration/crdt')('fake')
 
 const _storeOptions = {
   maxDeltaRetention: 0,
-  deltaTrimTimeoutMS: 0,
+  deltaTrimTimeoutMS: 0
 }
 
 describe('collaboration protocol', function () {

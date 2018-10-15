@@ -5,8 +5,6 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const crypto = require('libp2p-crypto')
-const PeerStar = require('../')
 const App = require('./utils/create-app')
 require('./utils/fake-crdt')
 const A_BIT = 10000

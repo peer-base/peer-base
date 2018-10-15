@@ -215,7 +215,7 @@ module.exports = class CollaborationStore extends EventEmitter {
       this._store.query({
         prefix: '/d:'
       }),
-      pull.asyncMap(({value}, cb) => this._decode(value, cb)),
+      pull.asyncMap(({ value }, cb) => this._decode(value, cb)),
       pull.map((d) => {
         debug('%s: delta stream candidate: %j', this._id, d)
         return d

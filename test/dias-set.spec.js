@@ -7,8 +7,6 @@ const expect = chai.expect
 
 const Ring = require('../src/common/ring')
 const DiasSet = require('../src/common/dias-peer-set')
-const PeerId = require('peer-id')
-const PeerInfo = require('peer-info')
 
 describe('dias set', () => {
   let id = [0, 0]

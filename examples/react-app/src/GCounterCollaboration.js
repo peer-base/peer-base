@@ -1,11 +1,11 @@
-import React from 'react';
+import React from 'react'
 import NetworkVis from 'peer-star-network-vis-react'
 import { withCollaboration, withCollaborationLiveValue } from 'peer-star-react'
 import CollaborationStats from './CollaborationStats'
 
-function LiveValue ({value}) {
+function LiveValue ({ value }) {
   return (
-    <div className="App-intro">
+    <div className='App-intro'>
       Value: <pre>{JSON.stringify(value)}</pre>
     </div>
   )
@@ -24,7 +24,7 @@ class GCounterCollaboration extends React.Component {
     this.props.shared.inc()
   }
 
-  render() {
+  render () {
     const { collaboration } = this.props
     return (
       <div>
@@ -36,7 +36,7 @@ class GCounterCollaboration extends React.Component {
         <this.Stats />
         <this.NetworkVis />
       </div>
-    );
+    )
   }
 }
 

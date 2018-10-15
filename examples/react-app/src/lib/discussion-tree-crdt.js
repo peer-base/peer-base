@@ -87,7 +87,7 @@ export default {
     return tree
   },
   mutators: {
-    add (id, s, {cid, parentCid, did, signature}) {
+    add (id, s, { cid, parentCid, did, signature }) {
       const latest = s[s.length - 1]
       const latestClock = (latest && latest.clock) || {}
       const clock = vectorclock.increment(clone(latestClock), id)

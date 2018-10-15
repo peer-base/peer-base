@@ -5,7 +5,6 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const crypto = require('libp2p-crypto')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const A_BIT = 19000
@@ -84,7 +83,7 @@ describe('collaboration', function () {
     let pendingChanges = collaborations.length
     collaborations.forEach((collaboration, idx) => {
       collaboration.shared.once('change', (change) => {
-        expect(change).to.deep.equal({add: 'a'})
+        expect(change).to.deep.equal({ add: 'a' })
         pendingChanges--
         if (!pendingChanges) {
           done()

@@ -12,6 +12,10 @@ describe('handling data', () => {
   it('correctly decodes data', (done) => {
     const sample = 'my data'
     const fn = handlingData((err, data) => {
+      if (err) {
+        return done(err)
+      }
+
       expect(data).to.equal(sample)
       done()
     })
@@ -20,7 +24,7 @@ describe('handling data', () => {
 
   it('sets error argument if the data is incorrectly encoded', (done) => {
     const fn = handlingData((err, data) => {
-      expect(err).to.be.defined
+      expect(err).to.be.ok()
       done()
     })
     fn('not encoded')
@@ -31,7 +35,7 @@ describe('handling data', () => {
     const fn = handlingData((err, data) => {
       if (!err) throw new Error('testing exception handling')
 
-      expect(err).to.be.defined
+      expect(err).to.be.ok()
       done()
     })
     fn(encode(sample))

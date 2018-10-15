@@ -87,12 +87,12 @@ module.exports = class ConnectionManager extends EventEmitter {
     this._protocol.on('outbound connection', onConnectionChange)
     this._protocol.on('outbound connection closed', onConnectionChange)
 
-    const onInboundMessage = ({fromPeer, size}) => {
+    const onInboundMessage = ({ fromPeer, size }) => {
       observer.inboundMessage(fromPeer, size)
     }
     this._protocol.on('inbound message', onInboundMessage)
 
-    const onOutboundMessage = ({toPeer, size}) => {
+    const onOutboundMessage = ({ toPeer, size }) => {
       observer.outboundMessage(toPeer, size)
     }
     this._protocol.on('outbound message', onOutboundMessage)

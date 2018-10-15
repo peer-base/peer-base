@@ -64,6 +64,7 @@
   },
   "devDependencies": {
     "aegir": "^15.3.1",
+    "babel-eslint": "^10.0.1",
     "bs58": "^4.0.1",
     "chai": "^4.1.2",
     "dirty-chai": "^2.0.1",
@@ -83,5 +84,8 @@
   "pre-push": [
     "lint",
     "test"
-  ]
+  ],
+  "standard": {
+    "parser": "babel-eslint"
+  }
 }
