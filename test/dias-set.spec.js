@@ -7,6 +7,7 @@ const expect = chai.expect
 
 const Ring = require('../src/common/ring')
 const DiasSet = require('../src/common/dias-peer-set')
+const FakePeerInfo = require('./utils/fake-peer-info')
 
 describe('dias set', () => {
   let id = [0, 0]
@@ -135,16 +136,6 @@ function sort (a, b) {
   }
 
   return 0
-}
-
-class FakePeerInfo {
-  constructor (id) {
-    this.id = {
-      toBytes () {
-        return id
-      }
-    }
-  }
 }
 
 function peerInfoToId (pi) {

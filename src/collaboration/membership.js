@@ -174,8 +174,8 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _createMembershipMessage (selfId) {
-    // TODO: membership should be a AW-OR-Set CRDT instead of a G-Set
     const message = [this._membershipTopic(), this._memberCRDT.state(), this._collaboration.typeName]
+    console.log('message:', message)
     // TODO: sign and encrypt membership message
     return encode(message)
   }
