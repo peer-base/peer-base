@@ -12,7 +12,6 @@ const DiasSet = require('../common/dias-peer-set')
 const ConnectionManager = require('./connection-manager')
 const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
 const { encode } = require('delta-crdts-msgpack-codec')
-const deepEquals = require('deep-eql')
 
 module.exports = class Membership extends EventEmitter {
   constructor (ipfs, globalConnectionManager, app, collaboration, store, clocks, options) {
@@ -177,7 +176,7 @@ module.exports = class Membership extends EventEmitter {
     return encode(message)
   }
 
-  _ensurePeerIsInMembershipCRDT(id) {
+  _ensurePeerIsInMembershipCRDT (id) {
     const pInfo = this._ipfs._peerInfo
     let addresses = pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
     const crdtAddresses = joinAddresses(this._memberCRDT.value()[id]).sort()
@@ -214,7 +213,6 @@ module.exports = class Membership extends EventEmitter {
             debug('remote addresses for %s:', peerId, addresses)
 
             const oldPeerInfo = this._members.has(peerId) && this._members.get(peerId)
-            let oldAddresses
             if (!oldPeerInfo) {
               const peerInfo = new PeerInfo(new PeerId(bs58.decode(peerId)))
               for (let address of addresses) {
@@ -283,7 +281,7 @@ function joinAddresses (addresses) {
   return (Array.from(addresses || [])).reduce((acc, moreAddresses) => acc.concat(moreAddresses), [])
 }
 
-function addressesEqual(addresses1, addresses2) {
+function addressesEqual (addresses1, addresses2) {
   if (addresses1.length !== addresses2.length) {
     return false
   }
