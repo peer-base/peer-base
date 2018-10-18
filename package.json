@@ -56,7 +56,7 @@
     "multiaddr": "^5.0.0",
     "multihashing": "~0.3.2",
     "p-queue": "^3.0.0",
-    "peer-id": "~0.11.0",
+    "peer-id": "~0.12.0",
     "peer-info": "~0.14.1",
     "pull-pushable": "^2.2.0",
     "pull-stream": "^3.6.8",
