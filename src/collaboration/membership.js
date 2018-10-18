@@ -64,7 +64,6 @@ module.exports = class Membership extends EventEmitter {
       this._memberCRDT = ORMap(peerId)
       let addresses = pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
       if (addresses.length) {
-        this._memberCRDT.applySub(peerId, 'mvreg', 'write', addresses)
         this._members.set(peerId, pInfo)
       }
 
@@ -95,7 +94,8 @@ module.exports = class Membership extends EventEmitter {
   }
 
   peerAddresses (peerId) {
-    return this._members.get(peerId)
+    const pInfo = this._members.get(peerId)
+    return (pInfo && pInfo.multiaddrs.toArray().map((ma) => ma.toString())) || []
   }
 
   outboundConnectionCount () {
@@ -119,19 +119,7 @@ module.exports = class Membership extends EventEmitter {
   }
 
   needsUrgentBroadcast () {
-    // needs to broadcast if self id is not included in the member set yet
-    if (this._someoneHasMembershipWrong) {
-      return true
-    }
-    return this._ipfs.id()
-      .then((peer) => peer.id)
-      .then((id) => {
-        const pInfo = this._ipfs._peerInfo
-        let addresses = pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
-        const existingPeerInfo = this._members.get(id)
-        const existingAddresses = existingPeerInfo && existingPeerInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
-        return !existingAddresses || !deepEquals(existingAddresses, addresses)
-      })
+    return this._someoneHasMembershipWrong
   }
 
   async deliverRemoteMembership (membership) {
@@ -140,6 +128,11 @@ module.exports = class Membership extends EventEmitter {
       this._someoneHasMembershipWrong = (membership !== expectedMembershipHash)
     } else {
       await this._joinMembership(membership)
+      const pInfo = this._ipfs._peerInfo
+      const id = pInfo.id.toB58String()
+      let addresses = pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
+      const crdtAddresses = joinAddresses(this._memberCRDT.value()[id]).sort()
+      this._someoneHasMembershipWrong = !addressesEqual(addresses, crdtAddresses)
     }
   }
 
@@ -147,14 +140,16 @@ module.exports = class Membership extends EventEmitter {
     return this._ipfs.id()
       .then((peer) => peer.id)
       .then(async (id) => {
-        let message
+        const messages = []
         if (await this.needsUrgentBroadcast()) {
-          message = this._createMembershipMessage(id)
+          this._ensurePeerIsInMembershipCRDT(id)
+          messages.push(this._createMembershipMessage(id))
+          messages.push(this._createMembershipSummaryMessage(id))
         } else {
-          message = this._createMembershipSummaryMessage(id)
+          messages.push(this._createMembershipSummaryMessage(id))
         }
         this._someoneHasMembershipWrong = false
-        this._app.gossip(message)
+        messages.forEach((message) => this._app.gossip(message))
       })
   }
 
@@ -167,17 +162,29 @@ module.exports = class Membership extends EventEmitter {
   }
 
   _createMembershipSummaryHash () {
-    const membership = Buffer.from(JSON.stringify(Array.from(this._members).sort(sortMembers)))
+    const membership = Array.from(this._members).map(
+      ([peerId, pInfo]) => [peerId, pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()]).sort(sortMembers)
+    debug('%s: membership:', this._ipfs._peerInfo.id.toB58String(), membership)
     return multihashing.digest(
-      membership,
+      Buffer.from(JSON.stringify(membership)),
       'sha1').toString('base64')
   }
 
   _createMembershipMessage (selfId) {
+    debug('sending membership', this._memberCRDT.value())
     const message = [this._membershipTopic(), this._memberCRDT.state(), this._collaboration.typeName]
-    console.log('message:', message)
     // TODO: sign and encrypt membership message
     return encode(message)
+  }
+
+  _ensurePeerIsInMembershipCRDT(id) {
+    const pInfo = this._ipfs._peerInfo
+    let addresses = pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
+    const crdtAddresses = joinAddresses(this._memberCRDT.value()[id]).sort()
+    if (!addressesEqual(addresses, crdtAddresses)) {
+      this._members.set(id, pInfo)
+      this._memberCRDT.applySub(id, 'mvreg', 'write', addresses)
+    }
   }
 
   _joinMembership (remoteMembership) {
@@ -196,7 +203,7 @@ module.exports = class Membership extends EventEmitter {
           let myAddresses = pInfo.multiaddrs.toArray().map((ma) => ma.toString()).sort()
           const newAddresses = joinAddresses(members[id])
 
-          if ((myAddresses.length && !members.has(id)) || !deepEquals(newAddresses, myAddresses)) {
+          if (addressesEqual(myAddresses, newAddresses)) {
             this._memberCRDT.applySub(id, 'mvreg', 'write', myAddresses)
             this._someoneHasMembershipWrong = true
           }
@@ -207,8 +214,12 @@ module.exports = class Membership extends EventEmitter {
             debug('remote addresses for %s:', peerId, addresses)
 
             const oldPeerInfo = this._members.has(peerId) && this._members.get(peerId)
+            let oldAddresses
             if (!oldPeerInfo) {
               const peerInfo = new PeerInfo(new PeerId(bs58.decode(peerId)))
+              for (let address of addresses) {
+                peerInfo.multiaddrs.add(address)
+              }
               this._members.set(peerId, peerInfo)
               this._ring.add(peerInfo)
               changed = true
@@ -270,4 +281,22 @@ function sortMembers (member1, member2) {
 function joinAddresses (addresses) {
   debug('joinAddresses:', addresses)
   return (Array.from(addresses || [])).reduce((acc, moreAddresses) => acc.concat(moreAddresses), [])
+}
+
+function addressesEqual(addresses1, addresses2) {
+  if (addresses1.length !== addresses2.length) {
+    return false
+  }
+  for (let address of addresses1) {
+    if (addresses2.indexOf(address) < 0) {
+      return false
+    }
+  }
+  for (let address of addresses2) {
+    if (addresses1.indexOf(address) < 0) {
+      return false
+    }
+  }
+
+  return true
 }
