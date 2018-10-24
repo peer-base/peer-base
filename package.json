@@ -34,7 +34,7 @@
   "dependencies": {
     "asino": "~0.3.3",
     "browser-process-hrtime": "^1.0.0",
-    "datastore-core": "~0.5.0",
+    "datastore-core": "~0.6.0",
     "debug": "^4.1.0",
     "delay": "^4.1.0",
     "delta-crdts": "^0.5.0",
