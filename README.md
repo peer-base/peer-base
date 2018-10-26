@@ -1,6 +1,6 @@
 # peer-star-app
 
-Peer-Star App support for real-time collaborative DApps built on top of IPFS
+Build real-time collaborative DApps on top of IPFS
 
 [![Build Status](https://travis-ci.org/ipfs-shipyard/peer-star-app.svg?branch=master)](https://travis-ci.org/ipfs-shipyard/peer-star-app) [![Greenkeeper badge](https://badges.greenkeeper.io/ipfs-shipyard/peer-star-app.svg)](https://greenkeeper.io/) [![made by Protocol Labs](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](https://protocol.ai)
 
