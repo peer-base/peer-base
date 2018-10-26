@@ -83,7 +83,7 @@ class App extends EventEmitter {
       }
       collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type, options)
       this._collaborations.set(name, collaboration)
-      collaboration.once('stop', () => this._collaborations.delete(name))
+      collaboration.once('stopped', () => this._collaborations.delete(name))
     }
     await collaboration.start()
     return collaboration
