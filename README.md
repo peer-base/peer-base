@@ -320,13 +320,13 @@ Convenience reference to the app object.
 
 ### Events:
 
-#### `"membership changed" (peers: Set<peer id>)`
+#### `"membership changed" (peers: Set<peer id (String)>)`
 
 ```js
 collaboration.on('membership changed', (peers) => {
-  Array.from(peers).forEach((peer) => {
+  for (peer of peers) {
     console.log('member peer: %s', peer)
-  })
+  }
 })
 ```
 
