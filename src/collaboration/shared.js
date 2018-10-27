@@ -66,7 +66,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
 
   // shared value
   shared.value = () => {
-    if (!memo.state || memo.state !== state) {
+    if ((!memo.state) || (memo.state !== state)) {
       memo.state = state
       memo.value = crdtType.value(state)
     }

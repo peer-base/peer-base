@@ -9,7 +9,7 @@ const PeerStar = require('../')
 const App = require('./utils/create-app')
 const A_BIT = 19000
 
-describe('collaboration', function () {
+describe.only('collaboration', function () {
   this.timeout(20000)
 
   const peerCount = 2 // 10
@@ -103,6 +103,9 @@ describe('collaboration', function () {
       swarm.map(async (peer) => peer.app.collaborate('test collaboration', 'gset', collaborationOptions)))
 
     await Promise.all(collaborations.map(async (collab) => {
+      const value = collab.shared.value()
+      const valueAgain = collab.shared.value()
+      expect(value === valueAgain).to.be.true()
       expect(collab.shared.value()).to.deep.equal(new Set(['a']))
     }))
   })
