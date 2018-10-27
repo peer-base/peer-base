@@ -9,7 +9,7 @@ const PeerStar = require('../')
 const App = require('./utils/create-app')
 const A_BIT = 19000
 
-describe.only('collaboration', function () {
+describe('collaboration', function () {
   this.timeout(20000)
 
   const peerCount = 2 // 10
