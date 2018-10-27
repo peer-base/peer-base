@@ -66,13 +66,11 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
 
   // shared value
   shared.value = () => {
-    if (memo.state && memo.state === state) {
-      return memo.value
-    } else {
+    if (!memo.state || memo.state !== state) {
       memo.state = state
       memo.value = crdtType.value(state)
-      return memo.value
     }
+    return memo.value
   }
 
   shared.apply = (remoteClock, encodedDelta, isPartial) => {
