@@ -58,7 +58,7 @@ module.exports = class PushProtocol {
       }
     }
 
-    const pushDeltas = this._keys && this._keys.read ? pushDeltaBatch : pushDeltaStream
+    const pushDeltas = this._options.replicateOnly ? pushDeltaStream : pushDeltaBatch
 
     const updateRemote = async (myClock) => {
       debug('%s: updateRemote %s', this._peerId(), remotePeerId)
