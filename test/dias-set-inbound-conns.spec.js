@@ -6,8 +6,8 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const PeerId = require('peer-id')
-const Ring = require('../../src/common/ring')
-const DiasSet = require('../../src/common/dias-peer-set')
+const Ring = require('../src/common/ring')
+const DiasSet = require('../src/common/dias-peer-set')
 
 const PEER_COUNT = 20
 
