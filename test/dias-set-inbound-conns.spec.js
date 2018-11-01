@@ -50,15 +50,15 @@ function generatePeer(peerIdB58) {
 }
 
 describe('dias set inbound connections', () => {
-  it('distributes inbound connections evenly', async function () {
+  it('distributes inbound connections evenly', function () {
     const peers = peerIds.map(generatePeer)
     const ring = Ring(options.preambleByteCount)
-    peers.forEach(p => {
+    for (let p of peers) {
       ring.add(p.peerInfo)
-    })
-    peers.forEach(p => {
+    }
+    for (let p of peers) {
       p.outbound = p.diasSet(ring)
-    })
+    }
 
     let maxInbound = 0
     let maxOutbound = 0
