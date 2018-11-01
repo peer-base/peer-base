@@ -33,6 +33,7 @@
   "homepage": "https://github.com/ipfs-shipyard/peer-star-app#readme",
   "dependencies": {
     "asino": "~0.3.3",
+    "big-integer": "^1.6.36",
     "browser-process-hrtime": "^1.0.0",
     "datastore-core": "~0.5.0",
     "debug": "^4.1.0",
