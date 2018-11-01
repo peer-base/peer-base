@@ -37,7 +37,7 @@ const peerIds = [ 'QmdZgq8EZExtxYeW7aqE12BLATYhMWrnHqriMkXw9drc2h',
   'QmVCM89L3Zm26ZbBhkvJkktm3yLNzzhgQiF7YmGatYue9W',
   'QmZtui53gKXrShG7tHL1CsfojHoHHF7fu7gzMS9YVjnj6c' ]
 
-function generatePeer(peerIdB58) {
+const generatePeer = (peerIdB58) => {
   const peerId = PeerId.createFromB58String(peerIdB58)
   const peerInfo = {
     id: peerId
@@ -50,7 +50,7 @@ function generatePeer(peerIdB58) {
 }
 
 describe('dias set inbound connections', () => {
-  it('distributes inbound connections evenly', function () {
+  it('distributes inbound connections evenly', () => {
     const peers = peerIds.map(generatePeer)
     const ring = Ring(options.preambleByteCount)
     for (let p of peers) {
