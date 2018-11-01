@@ -16,10 +16,29 @@ const options = {
   peerIdByteCount: 32
 }
 
-async function generatePeer() {
-  const peerId = await new Promise((resolve, reject) => {
-    PeerId.create({ bits: 1024 }, (err, data) => err ? reject(err) : resolve(data))
-  })
+const peerIds = [ 'QmdZgq8EZExtxYeW7aqE12BLATYhMWrnHqriMkXw9drc2h',
+  'QmTD6xzch1EgjV5ZCX6kvLRXENHggRo811noo2oGMFo3UW',
+  'QmWkX8hBenAqZXwjQY1cb78LDQ8pMyzUks2QVtynWgUPpG',
+  'QmVLvGyjqqWuNZHjMsXGGFjwCMznk6tJUWuB6H6fAJYEVM',
+  'QmRURs2SsskwgAVUa9mM6kgzVxyGfdhqPuPZD6h2v2XqPR',
+  'QmThDTXb6wf3S2GxHmcWp2w6vJEkruza8D9qiu1Kune4Lg',
+  'QmQ8UqWDEWti8U6kE7UMwp477Z8QJaV8fMvwXruV8wYnA9',
+  'QmQLYcYh32LizFYvFPDgx27TXSM7wvFAQYAxYAajcnxHYE',
+  'QmV6GQh3DDgXv8VDjGjVvYhGdYkAZvNxntq4EUEcAnfPN8',
+  'QmSXKpdAr5CgAKmLpzbyd6gKE2G9B27ndtRhXzE5AaAmu3',
+  'QmbxfF1FHChXRgR9nF2Qaw8R4MPWruSsPtiG314ntidqd9',
+  'QmXPuToFKkiyW1jba3cGgdfdQem3mJ9w4msgSks42Ehjrd',
+  'QmVC2FJLiVfJesWMVfrR88rsobxBZVk4hKMaRCKWfmGiC5',
+  'QmbpeVfC7BULYT9A6Qx5kuX8B8jRJk7FBBNsdqBFrtGD3n',
+  'Qme39PBMcn25sDUsCxW2VqNJeqG4ovkpYztfLp1gKhgeAi',
+  'QmTvpSWpWChNsRaygHnzSJ6BuKm8D2pMtoDM5QQpnnb392',
+  'QmXa69N4c4REhdE7pW8C7Fb86MFzM3KkAwB82siYtffzSP',
+  'Qmeax6iUnuceHbNr1Gx659xvn9wTyVYBudWoPZ4Ezvae7Z',
+  'QmVCM89L3Zm26ZbBhkvJkktm3yLNzzhgQiF7YmGatYue9W',
+  'QmZtui53gKXrShG7tHL1CsfojHoHHF7fu7gzMS9YVjnj6c' ]
+
+function generatePeer(peerIdB58) {
+  const peerId = PeerId.createFromB58String(peerIdB58)
   const peerInfo = {
     id: peerId
   }
@@ -31,14 +50,8 @@ async function generatePeer() {
 }
 
 describe('dias set inbound connections', () => {
-  let peers
-
-  before(async function () {
-    this.timeout(10000)
-    peers = (await Promise.all([...Array(PEER_COUNT)].map(() => generatePeer()))).sort(comparePeerId)
-  })
-
   it('distributes inbound connections evenly', async function () {
+    const peers = peerIds.map(generatePeer)
     const ring = Ring(options.preambleByteCount)
     peers.forEach(p => {
       ring.add(p.peerInfo)
@@ -64,25 +77,3 @@ describe('dias set inbound connections', () => {
     expect(maxOutbound).to.be.lessThan(peers.length * 0.75)
   })
 })
-
-function comparePeerId (peerA, peerB) {
-  return compareBuffers(peerA.peerInfo.id.toBytes(), peerB.peerInfo.id.toBytes())
-}
-
-function compareBuffers (buf1, buf2) {
-  if (buf1.length > buf2.length) {
-    return 1
-  }
-  if (buf2.length > buf1.length) {
-    return -1
-  }
-  for (let i = buf1.length - 1; i >= 0; i--) {
-    if (buf1[i] > buf2[i]) {
-      return 1
-    } else if (buf2[i] > buf1[i]) {
-      return -1
-    }
-  }
-
-  return 0
-}
