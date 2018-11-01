@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 import { withCollaborationFromApp } from 'peer-star-react'
 import CreateKey from './CreateKey'
 import GCounterCollaboration from './GCounterCollaboration'
@@ -7,7 +7,6 @@ import TextCollaboration from './TextCollaboration'
 import DiscussionTreeCollaboration from './DiscussionTreeCollaboration'
 
 const routes = (app) => {
-
   return [
     {
       path: '/counter/:name/:keys',

@@ -1,3 +1,4 @@
+/* global alert */
 'use strict'
 
 const EventEmitter = require('events')
@@ -42,10 +43,10 @@ class App extends EventEmitter {
             this.ipfs.on('error', (err) => this._handleIPFSError(err))
             this.ipfs.once('ready', resolve)
           } else {
-            alert(err.message)
+            this.emit('error', err)
           }
         } else {
-          alert(err.message)
+          this.emit('error', err)
         }
       }
       this.ipfs.on('error', onError)
@@ -82,7 +83,7 @@ class App extends EventEmitter {
       }
       collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type, options)
       this._collaborations.set(name, collaboration)
-      collaboration.once('stop', () => this._collaborations.delete(name))
+      collaboration.once('stopped', () => this._collaborations.delete(name))
     }
     await collaboration.start()
     return collaboration

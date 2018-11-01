@@ -17,6 +17,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   let clock = {}
   let state = crdtType.initial()
   let deltaBuffer = []
+  const memo = {}
   // let clock = await store.getLatestClock()
 
   const saveDeltaBuffer = debounce(() => {
@@ -65,7 +66,13 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   shared.state = () => state
 
   // shared value
-  shared.value = () => crdtType.value(state)
+  shared.value = () => {
+    if ((!memo.state) || (memo.state !== state)) {
+      memo.state = state
+      memo.value = crdtType.value(state)
+    }
+    return memo.value
+  }
 
   shared.apply = (remoteClock, encodedDelta, isPartial) => {
     debug('%s: apply', id, remoteClock, encodedDelta)

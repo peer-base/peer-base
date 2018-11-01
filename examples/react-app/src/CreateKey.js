@@ -1,5 +1,5 @@
-import React, { Component } from 'react';
-import { Redirect } from 'react-router-dom';
+import React, { Component } from 'react'
+import { Redirect } from 'react-router-dom'
 import PeerStar, { keys as Keys } from 'peer-star-app'
 
 export default class CreateKey extends Component {
@@ -26,5 +26,4 @@ export default class CreateKey extends Component {
   shouldComponentupdate () {
     return false
   }
-
 }

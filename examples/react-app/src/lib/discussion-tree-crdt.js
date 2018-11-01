@@ -1,6 +1,6 @@
 import vectorclock from 'vectorclock'
 
-export default (id) => ({
+export default {
   initial: () => [],
   join (_s1, _s2) {
     let s1 = clone(_s1)
@@ -87,7 +87,7 @@ export default (id) => ({
     return tree
   },
   mutators: {
-    add (s, {cid, parentCid, did, signature}) {
+    add (id, s, { cid, parentCid, did, signature }) {
       const latest = s[s.length - 1]
       const latestClock = (latest && latest.clock) || {}
       const clock = vectorclock.increment(clone(latestClock), id)
@@ -95,7 +95,7 @@ export default (id) => ({
       return [{ clock, createdAt, cid, parentCid, did, signature }]
     }
   }
-})
+}
 
 function clone (s) {
   if (Array.isArray(s)) {

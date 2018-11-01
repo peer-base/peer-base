@@ -7,10 +7,10 @@ const expect = chai.expect
 const fake = require('sinon').fake
 
 const EventEmitter = require('events')
-const bs58 = require('bs58')
 
 const AppTransport = require('../src/transport/app-transport')
 const fail = require('./utils/fail')
+const FakePeerInfo = require('./utils/fake-peer-info')
 
 describe('app-transport', function () {
   let appTransport
@@ -141,16 +141,3 @@ describe('app-transport', function () {
     })
   })
 })
-
-class FakePeerInfo {
-  constructor (id) {
-    this.id = {
-      toBytes () {
-        return id
-      },
-      toB58String () {
-        return bs58.encode(id)
-      }
-    }
-  }
-}

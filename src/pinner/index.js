@@ -5,7 +5,7 @@ const EventEmitter = require('events')
 const Collaboration = require('../collaboration')
 const IPFS = require('../transport/ipfs')
 const PeerCountGuess = require('../peer-count-guess')
-const decode = require('../common/decode')
+const { decode } = require('delta-crdts-msgpack-codec')
 
 const defaultOptions = {
   collaborationInnactivityTimeoutMS: 60000

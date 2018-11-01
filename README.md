@@ -1,10 +1,9 @@
 # peer-star-app
 
-Peer-Star App support for real-time collaborative DApps built on top of IPFS
+Build real-time collaborative DApps on top of IPFS
 
-[![made by Protocol Labs](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](https://protocol.ai)
+[![Build Status](https://travis-ci.org/ipfs-shipyard/peer-star-app.svg?branch=master)](https://travis-ci.org/ipfs-shipyard/peer-star-app) [![Greenkeeper badge](https://badges.greenkeeper.io/ipfs-shipyard/peer-star-app.svg)](https://greenkeeper.io/) [![made by Protocol Labs](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](https://protocol.ai)
 
-[![Build Status](https://travis-ci.org/ipfs-shipyard/peer-star-app.svg?branch=master)](https://travis-ci.org/ipfs-shipyard/peer-star-app)
 
 * [Example app](examples/react-app)
 * [How to run the example app](#run-example-app)
@@ -311,15 +310,23 @@ Returns the number of peers this peer is pushing data to.
 
 Returns the number of peers this peer is pulling data from.
 
+### `collaboration.name`
+
+The name of the collaboration (String).
+
+### `collaboration.app`
+
+Convenience reference to the app object.
+
 ### Events:
 
-#### `"membership changed" (peers: Set<peer id>)`
+#### `"membership changed" (peers: Set<peer id (String)>)`
 
 ```js
 collaboration.on('membership changed', (peers) => {
-  Array.from(peers).forEach((peer) => {
+  for (peer of peers) {
     console.log('member peer: %s', peer)
-  })
+  }
 })
 ```
 
@@ -334,6 +341,17 @@ collaboration.on('state changed', (fromSelf) => {
 ```
 
 __NOTE__: When receiving remote updates, this event may fire many times per second. You may want to use a debounce or a throttle mechanism when handling this event. If you do that, beware that the state in your UI may be out of sync with the state of the CRDT.
+
+#### `"stopped"`
+
+When the collaboration is stopped locally.
+
+```js
+collaboration.once('stopped', () => {
+  console.log('collaboration %s stopped', collaboration.name)
+})
+```
+
 
 ### `collaboration.shared`
 

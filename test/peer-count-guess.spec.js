@@ -8,6 +8,7 @@ const expect = chai.expect
 const bs58 = require('bs58')
 const EventEmitter = require('events')
 
+const randomPeerId = require('./utils/random-peer-id')
 const PeerCountGuess = require('../src/peer-count-guess')
 
 describe('peer count guess', () => {
@@ -53,13 +54,3 @@ describe('peer count guess', () => {
 
   it('can be stopped', () => guesser.stop())
 })
-
-function randomPeerId () {
-  const bitCount = 32
-  const bits = Array(bitCount)
-  for (let i = 0; i < bitCount; i++) {
-    bits[i] = Math.floor(Math.random() * 256)
-  }
-
-  return bs58.encode(Buffer.from(bits))
-}

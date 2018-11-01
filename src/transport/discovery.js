@@ -30,7 +30,7 @@ module.exports = class Discovery extends EventEmitter {
 
     this._stopped = true
 
-    this._queue = new Queue({concurrency: 1}) // TODO: make this an option
+    this._queue = new Queue({ concurrency: 1 }) // TODO: make this an option
     this._peersPending = []
 
     this._peerDiscovered = this._peerDiscovered.bind(this)

@@ -1,7 +1,7 @@
-import React, { Component } from 'react';
+import React, { Component } from 'react'
 import { HashRouter as Router, Route, Link } from 'react-router-dom'
-import logo from './logo.svg';
-import './App.css';
+import logo from './logo.svg'
+import './App.css'
 
 import PeerStarApp from 'peer-star-app'
 
@@ -30,27 +30,27 @@ class App extends Component {
       })
   }
 
-  render() {
+  render () {
     console.log('APP RENDER')
     return (
       <Router>
-        <div className="App">
-            <header className="App-header">
-              <img src={logo} className="App-logo" alt="logo" />
-              <h1 className="App-title"><Link to="/">Welcome to Peer-Star Counter app</Link></h1>
-            </header>
+        <div className='App'>
+          <header className='App-header'>
+            <img src={logo} className='App-logo' alt='logo' />
+            <h1 className='App-title'><Link to='/'>Welcome to Peer-Star Counter app</Link></h1>
+          </header>
 
-            <p className="App-intro">
+          <p className='App-intro'>
               App-wide peer count estimate: {this.state.appPeerCountEstimate} peers
-            </p>
+          </p>
 
-              <div>
-                <Route exact path="/" component={Home} />
-                {routes(this._app).map((route, i) => <Route key={i} {...route} />)}
-              </div>
+          <div>
+            <Route exact path='/' component={Home} />
+            {routes(this._app).map((route, i) => <Route key={i} {...route} />)}
+          </div>
         </div>
       </Router>
-    );
+    )
   }
 
   shouldComponentUpdate () {
@@ -58,4 +58,4 @@ class App extends Component {
   }
 }
 
-export default App;
+export default App
