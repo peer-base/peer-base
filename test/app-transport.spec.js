@@ -45,7 +45,7 @@ describe('app-transport', function () {
       },
       _peerInfo: {
         id: {
-          toBytes: () => [1, 2]
+          toBytes: () => Buffer.from([1, 2])
         }
       }
     }
