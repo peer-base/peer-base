@@ -25,7 +25,7 @@ describe('dias set', () => {
 
   it('can add a node', () => {
     r.add(new FakePeerInfo([0, 1]))
-    expect(Array.from(diasSet(r).values()).map(peerInfoToId)).to.deep.equal([[0, 1]])
+    expect(Array.from(diasSet(r).values()).map(peerInfoToId)).to.deep.equal(toBuffers([[0, 1]]))
   })
 
   it('can add some nodes before 1/5th', () => {
@@ -36,68 +36,68 @@ describe('dias set', () => {
     r.add(new FakePeerInfo([0, 6]))
     expect(
       Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
-      .to.deep.equal([
+      .to.deep.equal(toBuffers([
         [0, 1],
         [0, 2],
         [0, 3],
         [0, 4],
         [0, 5],
         [0, 6]
-      ])
+      ]))
   })
 
   it('can add a node before 1/5th', () => {
     r.add(new FakePeerInfo([51, 0]))
     expect(
       Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
-      .to.deep.equal([
+      .to.deep.equal(toBuffers([
         [0, 1],
         [0, 2],
         [0, 3],
         [0, 4],
         [0, 5],
         [51, 0]
-      ])
+      ]))
   })
 
   it('can add a node before 1/4th', () => {
     r.add(new FakePeerInfo([63, 0]))
     expect(
       Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
-      .to.deep.equal([
+      .to.deep.equal(toBuffers([
         [0, 1],
         [0, 2],
         [0, 3],
         [0, 4],
         [51, 0],
         [63, 0]
-      ])
+      ]))
   })
 
   it('can add a node before 1/3rd', () => {
     r.add(new FakePeerInfo([85, 0]))
     expect(
       Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
-      .to.deep.equal([
+      .to.deep.equal(toBuffers([
         [0, 1],
         [0, 2],
         [0, 3],
         [51, 0],
         [63, 0],
         [85, 0]
-      ])
+      ]))
   })
 
   it('can add a node after 1/2', () => {
     r.add(new FakePeerInfo([128, 0]))
-    expect(Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort)).to.deep.equal([
+    expect(Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort)).to.deep.equal(toBuffers([
         [0, 1],
         [0, 2],
         [51, 0],
         [63, 0],
         [85, 0],
         [128, 0]
-      ])
+      ]))
   })
 
   it('can work with poorly distributed small sets', () => {
@@ -112,14 +112,14 @@ describe('dias set', () => {
     r.add(new FakePeerInfo([0xef, 0x07]))
     expect(
       Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
-      .to.deep.equal([
+      .to.deep.equal(toBuffers([
         [0x4e, 0x31],
         [0x8b, 0xb5],
         [0xef, 0x07],
         [0xef, 0x5b],
         [0xf3, 0x00],
         [0xf8, 0xee]
-      ])
+      ]))
   })
 })
 
@@ -138,4 +138,8 @@ function sort (a, b) {
 
 function peerInfoToId (pi) {
   return pi.id.toBytes()
+}
+
+function toBuffers (buffers) {
+  return buffers.map((buffer) => Buffer.from(buffer))
 }
