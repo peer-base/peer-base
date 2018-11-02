@@ -31,7 +31,7 @@ describe('stats', function () {
 
   before((done) => {
     // wait a bit for things to sync
-    setTimeout(done, A_BIT)
+    setTimeout(done, A_BIT * 2)
   })
 
   before(async () => {
