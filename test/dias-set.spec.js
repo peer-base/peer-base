@@ -90,9 +90,7 @@ describe('dias set', () => {
 
   it('can add a node after 1/2', () => {
     r.add(new FakePeerInfo([128, 0]))
-    expect(
-      Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort))
-      .to.deep.equal([
+    expect(Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort)).to.deep.equal([
         [0, 1],
         [0, 2],
         [51, 0],

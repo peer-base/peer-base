@@ -103,7 +103,7 @@ describe('sub-collaboration', function () {
   })
 
   it('waits a bit', (done) => {
-    setTimeout(done, A_BIT * 2)
+    setTimeout(done, A_BIT * 3)
   })
 
   it('root collaboration still has same value', () => {
