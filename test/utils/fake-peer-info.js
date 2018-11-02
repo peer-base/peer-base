@@ -4,6 +4,9 @@ const bs58 = require('bs58')
 
 module.exports = class FakePeerInfo {
   constructor (id) {
+    if (!Buffer.isBuffer(id)) {
+      id = Buffer.from(id)
+    }
     this.id = {
       toBytes () {
         return id

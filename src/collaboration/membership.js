@@ -276,9 +276,15 @@ function sortMembers (member1, member2) {
   return 0
 }
 
-function joinAddresses (addresses) {
+function joinAddresses (addresses = []) {
   debug('joinAddresses:', addresses)
-  return (Array.from(addresses || [])).reduce((acc, moreAddresses) => acc.concat(moreAddresses), [])
+  const result = [...addresses].reduce((acc, moreAddresses) => {
+    for (let address of moreAddresses) {
+      acc.add(address)
+    }
+    return acc
+  }, new Set())
+  return [...result]
 }
 
 function addressesEqual (addresses1, addresses2) {
