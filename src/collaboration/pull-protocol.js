@@ -129,7 +129,7 @@ module.exports = class PullProtocol {
     const onEnd = (err) => {
       if (!ended) {
         if (err && err.message !== 'underlying socket has been closed') {
-          console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err)
+          console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.stack)
           console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.message)
           debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)
         }
@@ -144,7 +144,7 @@ module.exports = class PullProtocol {
     this._store.getLatestClock()
       .then((vectorClock) => {
         debug('%s: sending latest vector clock to %s:', this._peerId(), remotePeerId, vectorClock)
-        output.push(encode([vectorClock]))
+        output.push(encode([vectorClock, null, null, this._options.replicateOnly]))
       })
       .catch(onEnd)
 
