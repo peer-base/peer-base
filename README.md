@@ -166,6 +166,7 @@ Arguments:
   * `maxDeltaRetention`: number: maximum number of retained deltas. Defaults to `1000`.
   * `deltaTrimTimeoutMS`: number: after a delta was added to the store, the time it waits before trying to trim the deltas.
   * `debounceResetConnectionsMS`: (defaults to `1000`): debounce membership changes before resetting connections.
+  * `debouncePushMS`: (defaults to `200`): debounce time from collboration mutations into pushing them.
 
 ### Create your own collaboration type
 
