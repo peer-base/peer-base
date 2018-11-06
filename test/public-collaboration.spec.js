@@ -73,7 +73,7 @@ describe('public collaboration', function () {
   })
 
   it('waits a bit', (done) => {
-    setTimeout(done, 2000)
+    setTimeout(done, 4000)
   })
 
   it('all replicas in sync', async () => {
