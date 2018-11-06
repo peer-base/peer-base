@@ -7,6 +7,7 @@ const expect = chai.expect
 
 const PeerStar = require('../')
 const App = require('./utils/create-app')
+const Repo = require('./utils/repo')
 const A_BIT = 10000
 
 describe('pinner', function () {
@@ -55,7 +56,8 @@ describe('pinner', function () {
   it('can add a pinner to a collaboration', () => {
     pinner = PeerStar.createPinner(App.appName, {
       ipfs: {
-        swarm: App.swarm
+        swarm: App.swarm,
+        repo: Repo()
       }
     })
     return pinner.start()
