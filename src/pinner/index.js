@@ -15,6 +15,10 @@ class AppPinner extends EventEmitter {
   constructor (name, options) {
     super()
     this.name = name
+    if (!name) {
+      throw new Error('pinner should have app name')
+    }
+    console.log('pinner for', name)
     this._options = Object.assign({}, defaultOptions, options)
     this._peerCountGuess = new PeerCountGuess(this, options && options.peerCountGuess)
     this._collaborations = new Map()
@@ -71,36 +75,33 @@ class AppPinner extends EventEmitter {
     return this.peerCountGuess()
   }
 
-  _onGossipMessage (message) {
+  async _onGossipMessage (message) {
     debug('gossip message from %s', message.from)
     this.emit('gossip', message)
-    this.ipfs.id().then((peerInfo) => {
-      if (message.from === peerInfo.id) {
-        return
-      }
-      let collaborationName, membership, type
-      try {
-        [collaborationName, membership, type] = decode(message.data)
-      } catch (err) {
-        console.log('error parsing gossip message:', err)
-        return
-      }
+    const peerInfo = await this.ipfs.id()
+    if (message.from === peerInfo.id) {
+      return
+    }
+    let collaborationName, membership, type
+    try {
+      [collaborationName, membership, type] = decode(message.data)
+    } catch (err) {
+      console.log('error parsing gossip message:', err)
+      return
+    }
 
-      if (this._collaborations.has(collaborationName)) {
-        const collaboration = this._collaborations.get(collaborationName)
-        collaboration.deliverRemoteMembership(membership)
-          .catch((err) => {
-            console.error('error delivering remote membership:', err)
-          })
-      } else {
-        debug('new collaboration %s of type %s', collaborationName, type)
-        if (type) {
-          const collaboration = this._addCollaboration(collaborationName, type)
-          collaboration.start().then(() => {
-            collaboration.deliverRemoteMembership(membership)
-          })
-        }
+    let collaboration
+    if (this._collaborations.has(collaborationName)) {
+      collaboration = this._collaborations.get(collaborationName)
+    } else {
+      debug('new collaboration %s of type %s', collaborationName, type)
+      if (type) {
+        collaboration = this._addCollaboration(collaborationName, type)
+        await collaboration.start()
       }
+    }
+    collaboration.deliverRemoteMembership(membership).catch((err) => {
+      console.error('error delivering remote membership:', err)
     })
   }
 
