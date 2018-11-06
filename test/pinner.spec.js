@@ -8,7 +8,7 @@ const expect = chai.expect
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const Repo = require('./utils/repo')
-const A_BIT = 10000
+const A_BIT = 15000
 
 describe('pinner', function () {
   this.timeout(20000)
