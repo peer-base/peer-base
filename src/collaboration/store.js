@@ -216,13 +216,10 @@ module.exports = class CollaborationStore extends EventEmitter {
         prefix: '/d:'
       }),
       pull.asyncMap(({ value }, cb) => this._decode(value, cb)),
-      pull.map((d) => {
-        debug('%s: delta stream candidate: %j', this._id, d)
-        return d
-      }),
       pull.asyncMap((entireDelta, callback) => {
         const [previousClock, authorClock] = entireDelta
         if (vectorclock.isIdentical(previousClock, since)) {
+          debug('accepting delta %j', [previousClock, authorClock])
           since = vectorclock.incrementAll(previousClock, authorClock)
           callback(null, entireDelta)
         } else {
