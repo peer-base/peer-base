@@ -393,9 +393,26 @@ Peer-star-app supports using a circuit relay peer. For that you need to set up a
 * `relayWSAddr`: the multiaddress for the websocket server of the relay server
 * `apiAddr`: the multiaddress for the relay server API address (which we need for polling the known peers)
 
-# Pinner
+# Pinner (API and CLI)
 
-You can pin collaborations for peer-* apps without delegating keys. To install a pinner you can:
+You can pin collaborations for peer-* apps without delegating keys. You can do this through the JS API or the command-line.
+
+## API
+
+You can spawn the pinner through the JS API:
+
+```js
+const pinner = PeerStar.createPinner('app name' [, options])
+```
+
+Options:
+
+* `collaborationInnactivityTimeoutMS`: (defaults to `60000`). The amount of time to wait for activity before the pinner stops participating in the collaboration.
+* `ipfs`: same as app `options.ipfs` (see above).
+
+## Command-line
+
+To install a pinner you can:
 
 ```sh
 $ npm install -g peer-star-app
