@@ -8,7 +8,7 @@ const expect = chai.expect
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 require('./utils/fake-crdt')
-const A_BIT = 10000
+const A_BIT = 15000
 
 describe('collaboration gossip', function () {
   this.timeout(2 * A_BIT)
