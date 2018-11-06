@@ -144,7 +144,7 @@ module.exports = class PullProtocol {
     this._store.getLatestClock()
       .then((vectorClock) => {
         debug('%s: sending latest vector clock to %s:', this._peerId(), remotePeerId, vectorClock)
-        output.push(encode([vectorClock, null, null, this._options.replicateOnly]))
+        output.push(encode([vectorClock, null, null, this._options.replicateOnly || false]))
       })
       .catch(onEnd)
 
