@@ -167,6 +167,8 @@ Arguments:
   * `deltaTrimTimeoutMS`: number: after a delta was added to the store, the time it waits before trying to trim the deltas.
   * `debounceResetConnectionsMS`: (defaults to `1000`): debounce membership changes before resetting connections.
   * `debouncePushMS`: (defaults to `200`): debounce time from collboration mutations into pushing them.
+  * `debouncePushToPinnerMS`: (defaults to `5000`): debounce time from collboration mutations into pushing them into a pinner.
+  * `receiveTimeoutMS`: (defaults to `3000`): time after which a connection is turned to eager mode to receive missing data.
 
 ### Create your own collaboration type
 

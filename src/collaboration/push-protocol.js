@@ -24,7 +24,7 @@ module.exports = class PushProtocol {
     const queue = new Queue({ concurrency: 1 })
     let ended = false
     let pushing = true
-    let onlySendFullState = false
+    let isPinner = false
 
     const pushDeltaStream = async () => {
       debug('%s: push deltas to %s', this._peerId(), remotePeerId)
@@ -66,11 +66,11 @@ module.exports = class PushProtocol {
       if (pushing) {
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
-        if (!onlySendFullState) {
+        if (!isPinner) {
           await pushDeltas(myClock)
         }
 
-        if (onlySendFullState || remoteNeedsUpdate(myClock)) {
+        if (isPinner || remoteNeedsUpdate(myClock)) {
           if (pushing) {
             debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
             // remote still needs update
@@ -114,9 +114,11 @@ module.exports = class PushProtocol {
       }
     }
 
-    const debouncedReduceEntropy = debounce(() => {
+    const debounceReduceEntropyMS = () => isPinner ? this._options.debouncePushToPinnerMS : this._options.debouncePushMS
+
+    let debouncedReduceEntropy = debounce(() => {
       queue.add(reduceEntropy).catch(onEnd)
-    }, this._options.debouncePushMS)
+    }, debounceReduceEntropyMS())
 
     const onClockChanged = (newClock) => {
       debug('%s: clock changed to %j', this._peerId(), newClock)
@@ -129,7 +131,7 @@ module.exports = class PushProtocol {
 
     const gotPresentation = (message) => {
       debug('%s: got presentation message from %s:', this._peerId(), remotePeerId, message)
-      const [newRemoteClock, startLazy, startEager, onlyFullStates] = message
+      const [newRemoteClock, startLazy, startEager, _isPinner] = message
 
       if (startLazy) {
         debug('%s: push connection to %s now in lazy mode', this._peerId(), remotePeerId)
@@ -141,8 +143,11 @@ module.exports = class PushProtocol {
         pushing = true
       }
 
-      if ((typeof onlyFullStates) === 'boolean') {
-        onlySendFullState = onlyFullStates
+      if ((typeof _isPinner) === 'boolean') {
+        isPinner = _isPinner
+        debouncedReduceEntropy = debounce(() => {
+          queue.add(reduceEntropy).catch(onEnd)
+        }, debounceReduceEntropyMS())
       }
 
       if (newRemoteClock) {

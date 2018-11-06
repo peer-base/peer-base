@@ -108,7 +108,7 @@ module.exports = class PullProtocol {
                 debug('%s: timeout happened for clock', this._peerId(), waitingForClock)
                 output.push(encode([null, false, true]))
               }
-            }, this._options.receiveTimeout)
+            }, this._options.receiveTimeoutMS)
             // timeout and maybe turn into eager mode?
           }
         }

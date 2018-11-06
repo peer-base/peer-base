@@ -20,7 +20,9 @@ const defaultOptions = {
   resetConnectionIntervalMS: 6000,
   maxUnreachableBeforeEviction: 10,
   replicateOnly: false,
-  debouncePushMS: 500
+  debouncePushMS: 500,
+  debouncePushToPinnerMS: 5000,
+  receiveTimeoutMS: 3000
 }
 
 module.exports = (...args) => new Collaboration(...args)
