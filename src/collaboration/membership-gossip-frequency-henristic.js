@@ -31,10 +31,10 @@ module.exports = class MembershipGossipFrequencyHeuristic extends EventEmitter {
     this._samplingInterval = null
   }
 
-  async _sample () {
+  _sample () {
     this._totalAppPeerCountGuess = this._app.peerCountGuess()
     this._totalCollaborationPeerCount = this._membership.peerCount()
-    const targetInterval = await this._targetInterval()
+    const targetInterval = this._targetInterval()
     const now = Date.now()
     const when = targetInterval + this._lastBroadcast
     if (when <= now) {
@@ -43,8 +43,8 @@ module.exports = class MembershipGossipFrequencyHeuristic extends EventEmitter {
     }
   }
 
-  async _targetInterval () {
-    const urgency = (await this._membership.needsUrgentBroadcast())
+  _targetInterval () {
+    const urgency = this._membership.needsUrgentBroadcast()
       ? this._options.urgencyFrequencyMultiplier : 1
     const targetAverageInterval =
       (this._totalAppPeerCountGuess * this._options.targetGlobalMembershipGossipFrequencyMS) / urgency
