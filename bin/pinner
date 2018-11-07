@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 'use strict'
 
-if (!process.env.DEBUG) {
-  process.env.DEBUG = 'peer-star:pinner'
-}
+// if (!process.env.DEBUG) {
+//   process.env.DEBUG = 'peer-star:collaboration:store'
+// }
 
-const Pinner = require('../src/pinner')
+const createPinner = require('../src').createPinner
 
 const appName = process.argv[2]
 if (!appName) {

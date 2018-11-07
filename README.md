@@ -166,6 +166,9 @@ Arguments:
   * `maxDeltaRetention`: number: maximum number of retained deltas. Defaults to `1000`.
   * `deltaTrimTimeoutMS`: number: after a delta was added to the store, the time it waits before trying to trim the deltas.
   * `debounceResetConnectionsMS`: (defaults to `1000`): debounce membership changes before resetting connections.
+  * `debouncePushMS`: (defaults to `200`): debounce time from collboration mutations into pushing them.
+  * `debouncePushToPinnerMS`: (defaults to `5000`): debounce time from collboration mutations into pushing them into a pinner.
+  * `receiveTimeoutMS`: (defaults to `3000`): time after which a connection is turned to eager mode to receive missing data.
 
 ### Create your own collaboration type
 
@@ -390,9 +393,26 @@ Peer-star-app supports using a circuit relay peer. For that you need to set up a
 * `relayWSAddr`: the multiaddress for the websocket server of the relay server
 * `apiAddr`: the multiaddress for the relay server API address (which we need for polling the known peers)
 
-# Pinner
+# Pinner (API and CLI)
 
-You can pin collaborations for peer-* apps without delegating keys. To install a pinner you can:
+You can pin collaborations for peer-* apps without delegating keys. You can do this through the JS API or the command-line.
+
+## API
+
+You can spawn the pinner through the JS API:
+
+```js
+const pinner = PeerStar.createPinner('app name' [, options])
+```
+
+Options:
+
+* `collaborationInnactivityTimeoutMS`: (defaults to `60000`). The amount of time to wait for activity before the pinner stops participating in the collaboration.
+* `ipfs`: same as app `options.ipfs` (see above).
+
+## Command-line
+
+To install a pinner you can:
 
 ```sh
 $ npm install -g peer-star-app

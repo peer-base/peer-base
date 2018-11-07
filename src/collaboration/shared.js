@@ -95,7 +95,8 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
         }
         debug('%s state after apply:', id, state)
         if (!keys.public || keys.write) {
-          return [name, encode([name, forName && crdtType.typeName, await signAndEncrypt(encode(state))])]
+          const saveState = options.replicateOnly ? state : await signAndEncrypt(encode(state))
+          return [name, encode([name, forName && crdtType.typeName, saveState])]
         }
       } else if (typeName) {
         const sub = await collaboration.sub(forName, typeName)

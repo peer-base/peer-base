@@ -8,7 +8,7 @@ const PushProtocol = require('./push-protocol')
 const PullProtocol = require('./pull-protocol')
 
 const defaultOptions = {
-  receiveTimeout: 3000
+  receiveTimeoutMS: 3000
 }
 
 module.exports = (...args) => {
