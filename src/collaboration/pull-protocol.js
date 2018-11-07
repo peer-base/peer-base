@@ -9,7 +9,7 @@ const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PullProtocol {
-  constructor (ipfs, store, clocks, keys, options) {
+  constructor (ipfs, store, clocks, keys, replication, options) {
     this._ipfs = ipfs
     this._store = store
     this._clocks = clocks

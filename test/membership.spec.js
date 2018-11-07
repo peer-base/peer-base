@@ -354,16 +354,22 @@ describe('membership', function () {
             }
           }
         }
-        collaboration = {
+        const collaboration = {
           name: 'collab name',
           typeName: 'gset'
         }
-        store = {}
-        clocks = {}
+        const store = {}
+        const clocks = {}
+        const options = {
+          peerIdByteCount: 32,
+          preambleByteCount: 2,
+          keys: {}
+        }
+        const replication = {}
 
         ipfs._peerInfo.multiaddrs.add(Multiaddr(`/ip4/127.0.0.1/tcp/${memberIndex}`))
 
-        membership = new Membership(ipfs, globalConnectionManager, app, collaboration, store, clocks, options)
+        membership = new Membership(ipfs, globalConnectionManager, app, collaboration, store, clocks, replication, options)
 
         await membership.start()
 

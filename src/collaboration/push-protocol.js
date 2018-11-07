@@ -10,12 +10,13 @@ const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PushProtocol {
-  constructor (ipfs, store, clocks, keys, options) {
+  constructor (ipfs, store, clocks, keys, replication, options) {
     this._ipfs = ipfs
     this._store = store
     this._clocks = clocks
     this._keys = keys
     this._options = options
+    this._replication = replication
   }
 
   forPeer (peerInfo) {

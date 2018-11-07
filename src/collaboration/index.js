@@ -8,6 +8,7 @@ const Shared = require('./shared')
 const CRDT = require('./crdt')
 const Gossip = require('./gossip')
 const Clocks = require('./clocks')
+const Replication = require('./replication')
 const deriveCreateCipherFromKeys = require('../keys/derive-cipher-from-keys')
 const Stats = require('../stats')
 
@@ -35,10 +36,14 @@ class Collaboration extends EventEmitter {
     this._globalConnectionManager = globalConnectionManager
     this.app = app
     this.name = name
+
+    const selfId =this._ipfs._peerInfo.id.toB58String()
+
     this._options = Object.assign({}, defaultOptions, options)
     this._parentCollab = parentCollab
     this._gossips = new Set()
-    this._clocks = new Clocks(this._ipfs._peerInfo.id.toB58String())
+    this._clocks = new Clocks(selfId)
+    this.replication = Replication(selfId, this._clocks)
 
     if (!this._options.keys) {
       console.warn('No options.keys')
@@ -51,7 +56,8 @@ class Collaboration extends EventEmitter {
 
     this._store = this._options.store || new Store(ipfs, this, this._options)
 
-    this._membership = this._options.membership || new Membership(ipfs, globalConnectionManager, app, this, this._store, this._clocks, this._options)
+    this._membership = this._options.membership || new Membership(
+      ipfs, globalConnectionManager, app, this, this._store, this._clocks, this.replication, this._options)
     this._membership.on('changed', () => {
       debug('membership changed')
       this.emit('membership changed', this._membership.peers())
