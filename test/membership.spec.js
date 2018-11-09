@@ -83,11 +83,6 @@ describe('membership', function () {
         },
         gossipMessages () {
           return this._gossipMessages || []
-        },
-        popGossipMessages () {
-          const msgs = this._gossipMessages || []
-          this._gossipMessages = []
-          return msgs
         }
       }
       const collaboration = {
@@ -227,7 +222,10 @@ describe('membership', function () {
     })
 
     it('has correct peer count and events when delivering remote membership', async () => {
-      const membership = createMembership()
+      const gfh = mock.gossipFrequencyHeuristic()
+      const membership = createMembership({
+        gossipFrequencyHeuristic: gfh
+      })
       await membership.start()
 
       const events = ['peer joined', 'peer left', 'peer addresses changed', 'changed']
@@ -277,6 +275,33 @@ describe('membership', function () {
       expect(eventLogger.logs['peer left'][0][0]).to.equal(remotePeerId)
       expect(eventLogger.logs['peer addresses changed'].length).to.equal(0)
       expect(eventLogger.logs['changed'].length).to.equal(1)
+
+      eventLogger.clear()
+
+      // We want to test what happens when the membership receives a message
+      // that removes its own peer id
+
+      // Trigger membership to send a gossip message with its state
+      gfh.emit('gossip now')
+      await new Promise(r => setTimeout(r))
+      const gossipMessages = membership._app.gossipMessages()
+      expect(gossipMessages.length).to.equal(1)
+      const localState = gossipMessages[0][1]
+
+      // Apply the local state to the remote CRDT, then remove the local peer
+      const localPeerId = membership._peerId
+      remoteCrdt.apply(localState)
+      remoteCrdt.remove(localPeerId)
+
+      // Deliver remote CRDT with local peer removed
+      // This should have no effect because the membership will restore it
+      // after merging
+      await membership.deliverRemoteMembership(remoteCrdt.state())
+      expect(membership.peerCount()).to.equal(1)
+      expect(eventLogger.logs['peer joined'].length).to.equal(0)
+      expect(eventLogger.logs['peer left'].length).to.equal(0)
+      expect(eventLogger.logs['peer addresses changed'].length).to.equal(0)
+      expect(eventLogger.logs['changed'].length).to.equal(0)
     })
   })
 
