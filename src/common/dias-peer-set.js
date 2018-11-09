@@ -41,7 +41,7 @@ module.exports = (bytes, peerInfo, preambleBytes) => {
       if (!peers.has(peer)) {
         peers.add(peer)
       } else {
-        if (peer === stop) return;
+        if (peer === stop) return
         addOrAddSuccessor(ring.successorOf(peer), stop || peer)
       }
     }
