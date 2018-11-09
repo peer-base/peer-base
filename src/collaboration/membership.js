@@ -169,17 +169,16 @@ module.exports = class Membership extends EventEmitter {
     await this._gossipNowWaiting
     this._gossipNowWaiting = undefined
 
-    const messages = []
     if (this.needsUrgentBroadcast()) {
       // The addresses this peer advertises may have changed since the last
       // gossip, so ensure the CRDT is up to date
       // TODO: Can we listen for address changes and set someonHasMembershipWrong?
       this._ensureSelfIsInMembershipCRDT()
-      messages.push(this._createMembershipMessage())
+      this._app.gossip(this._createMembershipMessage())
+    } else {
+      this._app.gossip(this._createMembershipSummaryMessage())
     }
-    messages.push(this._createMembershipSummaryMessage())
     this._someoneHasMembershipWrong = false
-    messages.forEach((message) => this._app.gossip(message))
   }
 
   _createSummaryHashFromCrdtState (state) {
