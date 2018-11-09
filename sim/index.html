@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Peer Star Network Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!--link href="../node_modules/bootstrap/dist/css/bootstrap.css" rel="stylesheet"-->
+  <link href="index.css" rel="stylesheet">
+  <script src="../node_modules/d3/dist/d3.js"></script>
+</head>
+
+<body>
+  <header>
+    <div class="title">
+      Peer Star Network Simulator
+    </div>
+  </header>
+
+  <div class="container">
+    <table class="content">
+      <tr>
+        <td class="canvas-container">
+          <svg id="canvas">
+            <g id="canvas-messages">
+            <g id="canvas-edges">
+            <g id="canvas-nodes">
+          </svg>
+          <div class="info">
+            <div class="message"></div>
+          </div>
+        </td>
+        <td class="controls">
+          <div class="buttons">
+            <div class="control">
+              <button id="add-node">+ Add node</button>
+            </div>
+            <div class="control layout">
+              <label class="title">Layout:</label>
+              <button id="layout-evenly">Evenly</button>
+              <button id="layout-organic">Organic</button>
+            </div>
+            <div class="control">
+              <input type="checkbox" id="dias-set-checkbox">
+              <label for="dias-set-checkbox">Dias set connections</label>
+            </div>
+            <div class="control options">
+              <label class="title">Options:</label>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <script src="sim.js"></script>
+</body>
+</html>

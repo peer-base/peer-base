@@ -36,6 +36,7 @@
     "asino": "~0.3.3",
     "big-integer": "^1.6.36",
     "browser-process-hrtime": "^1.0.0",
+    "d3": "^5.7.0",
     "datastore-core": "~0.6.0",
     "debug": "^4.1.0",
     "delay": "^4.1.0",
@@ -67,6 +68,7 @@
   "devDependencies": {
     "aegir": "^17.0.0",
     "babel-eslint": "^10.0.1",
+    "browserify": "^16.2.3",
     "bs58": "^4.0.1",
     "chai": "^4.1.2",
     "dirty-chai": "^2.0.1",

@@ -28,7 +28,7 @@ module.exports = class Membership extends EventEmitter {
     this._someoneHasMembershipWrong = false
 
     this._ring = Ring(this._options.preambleByteCount)
-    this.connectionManager = new ConnectionManager(
+    this.connectionManager = this._options.connectionManager || new ConnectionManager(
       ipfs,
       globalConnectionManager,
       this._ring,
@@ -131,9 +131,10 @@ module.exports = class Membership extends EventEmitter {
 
   // The parameter is either the remote membership state or a hash of the
   // remote membership state
-  async deliverRemoteMembership (membership) {
+  async deliverGossipMessage (message) {
     await this.waitForStart()
 
+    const membership = message[1]
     let remoteHash = membership
     if (typeof membership !== 'string') {
       // If the parameter is the remote membership state, join to the local state
