@@ -19,6 +19,10 @@ const options = {
   keys: {}
 }
 
+function randomB58String() {
+  return new FakePeerInfo(randomPeerId()).id.toB58String()
+}
+
 const mock = {
   ipfs() {
     return {
@@ -145,8 +149,9 @@ describe('membership', function () {
     it('needs urgent broadcast on delivery of gossip message that doesnt contain this peer', async () => {
       const membership = createMembership()
       await membership.start()
-      const remoteCrdt = ORMap('tmp')
-      remoteCrdt.applySub('tmp', 'mvreg', 'write', [`/ip4/127.0.0.1/tcp/5001`])
+      const tmpId = randomB58String()
+      const remoteCrdt = ORMap(tmpId)
+      remoteCrdt.applySub(tmpId, 'mvreg', 'write', [`/ip4/127.0.0.1/tcp/5001`])
       await membership.deliverRemoteMembership(remoteCrdt.state())
       expect(membership.needsUrgentBroadcast()).to.equal(true)
     })
@@ -154,7 +159,7 @@ describe('membership', function () {
     it('needs urgent broadcast on delivery of gossip message that contains this peer but has the wrong addresses', async () => {
       const membership = createMembership()
       await membership.start()
-      const remoteCrdt = ORMap('tmp')
+      const remoteCrdt = ORMap(randomB58String())
       remoteCrdt.applySub(membership._peerId, 'mvreg', 'write', [`/ip4/127.0.0.1/tcp/5001`])
       await membership.deliverRemoteMembership(remoteCrdt.state())
       expect(membership.needsUrgentBroadcast()).to.equal(true)
@@ -163,7 +168,7 @@ describe('membership', function () {
     it('does not need urgent broadcast on delivery of gossip message that does contain this peer and addresses', async () => {
       const membership = createMembership()
       await membership.start()
-      const remoteCrdt = ORMap('tmp')
+      const remoteCrdt = ORMap(randomB58String())
       const addresses = membership._ipfs._peerInfo.multiaddrs.toArray().map((ma) => ma.toString())
       remoteCrdt.applySub(membership._peerId, 'mvreg', 'write', addresses)
       await membership.deliverRemoteMembership(remoteCrdt.state())
@@ -172,7 +177,7 @@ describe('membership', function () {
 
     it('calculates matching hashes regardless of order of peers and addresses', async () => {
       function getRemoteState(peerAddresses) {
-        const remoteCrdt = ORMap('tmp')
+        const remoteCrdt = ORMap(randomB58String())
         for (const peerAddr of peerAddresses) {
           remoteCrdt.applySub(peerAddr[0], 'mvreg', 'write', peerAddr[1])
         }
@@ -199,13 +204,13 @@ describe('membership', function () {
       const state2 = getRemoteState([
         ['peer2', [
           `/ip4/127.0.0.1/tcp/5555`,
+          `/ip4/127.0.0.1/tcp/7777`,
           `/ip4/127.0.0.1/tcp/6666`,
-          `/ip4/127.0.0.1/tcp/7777`
         ]],
         ['peer1', [
-          `/ip4/127.0.0.1/tcp/2222`,
+          `/ip4/127.0.0.1/tcp/4444`,
           `/ip4/127.0.0.1/tcp/3333`,
-          `/ip4/127.0.0.1/tcp/4444`
+          `/ip4/127.0.0.1/tcp/2222`
         ]],
         [membership._peerId, addresses]
       ])
@@ -215,34 +220,10 @@ describe('membership', function () {
       await membership.deliverRemoteMembership(state1)
       expect(membership.needsUrgentBroadcast()).to.equal(false)
 
-      // TODO: The following is failing because of problem with ORMap
-      // See following commented out test below
-
       // Second state is the same as the first, just with peers and addresses
       // in a different order, should produce the identical hash
-      // await membership.deliverRemoteMembership(state2)
-      // expect(membership.needsUrgentBroadcast()).to.equal(false)
-    })
-
-    // TODO: This is currently failing
-    it.skip('testing member CRDT', () => {
-      // Note: Only fails when order of adding peer 1 and peer 2 is reversed
-      // in second crdt
-      const crdt = ORMap('tmp')
-      crdt.applySub('peer1', 'mvreg', 'write', 'a')
-      crdt.applySub('peer2', 'mvreg', 'write', 'b')
-      const state1 = crdt.state()
-
-      const crdt2 = ORMap('tmp')
-      crdt2.applySub('peer2', 'mvreg', 'write', 'b')
-      crdt2.applySub('peer1', 'mvreg', 'write', 'a')
-      const state2 = crdt2.state()
-
-      const crdt3 = ORMap('tmp3')
-      crdt3.apply(state1)
-      crdt3.apply(state2)
-      console.log(crdt3.value())
-      expect(Object.keys(crdt3.value()).length).to.equal(2)
+      await membership.deliverRemoteMembership(state2)
+      expect(membership.needsUrgentBroadcast()).to.equal(false)
     })
 
     it('has correct peer count and events when delivering remote membership', async () => {
