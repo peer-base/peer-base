@@ -8,6 +8,7 @@
     "test:node": "aegir test -t node",
     "test:browser": "aegir test -t browser",
     "lint": "standard src/**/*.js",
+    "lint:fix": "standard --fix src/**/*.js",
     "test:perf": "mocha test/performance/all.js",
     "pinner": "node bin/pinner"
   },
@@ -38,7 +39,7 @@
     "datastore-core": "~0.6.0",
     "debug": "^4.1.0",
     "delay": "^4.1.0",
-    "delta-crdts": "^0.5.2",
+    "delta-crdts": "^0.5.3",
     "delta-crdts-msgpack-codec": "^0.2.0",
     "frequency-counter": "^1.0.1",
     "interface-datastore": "~0.6.0",
