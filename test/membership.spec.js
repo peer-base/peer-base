@@ -92,7 +92,7 @@ describe('membership', function () {
       const mergedOpts = Object.assign({
         gossipFrequencyHeuristic: mock.gossipFrequencyHeuristic()
       }, options, opts)
-      const m = new Membership(ipfs, globalConnectionManager, app, collaboration, {}, {}, mergedOpts)
+      const m = new Membership(ipfs, globalConnectionManager, app, collaboration, {}, {}, {}, mergedOpts)
       memberships.push(m)
       return m
     }
@@ -314,6 +314,8 @@ describe('membership', function () {
     let collaboration
     let store
     let clocks
+    let replication
+    let options
 
     let memberships = []
 
