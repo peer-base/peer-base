@@ -57,6 +57,7 @@ class Renderer {
   }
 
   setLayoutMode(layoutMode) {
+    this.layoutMode = layoutMode
     this.highlightedPeer = null
     const canvas = d3.select('#canvas')
     this.layout = new layoutMode(canvas, this.peers, this.options)
