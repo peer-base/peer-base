@@ -18,24 +18,19 @@ const Trig = {
   },
 
   onLine(from, to, howFarPx, fromStart = true) {
-    const a = Trig.angle(from, to)
-    const dx = to.pos[0] - from.pos[0]
-    const dy = to.pos[1] - from.pos[1]
-    const distance = fromStart ? howFarPx : Math.sqrt(dx * dx + dy * dy) - howFarPx
-    const relx = Math.cos(a) * distance
-    const rely = Math.sin(a) * distance
-    return [from.pos[0] + relx, from.pos[1] + rely]
-  },
-
-  onLineProportional(from, to, proportion, fromStart = true) {
-    const a = Trig.angle(from, to)
     const dx = to.pos[0] - from.pos[0]
     const dy = to.pos[1] - from.pos[1]
     const total = Math.sqrt(dx * dx + dy * dy)
-    const howFarPx = total * proportion
-    const distance = fromStart ? howFarPx : total - howFarPx
-    const relx = Math.cos(a) * distance
-    const rely = Math.sin(a) * distance
+    const proportion = howFarPx / total
+    return Trig.onLineProportional(from, to, proportion, fromStart)
+  },
+
+  onLineProportional(from, to, proportion, fromStart = true) {
+    proportion = fromStart ? proportion : 1 - proportion
+    const dx = to.pos[0] - from.pos[0]
+    const dy = to.pos[1] - from.pos[1]
+    const relx = proportion * dx
+    const rely = proportion * dy
     return [from.pos[0] + relx, from.pos[1] + rely]
   }
 }

@@ -1,4 +1,4 @@
-const Ring = require('../src/common/ring')
+const Ring = require('../../src/common/ring')
 const Color = require('./color')
 const Trig = require('./trig')
 const { LayoutType } = require('./layout')

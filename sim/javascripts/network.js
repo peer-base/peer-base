@@ -1,8 +1,8 @@
 const hat = require('hat')
 const PeerId = require('peer-id')
 const EventEmitter = require('events')
-const DiasSet = require('../src/common/dias-peer-set')
-const Membership = require('../src/collaboration/membership')
+const DiasSet = require('../../src/common/dias-peer-set')
+const Membership = require('../../src/collaboration/membership')
 const { decode } = require('delta-crdts-msgpack-codec')
 const Color = require('./color')
 
