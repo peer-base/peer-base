@@ -1,3 +1,4 @@
+const d3 = require('../../node_modules/d3/dist/d3.js')
 const debounce = require('lodash/debounce')
 const { LayoutType } = require('./layout')
 const InfoBox = require('./info')

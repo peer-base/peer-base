@@ -1,3 +1,4 @@
+const d3 = require('../../node_modules/d3/dist/d3.js')
 const Color = require('./color')
 
 class InfoBox {
