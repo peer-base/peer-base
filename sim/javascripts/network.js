@@ -23,7 +23,7 @@ class Network extends EventEmitter {
       this.messages.set(id, { id, message, from, to, duration, start: Date.now() })
       this.emit('gossip send', id, message, from, to, duration)
       setTimeout(() => {
-        to.membership.deliverGossipMessage(message)
+        to.membership.deliverRemoteMembership(message[1])
         this.messages.delete(id)
         this.emit('gossip arrive', id, message, from, to, duration)
       }, duration)
