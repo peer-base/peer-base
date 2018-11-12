@@ -21,4 +21,4 @@ The `Dias set connections` checkbox toggles whether to show connections between 
 
 ## Development
 
-Run `yarn:watch` to compile changes to the code. This will also watch for any further changes to the simulator files and compile them automatically. (Run `yarn:watch` manually to compile changes to other parts of the code into the simulator)
+Run `yarn sim:watch` to compile changes to the code. This will also watch for any further changes to files included by the simulator and compile them automatically.
