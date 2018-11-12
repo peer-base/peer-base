@@ -4,72 +4,28 @@ const { LayoutType } = require('./layout')
 const InfoBox = require('./info')
 const Network = require('./network')
 const Renderer = require('./renderer')
-
-const INIT_PEER_COUNT = 1
-const OptionDefaults = {
-  samplingIntervalMS: 2000,
-  targetGlobalMembershipGossipFrequencyMS: 2000,
-  resetConnectionIntervalMS: 200,
-  maxUnreachableBeforeEviction: 20,
-  urgencyFrequencyMultiplier: 1,
-  // These are specific to the simulator
-  avgNetworkDelay: 400,
-  avgPeerStartTime: 500,
-}
-const options = {
-  preambleByteCount: 2,
-  peerIdByteCount: 32,
-  nodeRadius: 10,
-  paddingY: 20
-}
-Object.keys(OptionDefaults).forEach(name => {
-  // Use local storage to save options values between refreshes
-  localStorageVal = localStorage.getItem(name)
-  localStorage.setItem(name, localStorageVal === null ? OptionDefaults[name] : localStorageVal)
-  Object.defineProperty(options, name, {
-    get: () => localStorage.getItem(name)
-  })
-
-  // Set up options inputs
-  const div = d3.selectAll('.controls .options').append('div')
-  div.attr('class', 'option')
-  div.append('label').attr('class', 'row').text(name)
-  const input = div.append('input')
-    .attr('type', 'text')
-    .attr('name', name)
-    .attr('value', localStorage.getItem(name))
-  input.node().addEventListener('keyup', () => localStorage.setItem(name, input.node().value))
-  input.node().addEventListener('change', () => localStorage.setItem(name, input.node().value))
-})
-
+const { options, localStorageKey } = require('./options')
 
 async function init() {
   const infoBox = new InfoBox(options)
-
-  let showDiasConnections = localStorage.showDiasConnections
-  showDiasConnections = !showDiasConnections || showDiasConnections === 'true'
-
   const network = new Network(options)
-  await Promise.all([...Array(INIT_PEER_COUNT)].map(() => network.generatePeer()))
-  const renderer = new Renderer(network, showDiasConnections, options)
+  await Promise.all([...Array(parseInt(options.initialPeerCount))].map(() => network.generatePeer()))
+  const renderer = new Renderer(network, options)
 
   d3.select('#add-node').on('click', async () => {
     await network.generatePeer()
     renderer.peerChanged()
   })
-
-  const diasCheck = d3.select('#dias-set-checkbox').on('click', () => {
-    const show = diasCheck.node().checked
-    renderer.setShowDiasConnections(show)
-    localStorage.showDiasConnections = show
-  }).property('checked', showDiasConnections)
-
   d3.select('#layout-evenly').on('click', () => {
     renderer.setLayoutMode(LayoutType.Evenly)
   })
   d3.select('#layout-organic').on('click', () => {
     renderer.setLayoutMode(LayoutType.Organic)
   })
+  d3.select('#dias-set-checkbox').on('click', () => {
+    renderer.renderDiasSetConnections()
+  })
+
   let lastResize = null
   window.addEventListener("resize", debounce(() => {
     renderer.setLayoutMode(renderer.layoutMode)
@@ -122,4 +78,4 @@ async function init() {
   renderer.peerChanged()
 }
 
-init()
+document.addEventListener('DOMContentLoaded', init)

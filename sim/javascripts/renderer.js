@@ -5,10 +5,9 @@ const Trig = require('./trig')
 const { LayoutType } = require('./layout')
 
 class Renderer {
-  constructor(network, showDiasConnections, options) {
+  constructor(network, options) {
     this.network = network
     this.layoutMode = LayoutType.Evenly
-    this.showDiasConnections = showDiasConnections
     this.options = options
   }
 
@@ -66,11 +65,6 @@ class Renderer {
     })
 
     this.renderNodes()
-    this.renderDiasSetConnections()
-  }
-
-  setShowDiasConnections(show) {
-    this.showDiasConnections = show
     this.renderDiasSetConnections()
   }
 
@@ -208,7 +202,7 @@ class Renderer {
 
   renderDiasSetConnections() {
     const nodeRadius = this.options.nodeRadius
-    const lineColor = this.showDiasConnections ? '#ccc' : 'transparent'
+    const lineColor = this.options.showDiasConnections ? '#ccc' : 'transparent'
     const highlightColor = (e) => !this.highlightedPeer || e.from === this.highlightedPeer ? lineColor : 'transparent'
     const arrowHeadSymbol = d3.symbol()
       .type(d3.symbolTriangle)
