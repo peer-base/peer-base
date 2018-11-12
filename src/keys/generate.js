@@ -14,8 +14,8 @@ async function generateKeys (options) {
     crypto.keys.generateKeyPair(options.algo, options.bits, (err, key) => {
       if (err) { return reject(err) }
       const keys = {
-        'read': key.public,
-        'write': key
+        read: key.public,
+        write: key
       }
       keys.cipher = deriveCipherFromKeys(keys)
       resolve(keys)

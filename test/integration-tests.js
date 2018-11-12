@@ -1,3 +1,5 @@
+'use strict'
+
 require('./app-swarm.spec')
 require('./app.spec')
 require('./peer-count-guess.spec')

@@ -28,5 +28,5 @@ process.on('unhandledRejection', (err) => {
   console.error(err)
 })
 
-const pinner = Pinner(appName, options)
+const pinner = createPinner(appName, options)
 pinner.start()

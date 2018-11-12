@@ -19,12 +19,12 @@ const options = {
   keys: {}
 }
 
-function randomB58String() {
+function randomB58String () {
   return new FakePeerInfo(randomPeerId()).id.toB58String()
 }
 
 const mock = {
-  ipfs() {
+  ipfs () {
     return {
       _peerInfo: new FakePeerInfo(randomPeerId()),
       id () {
@@ -32,13 +32,13 @@ const mock = {
       }
     }
   },
-  connectionManager() {
+  connectionManager () {
     return {
       handle (protocolName, handler) {},
       unhandle (protocolName) {}
     }
   },
-  gossipFrequencyHeuristic() {
+  gossipFrequencyHeuristic () {
     const gfh = new EventEmitter()
     gfh.start = () => {}
     gfh.stop = () => {}
@@ -47,7 +47,7 @@ const mock = {
 }
 
 class EventLogger {
-  constructor(membership, events) {
+  constructor (membership, events) {
     this.logs = {}
     for (const e of events) {
       this.logs[e] = []
@@ -56,7 +56,7 @@ class EventLogger {
       })
     }
   }
-  clear() {
+  clear () {
     for (const e in this.logs) {
       this.logs[e] = []
     }
@@ -66,7 +66,7 @@ class EventLogger {
 describe('membership', function () {
   describe('unit', function () {
     const memberships = []
-    function createMembership(opts) {
+    function createMembership (opts) {
       const memberIndex = memberships.length
       const ipfs = mock.ipfs()
       ipfs._peerInfo.multiaddrs.add(Multiaddr(`/ip4/127.0.0.1/tcp/${memberIndex}`))
@@ -171,7 +171,7 @@ describe('membership', function () {
     })
 
     it('calculates matching hashes regardless of order of peers and addresses', async () => {
-      function getRemoteState(peerAddresses) {
+      function getRemoteState (peerAddresses) {
         const remoteCrdt = ORMap(randomB58String())
         for (const peerAddr of peerAddresses) {
           remoteCrdt.applySub(peerAddr[0], 'mvreg', 'write', peerAddr[1])
@@ -200,7 +200,7 @@ describe('membership', function () {
         ['peer2', [
           `/ip4/127.0.0.1/tcp/5555`,
           `/ip4/127.0.0.1/tcp/7777`,
-          `/ip4/127.0.0.1/tcp/6666`,
+          `/ip4/127.0.0.1/tcp/6666`
         ]],
         ['peer1', [
           `/ip4/127.0.0.1/tcp/4444`,
@@ -246,7 +246,7 @@ describe('membership', function () {
       expect(eventLogger.logs['peer joined']).to.deep.equal([[remotePeerId]])
       expect(eventLogger.logs['peer left'].length).to.equal(0)
       expect(eventLogger.logs['peer addresses changed'].length).to.equal(0)
-      expect(eventLogger.logs['changed'].length).to.equal(1)
+      expect(eventLogger.logs.changed.length).to.equal(1)
 
       eventLogger.clear()
 
@@ -263,7 +263,7 @@ describe('membership', function () {
         remotePeerId,
         remoteAddresses
       ]])
-      expect(eventLogger.logs['changed'].length).to.equal(1)
+      expect(eventLogger.logs.changed.length).to.equal(1)
 
       eventLogger.clear()
 
@@ -274,7 +274,7 @@ describe('membership', function () {
       expect(eventLogger.logs['peer joined'].length).to.equal(0)
       expect(eventLogger.logs['peer left'][0][0]).to.equal(remotePeerId)
       expect(eventLogger.logs['peer addresses changed'].length).to.equal(0)
-      expect(eventLogger.logs['changed'].length).to.equal(1)
+      expect(eventLogger.logs.changed.length).to.equal(1)
 
       eventLogger.clear()
 
@@ -283,7 +283,7 @@ describe('membership', function () {
 
       // Trigger membership to send a gossip message with its state
       gfh.emit('gossip now')
-      await new Promise(r => setTimeout(r))
+      await new Promise((resolve) => setTimeout(resolve))
       const gossipMessages = membership._app.gossipMessages()
       expect(gossipMessages.length).to.equal(1)
       const localState = gossipMessages[0][1]
@@ -320,53 +320,55 @@ describe('membership', function () {
     let peerCount = 10
 
     before(async () => {
-      for (let memberIndex = 0; memberIndex < peerCount; memberIndex ++) {
-        await (async (memberIndex) => {
-          let membership
+      const members = []
+      for (let memberIndex = 0; memberIndex < peerCount; memberIndex++) {
+        members.push(memberIndex)
+      }
+      return Promise.all(members.map(async (memberIndex) => {
+        let membership
 
-          ipfs = mock.ipfs()
-          globalConnectionManager = mock.connectionManager()
-          app = {
-            peerCountGuess () {
-              return memberships.length
-            },
-            gossip (message) {
-              message = decode(message)
-              const [collabName, membershipMessage] = message
-              expect(collabName).to.equal('collab name')
-              // console.log(`${memberIndex}:`, membershipMessage)
-              if (typeof membershipMessage !== 'string') {
-                const clock = membershipMessage.cc.cc
-                for (let clockEntry of clock) {
-                  const [peerId, counter] = clockEntry
-                  // tests if there are no cycles in membership:
-                  // each peer should update the membership CRDT exactly once
-                  expect(counter).to.equal(1)
-                }
+        ipfs = mock.ipfs()
+        globalConnectionManager = mock.connectionManager()
+        app = {
+          peerCountGuess () {
+            return memberships.length
+          },
+          gossip (message) {
+            message = decode(message)
+            const [collabName, membershipMessage] = message
+            expect(collabName).to.equal('collab name')
+            // console.log(`${memberIndex}:`, membershipMessage)
+            if (typeof membershipMessage !== 'string') {
+              const clock = membershipMessage.cc.cc
+              for (let clockEntry of clock) {
+                const [, counter] = clockEntry
+                // tests if there are no cycles in membership:
+                // each peer should update the membership CRDT exactly once
+                expect(counter).to.equal(1)
               }
-              for (let otherMembership of memberships) {
-                if (otherMembership !== membership) {
-                  otherMembership.deliverRemoteMembership(membershipMessage)
-                }
+            }
+            for (let otherMembership of memberships) {
+              if (otherMembership !== membership) {
+                otherMembership.deliverRemoteMembership(membershipMessage)
               }
             }
           }
-          collaboration = {
-            name: 'collab name',
-            typeName: 'gset'
-          }
-          store = {}
-          clocks = {}
+        }
+        collaboration = {
+          name: 'collab name',
+          typeName: 'gset'
+        }
+        store = {}
+        clocks = {}
 
-          ipfs._peerInfo.multiaddrs.add(Multiaddr(`/ip4/127.0.0.1/tcp/${memberIndex}`))
+        ipfs._peerInfo.multiaddrs.add(Multiaddr(`/ip4/127.0.0.1/tcp/${memberIndex}`))
 
-          membership = new Membership(ipfs, globalConnectionManager, app, collaboration, store, clocks, options)
+        membership = new Membership(ipfs, globalConnectionManager, app, collaboration, store, clocks, options)
 
-          await membership.start()
+        await membership.start()
 
-          memberships.push(membership)
-        })(memberIndex)
-      }
+        memberships.push(membership)
+      }))
     })
 
     after(() => Promise.all(memberships.map((membership) => membership.stop())))
