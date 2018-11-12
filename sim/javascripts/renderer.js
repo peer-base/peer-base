@@ -191,7 +191,7 @@ class Renderer {
       if (typeof d.message[1] === 'string') return []
 
       // TODO: get known peers from message itself?
-      return [...(d.from.membership._members.keys())].map(k => ({ color: Color.getColor(k) }))
+      return d.from.getMemberPeers()
     }).enter()
       .append('circle')
       .classed('members', true)

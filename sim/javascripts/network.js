@@ -83,7 +83,7 @@ class Network extends EventEmitter {
         connectionManager: connectionManagerMock
       })),
       getMemberPeers() {
-        const mKeys = [...(this.membership._members.keys())]
+        const mKeys = [...(this.membership.peers())]
         const mPeers = mKeys.map(k => network.allPeers.find(p => p.b58 === k)).filter(Boolean)
         return mPeers.map(p =>({
           b58: p.b58,
