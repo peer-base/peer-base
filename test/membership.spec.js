@@ -311,11 +311,6 @@ describe('membership', function () {
     let app
     let ipfs
     let globalConnectionManager
-    let collaboration
-    let store
-    let clocks
-    let replication
-    let options
 
     let memberships = []
 

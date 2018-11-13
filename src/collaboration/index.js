@@ -37,7 +37,7 @@ class Collaboration extends EventEmitter {
     this.app = app
     this.name = name
 
-    const selfId =this._ipfs._peerInfo.id.toB58String()
+    const selfId = this._ipfs._peerInfo.id.toB58String()
 
     this._options = Object.assign({}, defaultOptions, options)
     this._parentCollab = parentCollab
