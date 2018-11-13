@@ -27,14 +27,16 @@ describe('keys', () => {
   })
 
   it('can generate a new symmetrical key', (done) => {
+    const decrypted = (err, decrypted) => {
+      expect(err).to.not.exist()
+      expect(decrypted.toString()).to.equal('message')
+      done()
+    }
+
     Keys.generateSymmetrical().then((key) => {
       key.key.encrypt(Buffer.from('message'), (err, encrypted) => {
         expect(err).to.not.exist()
-        key.key.decrypt(encrypted, (err, decrypted) => {
-          expect(err).to.not.exist()
-          expect(decrypted.toString()).to.equal('message')
-          done()
-        })
+        key.key.decrypt(encrypted, decrypted)
       })
     })
   })

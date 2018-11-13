@@ -7,8 +7,7 @@
     "test": "npm run test:node && npm run test:browser",
     "test:node": "aegir test -t node",
     "test:browser": "aegir test -t browser",
-    "lint": "standard src/**/*.js",
-    "lint:fix": "standard --fix src/**/*.js",
+    "lint": "aegir lint",
     "test:perf": "mocha test/performance/all.js",
     "pinner": "node bin/pinner",
     "sim:watch": "watchify -v --debug sim/javascripts -o sim/sim.js"
@@ -40,20 +39,20 @@
     "datastore-core": "~0.6.0",
     "debug": "^4.1.0",
     "delay": "^4.1.0",
-    "delta-crdts": "^0.5.3",
-    "delta-crdts-msgpack-codec": "^0.2.0",
+    "delta-crdts": "~0.5.3",
+    "delta-crdts-msgpack-codec": "~0.2.0",
     "frequency-counter": "^1.0.1",
     "interface-datastore": "~0.6.0",
     "ipfs": "0.33.0",
     "ipfs-api": "^25.0.0",
     "leftpad": "0.0.1",
-    "libp2p": "^0.23.1",
-    "libp2p-bootstrap": "^0.9.3",
+    "libp2p": "~0.23.1",
+    "libp2p-bootstrap": "~0.9.3",
     "libp2p-crypto": "~0.14.0",
-    "libp2p-mplex": "^0.8.0",
-    "libp2p-secio": "^0.10.0",
+    "libp2p-mplex": "~0.8.0",
+    "libp2p-secio": "~0.10.0",
     "libp2p-websocket-star": "~0.9.0",
-    "libp2p-websockets": "^0.12.0",
+    "libp2p-websockets": "~0.12.0",
     "lodash": "^4.17.10",
     "msgpack-lite": "~0.1.26",
     "multiaddr": "^5.0.0",
@@ -72,7 +71,7 @@
     "chai": "^4.1.2",
     "d3": "^5.7.0",
     "dirty-chai": "^2.0.1",
-    "execa": "~1.0.0",
+    "execa": "^1.0.0",
     "hat": "0.0.3",
     "ipfs-repo": "~0.25.0",
     "libp2p-websocket-star-rendezvous": "~0.2.3",
@@ -80,7 +79,6 @@
     "pull-pair": "^1.1.0",
     "rimraf": "^2.6.2",
     "sinon": "^7.1.0",
-    "standard": "^12.0.1",
     "watchify": "^3.11.0"
   },
   "browser": {
@@ -89,8 +87,5 @@
   "pre-push": [
     "lint",
     "test"
-  ],
-  "standard": {
-    "parser": "babel-eslint"
-  }
+  ]
 }

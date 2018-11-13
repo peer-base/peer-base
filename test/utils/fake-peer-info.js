@@ -22,7 +22,7 @@ module.exports = class FakePeerInfo {
       add (ma) {
         addresses.push(ma)
       },
-      toArray() {
+      toArray () {
         return addresses
       },
       has (ma) {

@@ -1,3 +1,5 @@
+'use strict'
+
 require('./ring.spec')
 require('./dias-set.spec')
 require('./dias-set-inbound-conns.spec')

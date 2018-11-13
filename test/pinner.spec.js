@@ -68,7 +68,6 @@ describe('pinner', function () {
   })
 
   it('peers can perform mutations', () => {
-    let pendingChanges = collaborations.length
     collaborations.forEach((collaboration, idx) => {
       collaboration.shared.add(idx)
     })
