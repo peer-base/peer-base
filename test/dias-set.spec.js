@@ -91,13 +91,13 @@ describe('dias set', () => {
   it('can add a node after 1/2', () => {
     r.add(new FakePeerInfo([128, 0]))
     expect(Array.from(diasSet(r).values()).map(peerInfoToId).sort(sort)).to.deep.equal(toBuffers([
-        [0, 1],
-        [0, 2],
-        [51, 0],
-        [63, 0],
-        [85, 0],
-        [128, 0]
-      ]))
+      [0, 1],
+      [0, 2],
+      [51, 0],
+      [63, 0],
+      [85, 0],
+      [128, 0]
+    ]))
   })
 
   it('can work with poorly distributed small sets', () => {

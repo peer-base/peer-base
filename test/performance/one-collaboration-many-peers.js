@@ -69,9 +69,7 @@ describe('performance tests - one collaboration, many peers', function () {
             testWorkerResults()
             const stopped = Date.now()
             const elapsedSeconds = Math.round((stopped - started) / 1000)
-            setTimeout(() => {
-              console.log('Convergence for %d replicas reached in %d seconds', peerCount, elapsedSeconds)
-            }, 3000)
+            console.log('Convergence for %d replicas reached in %d seconds', peerCount, elapsedSeconds)
             done()
           }
         })

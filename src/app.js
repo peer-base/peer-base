@@ -1,4 +1,3 @@
-/* global alert */
 'use strict'
 
 const EventEmitter = require('events')
@@ -35,7 +34,7 @@ class App extends EventEmitter {
       const onError = (err) => {
         if (err.message === 'websocket error') {
           if (!replacing && ipfsOptions.relay) {
-            alert('You seem to be having some issues connecting to ' + JSON.stringify(ipfsOptions && ipfsOptions.swarm) + '. Downgrading to no swarm setup. Please refresh if that\'s not working for you.')
+            console.warn('You seem to be having some issues connecting to ' + JSON.stringify(ipfsOptions && ipfsOptions.swarm) + '. Downgrading to no swarm setup. Please refresh if that\'s not working for you.')
             replacing = true
             this.ipfs.removeListener('error', onError)
             this._options.ipfs.swarm = []

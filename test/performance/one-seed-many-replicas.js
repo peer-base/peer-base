@@ -91,9 +91,7 @@ describe('performance tests - one seed, many replicas', function () {
             testWorkerResults()
             const stopped = Date.now()
             const elapsedSeconds = Math.round((stopped - started) / 1000)
-            setTimeout(() => {
-              console.log('Convergence reached for %d replicas in %d seconds', replicaCount, elapsedSeconds)
-            }, 3000)
+            console.log('Convergence reached for %d replicas in %d seconds', replicaCount, elapsedSeconds)
             done()
           }
         })

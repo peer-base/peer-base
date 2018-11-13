@@ -1,0 +1,83 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  color: #444;
+  display: flex;
+  flex-direction: column;
+}
+button {
+  font-size: 0.7em;
+}
+
+header {
+  color: steelblue;
+  padding: 0.5em 1em;
+}
+.container {
+  flex: 1;
+  padding: 0 0.5em 0.5em 0.5em;
+}
+.content {
+  height: 100%;
+}
+table td {
+  vertical-align: top;
+}
+.canvas-container {
+  width: 100%;
+  position: relative;
+}
+.canvas-container .info {
+  position: absolute;
+  top: 0.5em;
+  right: 0.5em;
+  width: 10em;
+  bottom: 0.5em;
+  overflow: auto;
+}
+.canvas-container .info svg {
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: top;
+}
+.canvas-container .info .item {
+  font-size: 0.75em;
+  padding: 0.25em 0;
+}
+.canvas-container .info .time {
+  padding-left: 0.5em;
+  font-size: 0.75em;
+  opacity: 0.8;
+}
+.controls {
+  min-width: 10em;
+}
+.controls .control {
+  text-align: center;
+  margin-bottom: 0.5em;
+}
+.controls .control .option {
+  padding: 0.25em;
+}
+.controls .control label {
+  font-size: 0.5em;
+}
+.controls .control label.row {
+  display: block;
+  word-break: break-word;
+}
+.controls .control label.title {
+  display: block;
+  padding: 0.25em;
+  font-size: 0.8em;
+}
+
+#canvas {
+  width: 100%;
+  height: 100%;
+  border: 1px dotted #eee;
+}
