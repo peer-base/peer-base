@@ -5,7 +5,6 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const bs58 = require('bs58')
 const EventEmitter = require('events')
 
 const randomPeerId = require('./utils/random-peer-id')

@@ -65,7 +65,7 @@ describe('dias set inbound connections', () => {
       p.inboundPeers = peers.filter(pi => pi !== p && pi.outbound.has(p.peerInfo))
 
       // filter out self
-      const outbound = [...p.outbound].filter(o => o != p.peerInfo.id.toHexString())
+      const outbound = [...p.outbound].filter(o => o !== p.peerInfo.id.toHexString())
 
       maxInbound = Math.max(maxInbound, p.inboundPeers.length)
       maxOutbound = Math.max(maxOutbound, outbound.length)

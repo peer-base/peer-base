@@ -45,14 +45,12 @@ function startLanDiscovery (ipfs, appTransport, options) {
                 if (peerId === myId) {
                   return
                 }
-                peerInfo.multiaddrs.forEach((ma) => {
+                for (let ma of peerInfo.multiaddrs) {
                   const maStr = ma.toString()
-                  if (maStr.indexOf('/p2p-circuit/') === 0) {
-                    if (!appTransport.hasPeer(peerInfo)) {
-                      appTransport.discovery._peerDiscovered(peerInfo)
-                    }
+                  if ((maStr.indexOf('/p2p-circuit/') === 0) && !appTransport.hasPeer(peerInfo)) {
+                    appTransport.discovery._peerDiscovered(peerInfo)
                   }
-                })
+                }
               })
               resolve()
             }).catch(reject)

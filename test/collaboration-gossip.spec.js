@@ -65,9 +65,9 @@ describe('collaboration gossip', function () {
         }
         messages.push(message)
         if (messages.length === peerCount) {
-          messages.forEach((message) => {
+          for (let message of messages) {
             expect(message).to.deep.equal(['hello', 'world!'])
-          })
+          }
           done()
         }
       })
