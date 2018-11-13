@@ -27,7 +27,7 @@ module.exports = class Persistence {
     const value = dagNode.value
     const data = this._codec.decode(value.data)
     return {
-      parent: (value.parent || {})['/'] && new CID(value.parent['/']),
+      parent: value.parent,
       clock: data.clock,
       record: data.record
     }
