@@ -8,6 +8,7 @@ const expect = chai.expect
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const Repo = require('./utils/repo')
+const waitForMembers = require('./utils/wait-for-members')
 const A_BIT = 19000
 
 describe('pinner', function () {
@@ -38,19 +39,11 @@ describe('pinner', function () {
     collaborationOptions.keys = await PeerStar.keys.generate()
   })
 
-  before((done) => {
-    // wait a bit for things to sync
-    setTimeout(done, A_BIT)
-  })
-
   before(async () => {
     collaborations = await Promise.all(
       swarm.map((peer) => peer.app.collaborate(collaborationName, 'gset', collaborationOptions)))
     expect(collaborations.length).to.equal(peerCount)
-  })
-
-  before((done) => {
-    setTimeout(done, A_BIT)
+    await waitForMembers(collaborations)
   })
 
   it('can add a pinner to a collaboration', () => {
@@ -63,8 +56,8 @@ describe('pinner', function () {
     return pinner.start()
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, A_BIT)
+  it('waits for the pinner to be a part of the membership', async () => {
+    await waitForMembers(collaborations.concat(await pinner.peerId()))
   })
 
   it('peers can perform mutations', () => {

@@ -6,6 +6,7 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const App = require('./utils/create-app')
+const waitForMembers = require('./utils/wait-for-members')
 const A_BIT = 5000
 
 describe('stats', function () {
@@ -29,19 +30,11 @@ describe('stats', function () {
     })(i)
   }
 
-  before((done) => {
-    // wait a bit for things to sync
-    setTimeout(done, A_BIT * 2)
-  })
-
   before(async () => {
     collaborations = await Promise.all(
       swarm.map((peer) => peer.app.collaborate('test collaboration', 'rga')))
     expect(collaborations.length).to.equal(peerCount)
-  })
-
-  before((done) => {
-    setTimeout(done, A_BIT)
+    await waitForMembers(collaborations)
   })
 
   before(() => {

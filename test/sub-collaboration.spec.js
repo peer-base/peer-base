@@ -7,6 +7,7 @@ const expect = chai.expect
 
 const PeerStar = require('../')
 const App = require('./utils/create-app')
+const waitForMembers = require('./utils/wait-for-members')
 require('./utils/fake-crdt')
 const A_BIT = 5000
 
@@ -41,11 +42,7 @@ describe('sub-collaboration', function () {
     collaborations = await Promise.all(
       swarm.map((peer) => peer.app.collaborate('test sub-collaboration', 'fake', collaborationOptions)))
     expect(collaborations.length).to.equal(peerCount)
-  })
-
-  before((done) => {
-    // wait a bit for things to sync
-    setTimeout(done, A_BIT)
+    await waitForMembers(collaborations)
   })
 
   it('can create sub-collaboration', async () => {

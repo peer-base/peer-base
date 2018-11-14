@@ -3,16 +3,37 @@
 module.exports = (collaborationsOrIds) => {
   const peerIds = collaborationsOrIds.map(getPeerId)
   const collaborations = collaborationsOrIds.filter(isCollaboration)
-  return Promise.all(collaborations.map((collaboration) => waitForPeers(collaboration, peerIds)))
+  return Promise.all(collaborations.map((collaboration) => waitForPeersFromCollaborations(collaboration, peerIds)))
 }
 
-function waitForPeers (collaboration, peerIds) {
+module.exports.fromMemberships = (memberships) => {
+  const peerIds = memberships.map(getPeerId)
+  return Promise.all(memberships.map((membership) => waitForPeersFromMemberships(membership, peerIds)))
+}
+
+function waitForPeersFromCollaborations (collaboration, peerIds) {
   return new Promise((resolve, reject) => {
     const members = collaboration.peers()
     if (isSetEqual(members, peerIds)) {
       resolve()
     } else {
       collaboration.on('membership changed', (members) => {
+        if (isSetEqual(members, peerIds)) {
+          resolve()
+        }
+      })
+    }
+  })
+}
+
+function waitForPeersFromMemberships (membership, peerIds) {
+  return new Promise((resolve, reject) => {
+    const members = membership.peers()
+    if (isSetEqual(members, peerIds)) {
+      resolve()
+    } else {
+      membership.on('changed', () => {
+        const members = membership.peers()
         if (isSetEqual(members, peerIds)) {
           resolve()
         }

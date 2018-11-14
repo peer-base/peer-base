@@ -6,6 +6,7 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const App = require('./utils/create-app')
+const waitForMembers = require('./utils/wait-for-members')
 require('./utils/fake-crdt')
 const A_BIT = 10000
 
@@ -30,19 +31,11 @@ describe('public collaboration', function () {
     })(i)
   }
 
-  before((done) => {
-    // wait a bit for things to sync
-    setTimeout(done, A_BIT)
-  })
-
   it('can be created', async () => {
     collaborations = await Promise.all(
       swarm.map((peer) => peer.app.collaborate('test public collaboration', 'fake')))
     expect(collaborations.length).to.equal(peerCount)
-  })
-
-  it('waits a bit for membership to propagate', (done) => {
-    setTimeout(done, A_BIT)
+    await waitForMembers(collaborations)
   })
 
   it('has all members', () => {
@@ -62,8 +55,8 @@ describe('public collaboration', function () {
     collaborations.push(collaboration)
   })
 
-  it('waits a bit for membership to propagate', (done) => {
-    setTimeout(done, A_BIT)
+  it('waits a bit for membership to propagate', async () => {
+    await waitForMembers(collaborations)
   })
 
   it('can push operation', async () => {
