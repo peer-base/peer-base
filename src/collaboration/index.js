@@ -81,6 +81,10 @@ class Collaboration extends EventEmitter {
       this._membership,
       globalConnectionManager,
       this._options.stats)
+
+    this.stats.on('error', (err) => {
+      console.error('error in stats:', err)
+    })
   }
 
   async start () {
