@@ -79,9 +79,9 @@ describe('app swarm', function () {
     swarm[0].app.gossip(Buffer.from(JSON.stringify('hello world!')))
   })
 
-  it('each node is outbound connected to maximum 12 other nodes', () => {
+  it('each node connections are bounded', () => {
     outboundConnectionCounts.forEach((connCount) => {
-      expect(connCount).to.be.most(7)
+      expect(connCount).to.be.most(10)
     })
     inboundConnectionCounts.forEach((connCount) => {
       expect(connCount).to.be.most(10)
