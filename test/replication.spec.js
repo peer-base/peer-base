@@ -65,11 +65,17 @@ describe('replication', function () {
   it('waits for replication events', (done) => {
     let waitingForPeers = 2
     for (const collaboration of collaborations) {
-      const id = collaboration._ipfs._peerInfo.id.toB58String()
       let replications = 0
       let receiveds = 0
       let pinneds = 0
       let peerDone = false
+
+      const maybeDone = () => {
+        if (!peerDone && replications === 1 && receiveds === 1 && pinneds === 1) {
+          peerDone = true
+          maybeAllDone()
+        }
+      }
 
       collaboration.replication.on('received', (peerId, clock) => {
         expect(receiveds).to.be.equal(0)
@@ -92,13 +98,6 @@ describe('replication', function () {
         pinneds++
         maybeDone()
       })
-
-      function maybeDone () {
-        if (!peerDone && replications === 1 && receiveds === 1 && pinneds === 1) {
-          peerDone = true
-          maybeAllDone()
-        }
-      }
     }
 
     function maybeAllDone () {

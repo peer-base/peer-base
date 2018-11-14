@@ -8,7 +8,6 @@ const expect = chai.expect
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
-const A_BIT = 19000
 
 describe('collaboration', function () {
   this.timeout(20000)
