@@ -51,6 +51,10 @@ class AppPinner extends EventEmitter {
     return this._starting
   }
 
+  async peerId () {
+    return (await this.ipfs.id()).id
+  }
+
   gossip (message) {
     if (this._gossip) {
       this._gossip.broadcast(message)

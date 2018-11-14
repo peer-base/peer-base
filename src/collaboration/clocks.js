@@ -11,12 +11,12 @@ module.exports = class Clocks extends EventEmitter {
     this._clocks = new Map()
   }
 
-  setFor (peerId, clock) {
+  setFor (peerId, clock, authoritative, isPinner) {
     const previousClock = this.getFor(peerId)
     const newClock = vectorclock.merge(previousClock, clock)
     debug('%s: setting clock for %s: %j', this._id, peerId, newClock)
     this._clocks.set(peerId, newClock)
-    this.emit('update', peerId, newClock)
+    this.emit('update', peerId, newClock, authoritative, isPinner)
   }
 
   getFor (peerId) {

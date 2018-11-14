@@ -12,16 +12,43 @@ class Replication extends EventEmitter {
     super()
     this._selfId = selfId
     this._clocks = clocks
-
-    this._clocks.on('update', this._onPeerClockUpdate.bind(this))
+    this._selfClock = {}
+    this._sentClocks = new Map()
   }
 
-  _onPeerClockUpdate (peerId, remoteClock) {
-    const localClock = this._clocks.getFor(this._selfId)
-    const comparison = vectorclock.compare(remoteClock, localClock)
-    const replicated = (comparison > 0) || (comparison === 0 && vectorclock.isIdentical(remoteClock, localClock))
-    if (replicated) {
-      this.emit('replicated', peerId)
+  received (peerId, clock) {
+    if (peerId === this._selfId) {
+      return
     }
+    if (vectorclock.isIdentical(this._selfClock, clock)) {
+      return
+    }
+    const comparison = vectorclock.compare(this._selfClock, clock)
+    if (comparison < 0 || comparison === 0) {
+      this.emit('received', peerId, clock)
+    }
+    this._selfClock = vectorclock.merge(this._selfClock, clock)
+  }
+
+  sent (peerId, clock, isPinner) {
+    if (peerId === this._selfId) {
+      return
+    }
+
+    const latestClock = this._sentClocks.get(peerId) || {}
+    if (vectorclock.isIdentical(latestClock, clock)) {
+      return
+    }
+
+    const selfClock = this._clocks.getFor(this._selfId)
+
+    if (vectorclock.isIdentical(selfClock, clock) || (vectorclock.compare(selfClock, clock) < 0)) {
+      if (isPinner) {
+        this.emit('pinned', peerId, clock)
+      } else {
+        this.emit('replicated', peerId, clock)
+      }
+    }
+    this._sentClocks.set(peerId, clock)
   }
 }
