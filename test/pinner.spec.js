@@ -110,7 +110,7 @@ describe('pinner', function () {
     return newReader.stop()
   })
 
-  it('can stop new replica', () => {
+  it('can stop pinner', () => {
     return pinner.stop()
   })
 })

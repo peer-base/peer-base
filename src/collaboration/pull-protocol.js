@@ -9,11 +9,12 @@ const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PullProtocol {
-  constructor (ipfs, store, clocks, keys, options) {
+  constructor (ipfs, store, clocks, keys, replication, options) {
     this._ipfs = ipfs
     this._store = store
     this._clocks = clocks
     this._keys = keys
+    this._replication = replication
     this._options = options
   }
 
@@ -84,6 +85,7 @@ module.exports = class PullProtocol {
                 debug('%s: setting %s to lazy mode (2)', this._peerId(), remotePeerId)
                 output.push(encode([null, true]))
               } else {
+                this._replication.received(remotePeerId, clock)
                 debug('%s: saved with new clock %j', this._peerId(), saved)
                 output.push(encode([clock]))
               }

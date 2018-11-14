@@ -10,11 +10,12 @@ const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PushProtocol {
-  constructor (ipfs, store, clocks, keys, options) {
+  constructor (ipfs, store, clocks, keys, replication, options) {
     this._ipfs = ipfs
     this._store = store
     this._clocks = clocks
     this._keys = keys
+    this._replication = replication
     this._options = options
   }
 
@@ -151,7 +152,8 @@ module.exports = class PushProtocol {
       }
 
       if (newRemoteClock) {
-        this._clocks.setFor(remotePeerId, newRemoteClock)
+        this._clocks.setFor(remotePeerId, newRemoteClock, true, isPinner)
+        this._replication.sent(remotePeerId, newRemoteClock, isPinner)
       }
 
       if (newRemoteClock || startEager) {

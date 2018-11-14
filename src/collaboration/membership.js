@@ -14,7 +14,7 @@ const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequenc
 const { encode } = require('delta-crdts-msgpack-codec')
 
 module.exports = class Membership extends EventEmitter {
-  constructor (ipfs, globalConnectionManager, app, collaboration, store, clocks, options) {
+  constructor (ipfs, globalConnectionManager, app, collaboration, store, clocks, replication, options) {
     super()
 
     this._ipfs = ipfs
@@ -35,6 +35,7 @@ module.exports = class Membership extends EventEmitter {
       this._collaboration,
       store,
       clocks,
+      replication,
       this._options)
 
     this._gossipNow = this._gossipNow.bind(this)
