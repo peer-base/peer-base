@@ -45,7 +45,7 @@ describe('collaboration gossip', function () {
     await waitForMembers(collaborations)
   })
 
-  before((done) => setTimeout(done, 4000))
+  before((done) => setTimeout(done, 8000))
 
   before(async () => {
     gossips = await Promise.all(collaborations.map((collab) => collab.gossip('gossip name')))
@@ -55,7 +55,12 @@ describe('collaboration gossip', function () {
     const messages = []
     let peer
     gossips.forEach((gossip) => {
+      let received = false
       gossip.on('message', (message, fromPeer) => {
+        if (received) {
+          return
+        }
+        received = true
         if (peer) {
           expect(fromPeer).to.be.equal(peer)
         } else {
@@ -66,11 +71,14 @@ describe('collaboration gossip', function () {
           for (let message of messages) {
             expect(message).to.deep.equal(['hello', 'world!'])
           }
+          clearInterval(interval)
           done()
         }
       })
     })
 
-    gossips[0].broadcast(['hello', 'world!'])
+    const interval = setInterval(() => {
+      gossips[0].broadcast(['hello', 'world!'])
+    }, 500)
   })
 })
