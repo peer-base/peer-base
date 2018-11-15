@@ -9,7 +9,7 @@ const PeerStar = require('../')
 const App = require('./utils/create-app')
 const Repo = require('./utils/repo')
 const waitForMembers = require('./utils/wait-for-members')
-const A_BIT = 19000
+const waitForValue = require('./utils/wait-for-value')
 
 describe('pinner', function () {
   this.timeout(20000)
@@ -66,18 +66,16 @@ describe('pinner', function () {
     })
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, A_BIT)
-  })
-
   it('converges between replicas', () => {
     expectedValue = new Set()
     collaborations.forEach((collaboration, idx) => {
       expectedValue.add(idx)
     })
-    collaborations.forEach((collaboration) => {
-      expect(collaboration.shared.value()).to.deep.equal(expectedValue)
-    })
+    return waitForValue(collaborations, expectedValue)
+  })
+
+  it('waits for pinned event', (done) => {
+    collaborations[0].replication.once('pinned', () => done())
   })
 
   it('stops all replicas except for pinner', () => {
@@ -91,13 +89,7 @@ describe('pinner', function () {
     newReaderCollab = await newReader.app.collaborate(collaborationName, 'gset', collaborationOptions)
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, A_BIT)
-  })
-
-  it('new reader got state', () => {
-    expect(newReaderCollab.shared.value()).to.deep.equal(expectedValue)
-  })
+  it('new reader got state', () => waitForValue(newReaderCollab, expectedValue))
 
   it('can stop new reader', () => {
     return newReader.stop()

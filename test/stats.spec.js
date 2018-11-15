@@ -7,7 +7,6 @@ const expect = chai.expect
 
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
-const A_BIT = 5000
 
 describe('stats', function () {
   this.timeout(20000)
@@ -97,9 +96,5 @@ describe('stats', function () {
   it('can remove listener', () => {
     const collaboration = collaborations[0]
     collaboration.stats.removeListener('peer updated', statsChangedHandler)
-  })
-
-  it('waits a bit', (done) => {
-    setTimeout(done, A_BIT)
   })
 })

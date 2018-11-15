@@ -8,11 +8,12 @@ const expect = chai.expect
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
+const waitForValue = require('./utils/wait-for-value')
 
 describe('collaboration', function () {
   this.timeout(20000)
 
-  const peerCount = 2 // 10
+  const peerCount = 3
   const collaborationOptions = {}
 
   let swarm = []
@@ -74,13 +75,11 @@ describe('collaboration', function () {
     collaboration.shared.add('a')
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, 2000)
-  })
-
   it('all replicas in sync', async () => {
     const collaborations = await Promise.all(
       swarm.map(async (peer) => peer.app.collaborate('test collaboration', 'gset', collaborationOptions)))
+
+    await waitForValue(collaborations, new Set(['a']))
 
     await Promise.all(collaborations.map(async (collab) => {
       const value = collab.shared.value()

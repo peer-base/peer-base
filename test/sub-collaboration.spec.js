@@ -8,8 +8,8 @@ const expect = chai.expect
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
+const waitForValue = require('./utils/wait-for-value')
 require('./utils/fake-crdt')
-const A_BIT = 5000
 
 describe('sub-collaboration', function () {
   this.timeout(20000)
@@ -56,16 +56,7 @@ describe('sub-collaboration', function () {
     collaboration.shared.add('b')
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, A_BIT)
-  })
-
-  it('all replicas in sync', () => {
-    collaborations.forEach((collab) => {
-      const value = collab.shared.value()
-      expect(value).to.equal('ab')
-    })
-  })
+  it('waits for convergence', () => waitForValue(collaborations, 'ab'))
 
   it('can push operations on sub collaboration', async () => {
     const collaboration = collaborations[0]
@@ -74,22 +65,12 @@ describe('sub-collaboration', function () {
     sub.shared.add('d')
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, A_BIT)
+  it('waits for sub-collaboration convergence', async () => {
+    const subCollaborations = await Promise.all(collaborations.map((collab) => collab.sub('sub', 'fake')))
+    waitForValue(subCollaborations, 'cd')
   })
 
-  it('root collaboration still has same value', () => {
-    collaborations.forEach((collab) => {
-      expect(collab.shared.value()).to.equal('ab')
-    })
-  })
-
-  it('all sub-collaboration replicas in sync', async () => {
-    (await Promise.all(collaborations.map((collab) => collab.sub('sub', 'fake'))))
-      .forEach((sub) => {
-        expect(sub.shared.value()).to.equal('cd')
-      })
-  })
+  it('root collaboration still has same value', () => waitForValue(collaborations, 'ab'))
 
   it('can create another replica', async () => {
     const peer = App({ maxThrottleDelayMS: 1000 })
@@ -99,15 +80,7 @@ describe('sub-collaboration', function () {
     collaborations.push(collaboration)
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, A_BIT * 3)
-  })
-
-  it('root collaboration still has same value', () => {
-    collaborations.forEach((collab) => {
-      expect(collab.shared.value()).to.equal('ab')
-    })
-  })
+  it('root collaboration still has same value', () => waitForValue(collaborations, 'ab'))
 
   it('can kill 3rd replica', () => {
     return swarm[peerCount].stop()

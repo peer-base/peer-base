@@ -7,11 +7,11 @@ const expect = chai.expect
 
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
+const waitForValue = require('./utils/wait-for-value')
 require('./utils/fake-crdt')
-const A_BIT = 10000
 
 describe('public collaboration', function () {
-  this.timeout(A_BIT * 2)
+  this.timeout(20000)
 
   const peerCount = 2 // 10
 
@@ -65,17 +65,11 @@ describe('public collaboration', function () {
     collaboration.shared.add('b')
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, 4000)
-  })
-
   it('all replicas in sync', async () => {
     const collaborations = await Promise.all(
       swarm.map(async (peer) => peer.app.collaborate('test public collaboration', 'fake')))
 
-    await Promise.all(collaborations.map(async (collab) => {
-      expect(collab.shared.value()).to.equal('ab')
-    }))
+    await waitForValue(collaborations, 'ab')
   })
 
   it('can get gossips', async () => {

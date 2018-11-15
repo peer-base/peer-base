@@ -16,6 +16,7 @@ const Clocks = require('../src/collaboration/clocks')
 const Replication = require('../src/collaboration/replication')
 const generateKeys = require('../src/keys/generate')
 
+const waitForValue = require('./utils/wait-for-value')
 require('./utils/fake-crdt')
 const Type = require('../src/collaboration/crdt')('fake')
 
@@ -121,11 +122,7 @@ describe('collaboration protocol', function () {
     return pusher.shared.add('a')
   })
 
-  it('waits a bit', (done) => setTimeout(done, 500))
-
-  it('puller got new state', () => {
-    expect(puller.shared.value()).to.equal('a')
-  })
+  it('push and puller in sync', () => waitForValue([pusher, puller], 'a'))
 
   it('introduces another pusher', async () => {
     const ipfs = {
