@@ -5,7 +5,6 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const delay = require('delay')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
@@ -41,12 +40,12 @@ describe('collaboration gossip', function () {
 
   before(async () => {
     collaborations = await Promise.all(
-      swarm.map((peer) => peer.app.collaborate('test sub-collaboration', 'fake', collaborationOptions)))
+      swarm.map((peer) => peer.app.collaborate('test collaboration gossip', 'fake', collaborationOptions)))
     expect(collaborations.length).to.equal(peerCount)
     await waitForMembers(collaborations)
   })
 
-  before(() => delay(4000))
+  before((done) => setTimeout(done, 4000))
 
   before(async () => {
     gossips = await Promise.all(collaborations.map((collab) => collab.gossip('gossip name')))
