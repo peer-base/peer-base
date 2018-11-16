@@ -70,9 +70,9 @@ describe('replication', function () {
   it('waits for replication events', (done) => {
     let waitingForPeers = 2
     for (const collaboration of collaborations) {
-      let replications = 0
       let receiveds = 0
       let pinneds = 0
+      let replications = 0
       let peerDone = false
 
       const maybeDone = () => {
@@ -83,26 +83,18 @@ describe('replication', function () {
       }
 
       collaboration.replication.on('received', (peerId, clock) => {
-        if (peerDone) { return }
-        expect(receiveds).to.be.equal(0)
-        expect(Object.values(clock)).to.deep.equal([1])
         receiveds++
         maybeDone()
       })
 
       collaboration.replication.on('replicated', (peerId, clock) => {
-        if (peerDone) { return }
-        expect(replications).to.be.equal(0)
-        expect(Object.keys(clock).length).to.equal(2)
-        expect(Object.values(clock)).to.deep.equal([1, 1])
+        Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
         replications++
         maybeDone()
       })
 
       collaboration.replication.on('pinned', (peerId, clock) => {
-        if (peerDone) { return }
-        expect(pinneds).to.be.equal(0)
-        expect(Object.values(clock)).to.deep.equal([1, 1])
+        Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
         pinneds++
         maybeDone()
       })
