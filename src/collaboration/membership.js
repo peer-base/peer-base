@@ -138,6 +138,7 @@ module.exports = class Membership extends EventEmitter {
     let remoteHash = membership
     if (typeof membership !== 'string') {
       // If the parameter is the remote membership state, join to the local state
+      console.log('deliverRemoteMembership:', membership)
       this._joinMembership(membership)
 
       // Figure out the hash of the remote membership state
