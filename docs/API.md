@@ -429,6 +429,18 @@ Options:
 * `collaborationInnactivityTimeoutMS`: (defaults to `60000`). The amount of time to wait for activity before the pinner stops participating in the collaboration.
 * `ipfs`: same as app `options.ipfs` (see above).
 
+## Pinner events
+
+A pinner emits the following events:
+
+### `collaboration started` (collaboration)
+
+Emitted when a collaboration starts.
+
+### `collaboration stopped` (collaboration)
+
+Emitted when a collaboration stops (probably because of innactivity).
+
 ## Command-line
 
 To install a pinner you can:
