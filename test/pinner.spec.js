@@ -51,14 +51,20 @@ describe('pinner', function () {
     await waitForMembers(collaborations)
   })
 
-  it('can add a pinner to a collaboration', () => {
+  it('can add a pinner to a collaboration', (done) => {
     pinner = PeerStar.createPinner(appName, {
       ipfs: {
         swarm: App.swarm,
         repo: Repo()
       }
     })
-    return pinner.start()
+
+    pinner.start().then(() => {
+      pinner.on('collaboration started', (collaboration) => {
+        expect(collaboration.name).to.equal(collaborationName)
+        done()
+      })
+    })
   })
 
   it('waits for the pinner to be a part of the membership', async () => {
@@ -102,6 +108,8 @@ describe('pinner', function () {
     await newReader.start()
     newReaderCollab = await newReader.app.collaborate(collaborationName, 'gset', collaborationOptions)
   })
+
+  it('new reader has pinner', async () => waitForMembers([newReaderCollab, await pinner.peerId()]))
 
   it('new reader got state', () => waitForValue(newReaderCollab, expectedValue))
 
