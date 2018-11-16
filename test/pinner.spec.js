@@ -12,7 +12,7 @@ const waitForMembers = require('./utils/wait-for-members')
 const waitForValue = require('./utils/wait-for-value')
 
 describe('pinner', function () {
-  this.timeout(30000)
+  this.timeout(60000)
 
   const collaborationName = 'pinner test collab'
   const peerCount = 2 // 10
