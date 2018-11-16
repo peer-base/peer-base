@@ -80,7 +80,16 @@ describe('pinner', function () {
   })
 
   it('waits for pinned event', (done) => {
-    collaborations[0].replication.once('pinned', () => done())
+    let pinned = false
+    collaborations.forEach((collaboration) => {
+      collaboration.replication.once('pinned', () => {
+        if (!pinned) {
+          pinned = true
+          done()
+        }
+      })
+    })
+
   })
 
   it('stops all replicas except for pinner', () => {
