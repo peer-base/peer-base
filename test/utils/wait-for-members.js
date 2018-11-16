@@ -19,6 +19,7 @@ function waitForPeersFromCollaborations (collaboration, peerIds) {
       resolve()
     } else {
       collaboration.on('membership changed', (members) => {
+        console.log('members are', [...members])
         if (isSetEqual(members, peerIds)) {
           resolve()
         }
