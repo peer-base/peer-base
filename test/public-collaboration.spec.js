@@ -11,7 +11,7 @@ const waitForValue = require('./utils/wait-for-value')
 require('./utils/fake-crdt')
 
 describe('public collaboration', function () {
-  this.timeout(20000)
+  this.timeout(30000)
 
   const peerCount = 2 // 10
 
@@ -22,7 +22,7 @@ describe('public collaboration', function () {
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
+        const app = App('public collaboration app', { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })
@@ -35,29 +35,19 @@ describe('public collaboration', function () {
     collaborations = await Promise.all(
       swarm.map((peer) => peer.app.collaborate('test public collaboration', 'fake')))
     expect(collaborations.length).to.equal(peerCount)
-    await waitForMembers(collaborations)
   })
 
-  it('has all members', () => {
-    return Promise.all(swarm.map((peer) => peer.app.ipfs.id())).then((ids) => {
-      ids = ids.map((id) => id.id)
-      collaborations.forEach((collaboration) => {
-        expect(Array.from(collaboration.peers()).sort()).to.deep.equal(ids.sort())
-      })
-    })
-  })
+  it('has all members', () => waitForMembers(collaborations))
 
   it('adding another peer', async () => {
-    const peer = App({ maxThrottleDelayMS: 1000 })
+    const peer = App('public collaboration app', { maxThrottleDelayMS: 1000 })
     swarm.push(peer)
     await peer.app.start()
     const collaboration = await peer.app.collaborate('test public collaboration', 'fake')
     collaborations.push(collaboration)
   })
 
-  it('waits a bit for membership to propagate', async () => {
-    await waitForMembers(collaborations)
-  })
+  it('waits a bit for membership to propagate', () => waitForMembers(collaborations))
 
   it('can push operation', async () => {
     const collaboration = await swarm[0].app.collaborate('test public collaboration', 'fake')

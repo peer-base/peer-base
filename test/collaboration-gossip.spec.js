@@ -11,7 +11,7 @@ const waitForMembers = require('./utils/wait-for-members')
 require('./utils/fake-crdt')
 
 describe('collaboration gossip', function () {
-  this.timeout(20000)
+  this.timeout(30000)
 
   const peerCount = 2 // 10
   const collaborationOptions = {
@@ -25,7 +25,7 @@ describe('collaboration gossip', function () {
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
+        const app = App('collaboration gossip app', { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })

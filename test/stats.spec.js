@@ -20,7 +20,7 @@ describe('stats', function () {
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
+        const app = App('stats app', { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })

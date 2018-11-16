@@ -11,7 +11,7 @@ const waitForMembers = require('./utils/wait-for-members')
 const waitForValue = require('./utils/wait-for-value')
 
 describe('collaboration', function () {
-  this.timeout(20000)
+  this.timeout(30000)
 
   const peerCount = 3
   const collaborationOptions = {}
@@ -22,7 +22,7 @@ describe('collaboration', function () {
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
+        const app = App('collaboration app', { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })
@@ -52,7 +52,7 @@ describe('collaboration', function () {
   })
 
   it('adding another peer', async () => {
-    const peer = App({ maxThrottleDelayMS: 1000 })
+    const peer = App('collaboration app', { maxThrottleDelayMS: 1000 })
     swarm.push(peer)
     await peer.app.start()
     const collaboration = await peer.app.collaborate('test collaboration', 'gset', collaborationOptions)

@@ -32,7 +32,7 @@ describe('app swarm', function () {
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
+        const app = App('app swarm app', { maxThrottleDelayMS: 1000 })
 
         app.app.on('outbound peer connected', (peerInfo) => {
           outboundConnectionCounts[i] = (outboundConnectionCounts[i] || 0) + 1
