@@ -83,6 +83,7 @@ describe('replication', function () {
       }
 
       collaboration.replication.on('received', (peerId, clock) => {
+        if (peerDone) { return }
         expect(receiveds).to.be.equal(0)
         expect(Object.values(clock)).to.deep.equal([1])
         receiveds++
@@ -90,6 +91,7 @@ describe('replication', function () {
       })
 
       collaboration.replication.on('replicated', (peerId, clock) => {
+        if (peerDone) { return }
         expect(replications).to.be.equal(0)
         expect(Object.keys(clock).length).to.equal(2)
         expect(Object.values(clock)).to.deep.equal([1, 1])
@@ -98,6 +100,7 @@ describe('replication', function () {
       })
 
       collaboration.replication.on('pinned', (peerId, clock) => {
+        if (peerDone) { return }
         expect(pinneds).to.be.equal(0)
         expect(Object.values(clock)).to.deep.equal([1, 1])
         pinneds++
