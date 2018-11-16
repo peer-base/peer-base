@@ -12,14 +12,12 @@ module.exports.fromMemberships = (memberships) => {
 }
 
 function waitForPeersFromCollaborations (collaboration, peerIds) {
-  console.log('waiting for', peerIds)
   return new Promise((resolve, reject) => {
     const members = collaboration.peers()
     if (isSetEqual(members, peerIds)) {
       resolve()
     } else {
       collaboration.on('membership changed', (members) => {
-        console.log('members are', [...members])
         if (isSetEqual(members, peerIds)) {
           resolve()
         }
