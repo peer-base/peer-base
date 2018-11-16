@@ -2,6 +2,7 @@
 
 const PeerStar = require('../../')
 const Repo = require('./repo')
+const delay = require('delay')
 
 const SWARM = [ '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star' ]
 
@@ -29,7 +30,8 @@ module.exports = (appName, transportOptions, ipfsOptions) => {
   const start = () => app.start()
 
   const stop = () => {
-    return app.stop()
+    return delay(2000) // to avoid race conditions with pending operations
+      .then(() => app.stop())
       .then(() => repo.teardown())
       .catch(() => repo.teardown())
   }
