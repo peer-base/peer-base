@@ -61,12 +61,6 @@ describe('replication', function () {
     await waitForMembers(collaborations.concat(pinnerPeerId))
   })
 
-  it('peers can perform mutations', () => {
-    collaborations.forEach((collaboration, idx) => {
-      collaboration.shared.add(idx)
-    })
-  })
-
   it('waits for replication events', (done) => {
     let waitingForPeers = 2
     for (const collaboration of collaborations) {
@@ -105,6 +99,10 @@ describe('replication', function () {
         done()
       }
     }
+
+    collaborations.forEach((collaboration, idx) => {
+      collaboration.shared.add(idx)
+    })
   })
 
   it('converged between replicas', () => {
