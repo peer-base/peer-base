@@ -11,7 +11,7 @@ const Repo = require('./utils/repo')
 const waitForMembers = require('./utils/wait-for-members')
 
 describe('replication', function () {
-  this.timeout(30000)
+  this.timeout(60000)
 
   const collaborationName = 'replication test collab'
   const peerCount = 2 // 10
