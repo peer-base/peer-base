@@ -13,14 +13,19 @@ describe('stats', function () {
 
   const peerCount = 4
 
+  let appName
   let swarm = []
   let collaborations
   let statsChangedHandler
 
+  before(() => {
+    appName = App.createName()
+  })
+
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App('stats app', { maxThrottleDelayMS: 1000 })
+        const app = App(appName, { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })

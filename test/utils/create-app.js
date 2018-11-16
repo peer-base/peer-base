@@ -6,6 +6,10 @@ const Repo = require('./repo')
 const SWARM = [ '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star' ]
 
 module.exports = (appName, transportOptions, ipfsOptions) => {
+  if (!appName) {
+    throw new Error('need app name')
+  }
+
   const repo = Repo()
 
   ipfsOptions = Object.assign({
@@ -34,6 +38,11 @@ module.exports = (appName, transportOptions, ipfsOptions) => {
 }
 
 module.exports.swarm = SWARM
+
+let seq = 0
+module.exports.createName = () => {
+  return PeerStar.generateRandomName()
+}
 
 process.on('uncaughtException', (err) => {
   console.error('uncaught error:', err)

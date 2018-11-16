@@ -18,14 +18,19 @@ describe('collaboration gossip', function () {
     maxDeltaRetention: 0
   }
 
+  let appName
   let swarm = []
   let collaborations
   let gossips
 
+  before(() => {
+    appName = App.createName()
+  })
+
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App('collaboration gossip app', { maxThrottleDelayMS: 1000 })
+        const app = App(appName, { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })

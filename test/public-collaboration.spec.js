@@ -15,14 +15,19 @@ describe('public collaboration', function () {
 
   const peerCount = 2 // 10
 
+  let appName
   let swarm = []
   let collaborations
   let gossips
 
+  before(() => {
+    appName = App.createName()
+  })
+
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App('public collaboration app', { maxThrottleDelayMS: 1000 })
+        const app = App(appName, { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })
@@ -40,7 +45,7 @@ describe('public collaboration', function () {
   it('has all members', () => waitForMembers(collaborations))
 
   it('adding another peer', async () => {
-    const peer = App('public collaboration app', { maxThrottleDelayMS: 1000 })
+    const peer = App(appName, { maxThrottleDelayMS: 1000 })
     swarm.push(peer)
     await peer.app.start()
     const collaboration = await peer.app.collaborate('test public collaboration', 'fake')

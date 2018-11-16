@@ -18,6 +18,7 @@ describe('pinner', function () {
   const peerCount = 2 // 10
   const collaborationOptions = {}
 
+  let appName
   let swarm = []
   let pinner
   let collaborations
@@ -25,10 +26,14 @@ describe('pinner', function () {
   let newReaderCollab
   let expectedValue
 
+  before(() => {
+    appName = App.createName()
+  })
+
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App('pinner app', { maxThrottleDelayMS: 1000 })
+        const app = App(appName, { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })
@@ -47,7 +52,7 @@ describe('pinner', function () {
   })
 
   it('can add a pinner to a collaboration', () => {
-    pinner = PeerStar.createPinner('pinner app', {
+    pinner = PeerStar.createPinner(appName, {
       ipfs: {
         swarm: App.swarm,
         repo: Repo()
@@ -83,7 +88,7 @@ describe('pinner', function () {
   })
 
   it('can start new reader', async () => {
-    newReader = App('pinner app', { maxThrottleDelayMS: 1000 })
+    newReader = App(appName, { maxThrottleDelayMS: 1000 })
     swarm.push(newReader)
     await newReader.start()
     newReaderCollab = await newReader.app.collaborate(collaborationName, 'gset', collaborationOptions)

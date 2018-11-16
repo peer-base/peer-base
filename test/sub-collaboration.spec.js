@@ -19,13 +19,18 @@ describe('sub-collaboration', function () {
     maxDeltaRetention: 0
   }
 
+  let appName
   let swarm = []
   let collaborations
+
+  before(() => {
+    appName = App.createName()
+  })
 
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App('sub-collaboration app', { maxThrottleDelayMS: 0 })
+        const app = App(appName, { maxThrottleDelayMS: 0 })
         swarm.push(app)
         return app.start()
       })
@@ -73,7 +78,7 @@ describe('sub-collaboration', function () {
   it('root collaboration still has same value', () => waitForValue(collaborations, 'ab'))
 
   it('can create another replica', async () => {
-    const peer = App('sub-collaboration app', { maxThrottleDelayMS: 1000 })
+    const peer = App(appName, { maxThrottleDelayMS: 1000 })
     await peer.app.start()
     swarm.push(peer)
     const collaboration = await peer.app.collaborate('test sub-collaboration', 'fake', collaborationOptions)

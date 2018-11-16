@@ -12,6 +12,7 @@ const A_BIT = 19000
 describe('app swarm', function () {
   this.timeout(20000)
 
+  let appName
   const peerCount = 10
 
   // let rendezvous
@@ -29,10 +30,14 @@ describe('app swarm', function () {
 
   after(() => clearInterval(interval))
 
+  before(() => {
+    appName = App.createName()
+  })
+
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App('app swarm app', { maxThrottleDelayMS: 1000 })
+        const app = App(appName, { maxThrottleDelayMS: 1000 })
 
         app.app.on('outbound peer connected', (peerInfo) => {
           outboundConnectionCounts[i] = (outboundConnectionCounts[i] || 0) + 1

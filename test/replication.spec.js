@@ -17,16 +17,21 @@ describe('replication', function () {
   const peerCount = 2 // 10
   const collaborationOptions = {}
 
+  let appName
   let swarm = []
   let pinner
   let pinnerPeerId
   let collaborations
   let expectedValue
 
+  before(() => {
+    appName = App.createName()
+  })
+
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App('replication app', { maxThrottleDelayMS: 1000 })
+        const app = App(appName, { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })
@@ -44,7 +49,7 @@ describe('replication', function () {
   })
 
   it('can add a pinner to a collaboration', async () => {
-    pinner = PeerStar.createPinner('replication app', {
+    pinner = PeerStar.createPinner(appName, {
       ipfs: {
         swarm: App.swarm,
         repo: Repo()

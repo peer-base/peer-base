@@ -16,13 +16,18 @@ describe('collaboration', function () {
   const peerCount = 3
   const collaborationOptions = {}
 
+  let appName
   let swarm = []
   let collaborations
+
+  before(() => {
+    appName = App.createName()
+  })
 
   for (let i = 0; i < peerCount; i++) {
     ((i) => {
       before(() => {
-        const app = App('collaboration app', { maxThrottleDelayMS: 1000 })
+        const app = App(appName, { maxThrottleDelayMS: 1000 })
         swarm.push(app)
         return app.start()
       })
@@ -52,7 +57,7 @@ describe('collaboration', function () {
   })
 
   it('adding another peer', async () => {
-    const peer = App('collaboration app', { maxThrottleDelayMS: 1000 })
+    const peer = App(appName, { maxThrottleDelayMS: 1000 })
     swarm.push(peer)
     await peer.app.start()
     const collaboration = await peer.app.collaborate('test collaboration', 'gset', collaborationOptions)
