@@ -77,17 +77,20 @@ describe('replication', function () {
       }
 
       collaboration.replication.on('received', (peerId, clock) => {
+        console.log('received', peerId, clock)
         receiveds++
         maybeDone()
       })
 
       collaboration.replication.on('replicated', (peerId, clock) => {
+        console.log('replicated', peerId, clock)
         Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
         replications++
         maybeDone()
       })
 
       collaboration.replication.on('pinned', (peerId, clock) => {
+        console.log('pinned', peerId, clock)
         Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
         pinneds++
         maybeDone()
