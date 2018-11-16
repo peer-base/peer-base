@@ -28,15 +28,18 @@ describe('replication', function () {
     appName = App.createName()
   })
 
+  const peerIndexes = []
   for (let i = 0; i < peerCount; i++) {
-    ((i) => {
-      before(() => {
-        const app = App(appName, { maxThrottleDelayMS: 1000 })
-        swarm.push(app)
-        return app.start()
-      })
-    })(i)
+    peerIndexes.push(i)
   }
+
+  peerIndexes.forEach((peerIndex) => {
+    before(() => {
+      const app = App(appName, { maxThrottleDelayMS: 1000 })
+      swarm.push(app)
+      return app.start()
+    })
+  })
 
   before(async () => {
     collaborationOptions.keys = await PeerStar.keys.generate()

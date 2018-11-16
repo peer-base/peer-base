@@ -41,7 +41,6 @@ module.exports = (appName, transportOptions, ipfsOptions) => {
 
 module.exports.swarm = SWARM
 
-let seq = 0
 module.exports.createName = () => {
   return PeerStar.generateRandomName()
 }

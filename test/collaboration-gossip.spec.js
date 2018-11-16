@@ -27,17 +27,20 @@ describe('collaboration gossip', function () {
     appName = App.createName()
   })
 
+  const peerIndexes = []
   for (let i = 0; i < peerCount; i++) {
-    ((i) => {
-      before(() => {
-        const app = App(appName, { maxThrottleDelayMS: 1000 })
-        swarm.push(app)
-        return app.start()
-      })
-
-      after(() => swarm[i] && swarm[i].stop())
-    })(i)
+    peerIndexes.push(i)
   }
+
+  peerIndexes.forEach((peerIndex) => {
+    before(() => {
+      const app = App(appName, { maxThrottleDelayMS: 1000 })
+      swarm.push(app)
+      return app.start()
+    })
+
+    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
+  })
 
   before(async () => {
     collaborationOptions.keys = await PeerStar.keys.generate()

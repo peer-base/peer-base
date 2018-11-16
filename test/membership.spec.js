@@ -59,7 +59,9 @@ class EventLogger {
   }
   clear () {
     for (const e in this.logs) {
-      this.logs[e] = []
+      if (this.logs.hasOwnProperty(e)) {
+        this.logs[e] = []
+      }
     }
   }
 }
@@ -302,7 +304,7 @@ describe('membership', function () {
       expect(eventLogger.logs['peer joined'].length).to.equal(0)
       expect(eventLogger.logs['peer left'].length).to.equal(0)
       expect(eventLogger.logs['peer addresses changed'].length).to.equal(0)
-      expect(eventLogger.logs['changed'].length).to.equal(0)
+      expect(eventLogger.logs.changed.length).to.equal(0)
     })
   })
 
