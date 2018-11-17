@@ -87,12 +87,18 @@ describe('replication', function () {
       }
 
       collaboration.replication.on('received', (peerId, clock) => {
+        if (peerDone) {
+          return
+        }
         console.log('received', peerId, clock)
         receiveds++
         maybeDone()
       })
 
       collaboration.replication.on('replicated', (peerId, clock) => {
+        if (peerDone) {
+          return
+        }
         console.log('replicated', peerId, clock)
         Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
         replications++
@@ -100,6 +106,9 @@ describe('replication', function () {
       })
 
       collaboration.replication.on('pinned', (peerId, clock) => {
+        if (peerDone) {
+          return
+        }
         console.log('pinned', peerId, clock)
         Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
         pinneds++
