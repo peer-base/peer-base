@@ -83,6 +83,12 @@ class App extends EventEmitter {
       collaboration = Collaboration(true, this.ipfs, this._globalConnectionManager, this, name, type, options)
       this._collaborations.set(name, collaboration)
       collaboration.once('stopped', () => this._collaborations.delete(name))
+      collaboration.on('error', (err) => {
+        if (collaboration.listenerCount('error') === 1) { // self
+          console.warn('error trapped in collaboration: you should listen to `error` events. Instead, we\'re forwarding this error to the app', err)
+          this.emit('error', err)
+        }
+      })
     }
     await collaboration.start()
     return collaboration

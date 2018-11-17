@@ -11,27 +11,35 @@ const Repo = require('./utils/repo')
 const waitForMembers = require('./utils/wait-for-members')
 
 describe('replication', function () {
-  this.timeout(20000)
+  this.timeout(60000)
 
   const collaborationName = 'replication test collab'
   const peerCount = 2 // 10
   const collaborationOptions = {}
 
+  let appName
   let swarm = []
   let pinner
   let pinnerPeerId
   let collaborations
   let expectedValue
 
+  before(() => {
+    appName = App.createName()
+  })
+
+  const peerIndexes = []
   for (let i = 0; i < peerCount; i++) {
-    ((i) => {
-      before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
-        swarm.push(app)
-        return app.start()
-      })
-    })(i)
+    peerIndexes.push(i)
   }
+
+  peerIndexes.forEach((peerIndex) => {
+    before(() => {
+      const app = App(appName, { maxThrottleDelayMS: 1000 })
+      swarm.push(app)
+      return app.start()
+    })
+  })
 
   before(async () => {
     collaborationOptions.keys = await PeerStar.keys.generate()
@@ -44,7 +52,7 @@ describe('replication', function () {
   })
 
   it('can add a pinner to a collaboration', async () => {
-    pinner = PeerStar.createPinner(App.appName, {
+    pinner = PeerStar.createPinner(appName, {
       ipfs: {
         swarm: App.swarm,
         repo: Repo()
@@ -56,49 +64,40 @@ describe('replication', function () {
     await waitForMembers(collaborations.concat(pinnerPeerId))
   })
 
-  it('peers can perform mutations', () => {
-    collaborations.forEach((collaboration, idx) => {
-      collaboration.shared.add(idx)
-    })
-  })
-
   it('waits for replication events', (done) => {
     let waitingForPeers = 2
     for (const collaboration of collaborations) {
-      const id = collaboration._ipfs._peerInfo.id.toB58String()
-      let replications = 0
       let receiveds = 0
       let pinneds = 0
+      let replications = 0
       let peerDone = false
 
-      collaboration.replication.on('received', (peerId, clock) => {
-        expect(receiveds).to.be.equal(0)
-        expect(Object.values(clock)).to.deep.equal([1])
-        receiveds++
-        maybeDone()
-      })
-
-      collaboration.replication.on('replicated', (peerId, clock) => {
-        expect(replications).to.be.equal(0)
-        expect(Object.keys(clock).length).to.equal(2)
-        expect(Object.values(clock)).to.deep.equal([1, 1])
-        replications++
-        maybeDone()
-      })
-
-      collaboration.replication.on('pinned', (peerId, clock) => {
-        expect(pinneds).to.be.equal(0)
-        expect(Object.values(clock)).to.deep.equal([1, 1])
-        pinneds++
-        maybeDone()
-      })
-
-      function maybeDone () {
+      const maybeDone = () => {
         if (!peerDone && replications === 1 && receiveds === 1 && pinneds === 1) {
           peerDone = true
           maybeAllDone()
         }
       }
+
+      collaboration.replication.on('received', (peerId, clock) => {
+        console.log('received', peerId, clock)
+        receiveds++
+        maybeDone()
+      })
+
+      collaboration.replication.on('replicated', (peerId, clock) => {
+        console.log('replicated', peerId, clock)
+        Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
+        replications++
+        maybeDone()
+      })
+
+      collaboration.replication.on('pinned', (peerId, clock) => {
+        console.log('pinned', peerId, clock)
+        Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
+        pinneds++
+        maybeDone()
+      })
     }
 
     function maybeAllDone () {
@@ -106,6 +105,10 @@ describe('replication', function () {
         done()
       }
     }
+
+    collaborations.forEach((collaboration, idx) => {
+      collaboration.shared.add(idx)
+    })
   })
 
   it('converged between replicas', () => {

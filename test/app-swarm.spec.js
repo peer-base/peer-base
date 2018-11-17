@@ -12,6 +12,7 @@ const A_BIT = 19000
 describe('app swarm', function () {
   this.timeout(20000)
 
+  let appName
   const peerCount = 10
 
   // let rendezvous
@@ -29,34 +30,41 @@ describe('app swarm', function () {
 
   after(() => clearInterval(interval))
 
+  before(() => {
+    appName = App.createName()
+  })
+
+  const peerIndexes = []
   for (let i = 0; i < peerCount; i++) {
-    ((i) => {
-      before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
+    peerIndexes.push(i)
+  }
 
-        app.app.on('outbound peer connected', (peerInfo) => {
-          outboundConnectionCounts[i] = (outboundConnectionCounts[i] || 0) + 1
-        })
+  peerIndexes.forEach((peerIndex) => {
+    before(() => {
+      const app = App(appName, { maxThrottleDelayMS: 1000 })
 
-        app.app.on('inbound peer connected', (peerInfo) => {
-          inboundConnectionCounts[i] = (inboundConnectionCounts[i] || 0) + 1
-        })
-
-        app.app.on('outbound peer disconnected', (peerInfo) => {
-          outboundConnectionCounts[i] = (outboundConnectionCounts[i] || 0) - 1
-        })
-
-        app.app.on('inbound peer disconnected', (peerInfo) => {
-          inboundConnectionCounts[i] = (inboundConnectionCounts[i] || 0) - 1
-        })
-
-        swarm.push(app)
-        return app.start()
+      app.app.on('outbound peer connected', (peerInfo) => {
+        outboundConnectionCounts[peerIndex] = (outboundConnectionCounts[peerIndex] || 0) + 1
       })
 
-      after(() => swarm[i] && swarm[i].stop())
-    })(i)
-  }
+      app.app.on('inbound peer connected', (peerInfo) => {
+        inboundConnectionCounts[peerIndex] = (inboundConnectionCounts[peerIndex] || 0) + 1
+      })
+
+      app.app.on('outbound peer disconnected', (peerInfo) => {
+        outboundConnectionCounts[peerIndex] = (outboundConnectionCounts[peerIndex] || 0) - 1
+      })
+
+      app.app.on('inbound peer disconnected', (peerInfo) => {
+        inboundConnectionCounts[peerIndex] = (inboundConnectionCounts[peerIndex] || 0) - 1
+      })
+
+      swarm.push(app)
+      return app.start()
+    })
+
+    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
+  })
 
   before((done) => {
     // wait a bit for things to sync
@@ -79,9 +87,12 @@ describe('app swarm', function () {
     swarm[0].app.gossip(Buffer.from(JSON.stringify('hello world!')))
   })
 
-  // it('each node is outbound connected to maximum 12 other nodes', () => {
-  //   outboundConnectionCounts.forEach((connCount) => {
-  //     expect(connCount).to.be.most(12)
-  //   })
-  // })
+  it('each node connections are bounded', () => {
+    outboundConnectionCounts.forEach((connCount) => {
+      expect(connCount).to.be.most(10)
+    })
+    inboundConnectionCounts.forEach((connCount) => {
+      expect(connCount).to.be.most(10)
+    })
+  })
 })

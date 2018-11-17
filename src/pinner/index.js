@@ -18,7 +18,6 @@ class AppPinner extends EventEmitter {
     if (!name) {
       throw new Error('pinner should have app name')
     }
-    console.log('pinner for', name)
     this._options = Object.assign({}, defaultOptions, options)
     this._peerCountGuess = new PeerCountGuess(this, options && options.peerCountGuess)
     this._collaborations = new Map()
@@ -46,6 +45,7 @@ class AppPinner extends EventEmitter {
       }
     }).then(() => {
       this._peerCountGuess.start()
+      console.log('pinner for %j started', this.name)
     })
 
     return this._starting
@@ -102,6 +102,7 @@ class AppPinner extends EventEmitter {
       if (type) {
         collaboration = this._addCollaboration(collaborationName, type)
         await collaboration.start()
+        this.emit('collaboration started', collaboration)
       }
     }
     collaboration.deliverRemoteMembership(membership).catch((err) => {
@@ -122,9 +123,14 @@ class AppPinner extends EventEmitter {
       debug('collaboration %j timed out. Removing it...', name, type)
       collaboration.removeListener('state changed', onStateChanged)
       this._collaborations.delete(name)
-      collaboration.stop().catch((err) => {
-        console.error('error stopping collaboration ' + name + ':', err)
-      })
+
+      collaboration.stop()
+        .then(() => {
+          this.emit('collaboration stopped', collaboration)
+        })
+        .catch((err) => {
+          console.error('error stopping collaboration ' + name + ':', err)
+        })
     }
 
     let activityTimeout

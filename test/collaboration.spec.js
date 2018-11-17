@@ -7,46 +7,47 @@ const expect = chai.expect
 
 const PeerStar = require('../')
 const App = require('./utils/create-app')
-const A_BIT = 19000
+const waitForMembers = require('./utils/wait-for-members')
+const waitForValue = require('./utils/wait-for-value')
 
 describe('collaboration', function () {
-  this.timeout(20000)
+  this.timeout(30000)
 
-  const peerCount = 2 // 10
+  const peerCount = 3
   const collaborationOptions = {}
 
+  let appName
   let swarm = []
   let collaborations
 
-  for (let i = 0; i < peerCount; i++) {
-    ((i) => {
-      before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
-        swarm.push(app)
-        return app.start()
-      })
+  before(() => {
+    appName = App.createName()
+  })
 
-      after(() => swarm[i] && swarm[i].stop())
-    })(i)
+  const peerIndexes = []
+  for (let i = 0; i < peerCount; i++) {
+    peerIndexes.push(i)
   }
+
+  peerIndexes.forEach((peerIndex) => {
+    before(() => {
+      const app = App(appName, { maxThrottleDelayMS: 1000 })
+      swarm.push(app)
+      return app.start()
+    })
+
+    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
+  })
 
   before(async () => {
     collaborationOptions.keys = await PeerStar.keys.generate()
-  })
-
-  before((done) => {
-    // wait a bit for things to sync
-    setTimeout(done, A_BIT)
   })
 
   it('can be created', async () => {
     collaborations = await Promise.all(
       swarm.map((peer) => peer.app.collaborate('test collaboration', 'gset', collaborationOptions)))
     expect(collaborations.length).to.equal(peerCount)
-  })
-
-  it('waits a bit for membership to propagate', (done) => {
-    setTimeout(done, A_BIT)
+    await waitForMembers(collaborations)
   })
 
   it('has all members', () => {
@@ -59,25 +60,13 @@ describe('collaboration', function () {
   })
 
   it('adding another peer', async () => {
-    const peer = App({ maxThrottleDelayMS: 1000 })
+    const peer = App(appName, { maxThrottleDelayMS: 1000 })
     swarm.push(peer)
     await peer.app.start()
     const collaboration = await peer.app.collaborate('test collaboration', 'gset', collaborationOptions)
     collaborations.push(collaboration)
+    await waitForMembers(collaborations)
   })
-
-  it('waits a bit for membership to propagate', (done) => {
-    setTimeout(done, A_BIT)
-  })
-
-  // it('all peers have entire membership', () => {
-  //   return Promise.all(swarm.map((peer) => peer.app.ipfs.id())).then((ids) => {
-  //     ids = ids.map((id) => id.id)
-  //     collaborations.forEach((collaboration) => {
-  //       expect(Array.from(collaboration.peers()).sort()).to.deep.equal(ids.sort())
-  //     })
-  //   })
-  // })
 
   it('can push operation', (done) => {
     let pendingChanges = collaborations.length
@@ -94,13 +83,11 @@ describe('collaboration', function () {
     collaboration.shared.add('a')
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, 2000)
-  })
-
   it('all replicas in sync', async () => {
     const collaborations = await Promise.all(
       swarm.map(async (peer) => peer.app.collaborate('test collaboration', 'gset', collaborationOptions)))
+
+    await waitForValue(collaborations, new Set(['a']))
 
     await Promise.all(collaborations.map(async (collab) => {
       const value = collab.shared.value()

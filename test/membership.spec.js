@@ -7,6 +7,7 @@ const expect = chai.expect
 
 const FakePeerInfo = require('./utils/fake-peer-info')
 const randomPeerId = require('./utils/random-peer-id').buffer
+const waitForMembers = require('./utils/wait-for-members').fromMemberships
 const Membership = require('../src/collaboration/membership')
 const { decode } = require('delta-crdts-msgpack-codec')
 const Multiaddr = require('multiaddr')
@@ -58,7 +59,9 @@ class EventLogger {
   }
   clear () {
     for (const e in this.logs) {
-      this.logs[e] = []
+      if (this.logs.hasOwnProperty(e)) {
+        this.logs[e] = []
+      }
     }
   }
 }
@@ -301,7 +304,7 @@ describe('membership', function () {
       expect(eventLogger.logs['peer joined'].length).to.equal(0)
       expect(eventLogger.logs['peer left'].length).to.equal(0)
       expect(eventLogger.logs['peer addresses changed'].length).to.equal(0)
-      expect(eventLogger.logs['changed'].length).to.equal(0)
+      expect(eventLogger.logs.changed.length).to.equal(0)
     })
   })
 
@@ -321,7 +324,7 @@ describe('membership', function () {
       for (let memberIndex = 0; memberIndex < peerCount; memberIndex++) {
         members.push(memberIndex)
       }
-      return Promise.all(members.map(async (memberIndex) => {
+      await Promise.all(members.map(async (memberIndex) => {
         let membership
 
         ipfs = mock.ipfs()
@@ -372,13 +375,11 @@ describe('membership', function () {
 
         memberships.push(membership)
       }))
+
+      await waitForMembers(memberships)
     })
 
     after(() => Promise.all(memberships.map((membership) => membership.stop())))
-
-    it('waits a bit', (done) => {
-      setTimeout(done, 9000)
-    })
 
     it('has all members', () => {
       for (let membership of memberships) {
