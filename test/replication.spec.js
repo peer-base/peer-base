@@ -66,6 +66,13 @@ describe('replication', function () {
 
   it('waits for replication events', (done) => {
     let waitingForPeers = 2
+
+    const interval = setInterval(() => {
+      collaborations.forEach((collaboration, idx) => {
+        collaboration.shared.add(idx)
+      })
+    }, 1000)
+
     for (const collaboration of collaborations) {
       let receiveds = 0
       let pinneds = 0
@@ -102,13 +109,10 @@ describe('replication', function () {
 
     function maybeAllDone () {
       if (--waitingForPeers === 0) {
+        clearInterval(interval)
         done()
       }
     }
-
-    collaborations.forEach((collaboration, idx) => {
-      collaboration.shared.add(idx)
-    })
   })
 
   it('converged between replicas', () => {
