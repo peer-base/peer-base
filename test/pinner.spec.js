@@ -81,10 +81,7 @@ describe('pinner', function () {
   })
 
   it('converges between replicas', () => {
-    expectedValue = new Set()
-    collaborations.forEach((collaboration, idx) => {
-      expectedValue.add(idx)
-    })
+    expectedValue = new Set([...peerIndexes])
     return waitForValue(collaborations, expectedValue)
   })
 
