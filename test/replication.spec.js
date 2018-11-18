@@ -65,56 +65,45 @@ describe('replication', function () {
   })
 
   it('waits for replication events', (done) => {
-    let waitingForPeers = 2
+    let waitingForPeers = collaborations.length
 
     const interval = setInterval(() => {
       collaborations.forEach((collaboration, idx) => {
         collaboration.shared.add(idx)
       })
-    }, 1000)
+    }, 6000)
 
-    for (const collaboration of collaborations) {
-      let receiveds = 0
-      let pinneds = 0
-      let replications = 0
+    collaborations.forEach((collaboration) => {
       let peerDone = false
+      const events = {}
 
       const maybeDone = () => {
-        if (!peerDone && replications === 1 && receiveds === 1 && pinneds === 1) {
+        if (!peerDone && events.received && events.replicated && events.pinned) {
           peerDone = true
+          for (let [eventName, listener] of Object.entries(listeners)) {
+            collaboration.replication.removeListener(eventName, listener)
+          }
           maybeAllDone()
         }
       }
 
-      collaboration.replication.on('received', (peerId, clock) => {
+      const listenerFor = (eventName) => (peerId, clock) => {
         if (peerDone) {
           return
         }
-        console.log('received', peerId, clock)
-        receiveds++
+        events[eventName] = (events[eventName] || 0) + 1
         maybeDone()
-      })
+      }
 
-      collaboration.replication.on('replicated', (peerId, clock) => {
-        if (peerDone) {
-          return
-        }
-        console.log('replicated', peerId, clock)
-        Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
-        replications++
-        maybeDone()
-      })
+      const eventNames = ['received', 'replicated', 'pinned']
 
-      collaboration.replication.on('pinned', (peerId, clock) => {
-        if (peerDone) {
-          return
-        }
-        console.log('pinned', peerId, clock)
-        Object.values(clock).forEach((clock) => expect(clock).to.equal(1))
-        pinneds++
-        maybeDone()
-      })
-    }
+      const listeners = eventNames.reduce((listeners, eventName) => {
+        const listener = listenerFor(eventName)
+        collaboration.replication.on(eventName, listener)
+        listeners[eventName] = listener
+        return listeners
+      }, {})
+    })
 
     function maybeAllDone () {
       if (--waitingForPeers === 0) {
