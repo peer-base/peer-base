@@ -135,7 +135,7 @@ module.exports = class CollaborationStore extends EventEmitter {
     })
   }
 
-  async saveStates ([clock, states]) {
+  async saveStates (clock, states) {
     debug('%s: saveStates', this._id, clock, states)
     return this._queue.add(async () => {
       const latest = await this.getLatestClock()
