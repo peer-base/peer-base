@@ -26,6 +26,13 @@ module.exports = class PushProtocol {
     let ended = false
     let pushing = true
     let isPinner = false
+    let sentClock = {}
+
+    const sendClockDiff = (clock) => {
+      const clockDiff = vectorclock.diff(sentClock, clock)
+      sentClock = clock
+      return clockDiff
+    }
 
     const pushDeltaStream = async () => {
       debug('%s: push deltas to %s', this._peerId(), remotePeerId)
@@ -93,7 +100,7 @@ module.exports = class PushProtocol {
         }
       } else {
         debug('%s: NOT pushing to %s', this._peerId(), remotePeerId)
-        output.push(encode([null, [this._clocks.getFor(this._peerId())]]))
+        output.push(encode([null, [sendClockDiff(this._clocks.getFor(this._peerId()))]]))
       }
     }
 
@@ -152,8 +159,8 @@ module.exports = class PushProtocol {
       }
 
       if (newRemoteClock) {
-        this._clocks.setFor(remotePeerId, newRemoteClock, true, isPinner)
-        this._replication.sent(remotePeerId, newRemoteClock, isPinner)
+        const mergedClock = this._clocks.setFor(remotePeerId, newRemoteClock, true, isPinner)
+        this._replication.sent(remotePeerId, mergedClock, isPinner)
       }
 
       if (newRemoteClock || startEager) {

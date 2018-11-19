@@ -17,6 +17,7 @@ module.exports = class Clocks extends EventEmitter {
     debug('%s: setting clock for %s: %j', this._id, peerId, newClock)
     this._clocks.set(peerId, newClock)
     this.emit('update', peerId, newClock, authoritative, isPinner)
+    return newClock
   }
 
   getFor (peerId) {
