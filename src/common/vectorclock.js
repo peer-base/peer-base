@@ -89,7 +89,7 @@ exports.incrementAll = (_clock, authorClock) => {
 
 exports.diff = (a, b) => {
   const result = {}
-  for(let [peer, clock] of Object.entries(b)) {
+  for (let [peer, clock] of Object.entries(b)) {
     const previousClock = a[peer] || 0
     if (previousClock !== clock) {
       result[peer] = clock
