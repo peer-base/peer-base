@@ -61,10 +61,6 @@ describe('shared', () => {
     shared.add('b')
   })
 
-  it('waits a bit', (done) => {
-    setTimeout(done, 500)
-  })
-
   it('has the correct value', () => {
     expect(shared.value()).to.equal('ab')
   })

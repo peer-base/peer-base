@@ -15,7 +15,7 @@ const FakePeerInfo = require('./utils/fake-peer-info')
 describe('app-transport', function () {
   let appTransport
   let listener = (conn) => {
-    // TODO
+    // nothing
   }
   let discovery
   let transport
@@ -55,7 +55,7 @@ describe('app-transport', function () {
     })
     transport = {
       createListener () {
-        // TODO
+        // nothing
       },
       discovery: discovery,
       listeners: []

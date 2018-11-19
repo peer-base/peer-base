@@ -6,42 +6,42 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const App = require('./utils/create-app')
-const A_BIT = 5000
+const waitForMembers = require('./utils/wait-for-members')
 
 describe('stats', function () {
-  this.timeout(20000)
+  this.timeout(30000)
 
   const peerCount = 4
 
+  let appName
   let swarm = []
   let collaborations
   let statsChangedHandler
 
-  for (let i = 0; i < peerCount; i++) {
-    ((i) => {
-      before(() => {
-        const app = App({ maxThrottleDelayMS: 1000 })
-        swarm.push(app)
-        return app.start()
-      })
+  before(() => {
+    appName = App.createName()
+  })
 
-      after(() => swarm[i] && swarm[i].stop())
-    })(i)
+  const peerIndexes = []
+  for (let i = 0; i < peerCount; i++) {
+    peerIndexes.push(i)
   }
 
-  before((done) => {
-    // wait a bit for things to sync
-    setTimeout(done, A_BIT * 2)
+  peerIndexes.forEach((peerIndex) => {
+    before(() => {
+      const app = App(appName, { maxThrottleDelayMS: 1000 })
+      swarm.push(app)
+      return app.start()
+    })
+
+    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
   })
 
   before(async () => {
     collaborations = await Promise.all(
       swarm.map((peer) => peer.app.collaborate('test collaboration', 'rga')))
     expect(collaborations.length).to.equal(peerCount)
-  })
-
-  before((done) => {
-    setTimeout(done, A_BIT)
+    await waitForMembers(collaborations)
   })
 
   before(() => {
@@ -104,9 +104,5 @@ describe('stats', function () {
   it('can remove listener', () => {
     const collaboration = collaborations[0]
     collaboration.stats.removeListener('peer updated', statsChangedHandler)
-  })
-
-  it('waits a bit', (done) => {
-    setTimeout(done, A_BIT)
   })
 })

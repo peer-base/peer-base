@@ -16,15 +16,15 @@ module.exports = (...args) => {
 }
 
 class Protocol extends EventEmitter {
-  constructor (ipfs, collaboration, store, keys, clocks, options) {
+  constructor (ipfs, collaboration, store, keys, clocks, replication, options) {
     super()
     this._ipfs = ipfs
     this._collaboration = collaboration
     this._store = store
     this._clocks = clocks
     this._options = Object.assign({}, defaultOptions, options)
-    this._pushProtocol = new PushProtocol(ipfs, store, this._clocks, keys, this._options)
-    this._pullProtocol = new PullProtocol(ipfs, store, this._clocks, keys, this._options)
+    this._pushProtocol = new PushProtocol(ipfs, store, this._clocks, keys, replication, this._options)
+    this._pullProtocol = new PullProtocol(ipfs, store, this._clocks, keys, replication, this._options)
 
     this.handler = this.handler.bind(this)
   }

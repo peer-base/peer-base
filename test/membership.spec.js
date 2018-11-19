@@ -7,6 +7,7 @@ const expect = chai.expect
 
 const FakePeerInfo = require('./utils/fake-peer-info')
 const randomPeerId = require('./utils/random-peer-id').buffer
+const waitForMembers = require('./utils/wait-for-members').fromMemberships
 const Membership = require('../src/collaboration/membership')
 const { decode } = require('delta-crdts-msgpack-codec')
 const Multiaddr = require('multiaddr')
@@ -58,7 +59,9 @@ class EventLogger {
   }
   clear () {
     for (const e in this.logs) {
-      this.logs[e] = []
+      if (this.logs.hasOwnProperty(e)) {
+        this.logs[e] = []
+      }
     }
   }
 }
@@ -92,7 +95,7 @@ describe('membership', function () {
       const mergedOpts = Object.assign({
         gossipFrequencyHeuristic: mock.gossipFrequencyHeuristic()
       }, options, opts)
-      const m = new Membership(ipfs, globalConnectionManager, app, collaboration, {}, {}, mergedOpts)
+      const m = new Membership(ipfs, globalConnectionManager, app, collaboration, {}, {}, {}, mergedOpts)
       memberships.push(m)
       return m
     }
@@ -301,7 +304,7 @@ describe('membership', function () {
       expect(eventLogger.logs['peer joined'].length).to.equal(0)
       expect(eventLogger.logs['peer left'].length).to.equal(0)
       expect(eventLogger.logs['peer addresses changed'].length).to.equal(0)
-      expect(eventLogger.logs['changed'].length).to.equal(0)
+      expect(eventLogger.logs.changed.length).to.equal(0)
     })
   })
 
@@ -311,9 +314,6 @@ describe('membership', function () {
     let app
     let ipfs
     let globalConnectionManager
-    let collaboration
-    let store
-    let clocks
 
     let memberships = []
 
@@ -324,7 +324,7 @@ describe('membership', function () {
       for (let memberIndex = 0; memberIndex < peerCount; memberIndex++) {
         members.push(memberIndex)
       }
-      return Promise.all(members.map(async (memberIndex) => {
+      await Promise.all(members.map(async (memberIndex) => {
         let membership
 
         ipfs = mock.ipfs()
@@ -354,28 +354,32 @@ describe('membership', function () {
             }
           }
         }
-        collaboration = {
+        const collaboration = {
           name: 'collab name',
           typeName: 'gset'
         }
-        store = {}
-        clocks = {}
+        const store = {}
+        const clocks = {}
+        const options = {
+          peerIdByteCount: 32,
+          preambleByteCount: 2,
+          keys: {}
+        }
+        const replication = {}
 
         ipfs._peerInfo.multiaddrs.add(Multiaddr(`/ip4/127.0.0.1/tcp/${memberIndex}`))
 
-        membership = new Membership(ipfs, globalConnectionManager, app, collaboration, store, clocks, options)
+        membership = new Membership(ipfs, globalConnectionManager, app, collaboration, store, clocks, replication, options)
 
         await membership.start()
 
         memberships.push(membership)
       }))
+
+      await waitForMembers(memberships)
     })
 
     after(() => Promise.all(memberships.map((membership) => membership.stop())))
-
-    it('waits a bit', (done) => {
-      setTimeout(done, 9000)
-    })
 
     it('has all members', () => {
       for (let membership of memberships) {

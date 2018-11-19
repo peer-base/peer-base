@@ -13,8 +13,10 @@ const Store = require('../src/collaboration/store')
 const Shared = require('../src/collaboration/shared')
 const Protocol = require('../src/collaboration/protocol')
 const Clocks = require('../src/collaboration/clocks')
+const Replication = require('../src/collaboration/replication')
 const generateKeys = require('../src/keys/generate')
 
+const waitForValue = require('./utils/wait-for-value')
 require('./utils/fake-crdt')
 const Type = require('../src/collaboration/crdt')('fake')
 
@@ -67,7 +69,8 @@ describe('collaboration protocol', function () {
     pusher.store = new Store(ipfs, collaboration, storeOptions)
     await pusher.store.start()
     const clocks = new Clocks()
-    pusher.protocol = Protocol(ipfs, collaboration, pusher.store, null, clocks)
+    const replication = Replication(ipfs.id().id, clocks)
+    pusher.protocol = Protocol(ipfs, collaboration, pusher.store, null, clocks, replication)
     pusher.shared = await Shared(null, 'pusher', Type, collaboration, pusher.store, keys)
     pusher.store.setShared(pusher.shared)
   })
@@ -86,7 +89,8 @@ describe('collaboration protocol', function () {
     puller.store = new Store(ipfs, collaboration, storeOptions)
     await puller.store.start()
     const clocks = new Clocks()
-    puller.protocol = Protocol(ipfs, collaboration, puller.store, null, clocks, {
+    const replication = Replication(ipfs.id().id, clocks)
+    puller.protocol = Protocol(ipfs, collaboration, puller.store, null, clocks, replication, {
       receiveTimeout: 500
     })
     puller.shared = await Shared(null, 'puller', Type, collaboration, puller.store, keys)
@@ -118,11 +122,7 @@ describe('collaboration protocol', function () {
     return pusher.shared.add('a')
   })
 
-  it('waits a bit', (done) => setTimeout(done, 500))
-
-  it('puller got new state', () => {
-    expect(puller.shared.value()).to.equal('a')
-  })
+  it('push and puller in sync', () => waitForValue([pusher, puller], 'a'))
 
   it('introduces another pusher', async () => {
     const ipfs = {
@@ -138,7 +138,8 @@ describe('collaboration protocol', function () {
     pusher2.store = new Store(ipfs, collaboration, storeOptions)
     await pusher2.store.start()
     const clocks = new Clocks()
-    pusher2.protocol = Protocol(ipfs, collaboration, pusher2.store, null, clocks)
+    const replication = Replication(ipfs.id().id, clocks)
+    pusher2.protocol = Protocol(ipfs, collaboration, pusher2.store, null, clocks, replication)
     pusher2.shared = await Shared(null, 'pusher 2', Type, collaboration, pusher2.store, keys)
     pusher2.store.setShared(pusher2.shared)
   })
@@ -197,7 +198,8 @@ describe('collaboration protocol', function () {
     const collaboration = { name: 'collaboration protocol test' }
     pusher3.store = puller.store // same store as puller
     const clocks = new Clocks()
-    pusher3.protocol = Protocol(ipfs, collaboration, pusher3.store, null, clocks)
+    const replication = Replication(ipfs.id().id, clocks)
+    pusher3.protocol = Protocol(ipfs, collaboration, pusher3.store, null, clocks, replication)
     pusher3.shared = await Shared(null, 'pusher from puller', Type, collaboration, pusher3.store, keys)
     pusher3.store.setShared(pusher3.shared)
   })
@@ -216,7 +218,8 @@ describe('collaboration protocol', function () {
     puller2.store = new Store(ipfs, collaboration, storeOptions)
     await puller2.store.start()
     const clocks = new Clocks()
-    puller2.protocol = Protocol(ipfs, collaboration, puller2.store, null, clocks, {
+    const replication = Replication(ipfs.id().id, clocks)
+    puller2.protocol = Protocol(ipfs, collaboration, puller2.store, null, clocks, replication, {
       receiveTimeout: 500
     })
     puller2.shared = await Shared(null, 'puller 2', Type, collaboration, puller2.store, keys)
