@@ -10,9 +10,9 @@ const LocalCollaborationStore = require('./local-collaboration-store')
 
 class IpfsRepoStore extends LocalCollaborationStore {
   async start () {
+    await super.start()
     this._store = await datastore(this._ipfs, this._collaboration)
     this._seq = await this.getSequence()
-    this._id = (await this._ipfs.id()).id
   }
 
   stop () {
@@ -40,6 +40,10 @@ class IpfsRepoStore extends LocalCollaborationStore {
       }),
       pull.filter(Boolean) // only allow non-null values
     )
+  }
+
+  async _id () {
+    return this._ipfsId
   }
 
   _get (key) {

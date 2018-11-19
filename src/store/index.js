@@ -7,7 +7,7 @@ const strategies = {
 module.exports = (ipfs, collaboration, options = {}) => {
   let Strategy = options.storeStrategy
   if (!Strategy) {
-    const strategyName = options.storeStrategy || 'ipfs-repo'
+    const strategyName = options.storeStrategyName || 'ipfs-repo'
     Strategy = strategies[strategyName]
     if (!Strategy) {
       throw new Error(`Unknown strategy "${strategyName}"`)

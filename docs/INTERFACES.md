@@ -54,11 +54,15 @@ Options:
 
 #### `async stop ()`
 
+#### `setShared (shared : Shared)`
+
 #### `async getLatestClock () : Clock`
 
 #### `contains (clock:Clock]`
 
-#### `async saveDelta (delta:DeltaRecord)`
+#### `async saveDelta (delta:DeltaRecord) : Boolean`
+
+Returns the new vector clock if delta was causally (type Clock) consistent, `false` otherwise
 
 #### `deltaStream ([since:Clock]) : PullStream<DeltaRecord>`
 

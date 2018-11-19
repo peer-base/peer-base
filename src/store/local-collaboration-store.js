@@ -13,6 +13,7 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
   constructor (ipfs, collaboration, options) {
     super()
     this._ipfs = ipfs
+
     this._collaboration = collaboration
     this._options = options
 
@@ -23,11 +24,15 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
     this._shareds = []
   }
 
+  async start () {
+    this._id = (await this._ipfs.id()).id
+  }
+
   setShared (shared) {
     this._shareds.push(shared)
   }
 
-  findShared (name) {
+  _findShared (name) {
     return this._shareds.find((shared) => shared.name === name)
   }
 
@@ -193,7 +198,7 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
           (acc, delta) => {
             const encodedDelta = delta[2]
             const [forName] = decode(encodedDelta)
-            const shared = this.findShared(forName)
+            const shared = this._findShared(forName)
             if (!shared) {
               reject(new Error('could not find share for name', forName))
               return
@@ -211,7 +216,7 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
                 for (let collabKey of batch.keys()) {
                   const collab = batch.get(collabKey)
                   const [name, type, clock, authorClock, state] = collab
-                  const shared = this.findShared(collabKey)
+                  const shared = this._findShared(collabKey)
                   const finalBatch = [clock, authorClock, encode([name, type, await shared.signAndEncrypt(encode(state))])]
                   batch.set(collabKey, finalBatch)
                 }
