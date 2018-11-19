@@ -19,7 +19,6 @@ const defaultOptions = {
 class CollaborationPersister extends EventEmitter {
   constructor (ipfs, name, type, store, options) {
     super()
-    this._name = name
     this._type = type
     this._store = store
     this._options = Object.assign({}, defaultOptions, options)
@@ -75,7 +74,7 @@ class CollaborationPersister extends EventEmitter {
         // debug('rec', rec)
         const encodedState = await this._options.decryptAndVerify(encryptedState)
         const state = decode(encodedState)
-        // debug('plaintext', [name, type, state])
+        // debug('plaintext state', [state])
         deltaClocks.unshift({ clock, state })
       }
       cid = parent
@@ -91,7 +90,7 @@ class CollaborationPersister extends EventEmitter {
     // debug('joined clocks', merged)
 
     const encryptedState = await this._options.signAndEncrypt(encode(joined))
-    const rec = [this._name, this._type.typeName, encryptedState]
+    const rec = [null, this._type.typeName, encryptedState]
     return { clock: merged, state: encode(rec) }
   }
 
@@ -138,13 +137,17 @@ class CollaborationPersister extends EventEmitter {
     this._persistenceHeuristic.stop()
     this._publishQueue.clear()
     this._processQueue.clear()
-    await Promise.all([
-      this._publishQueue.onIdle(),
-      this._processQueue.onIdle()
-    ])
+    await this.onIdle()
     await Promise.all([
       this._persistence.stop(),
       this._naming.stop()
+    ])
+  }
+
+  onIdle() {
+    return Promise.all([
+      this._publishQueue.onIdle(),
+      this._processQueue.onIdle()
     ])
   }
 
@@ -248,7 +251,7 @@ class CollaborationPersister extends EventEmitter {
 
   async _processSnapshot () {
     // Get the latest snapshot from the store
-    let [clock, state] = await this._store.getClockAndState(this._name)
+    let [clock, state] = await this._store.getClockAndState(null)
 
     // If the store state is the same as the latest snapshot, no need to save it
     dbgq('Comparing latest clock from store %j to last snapshot clock %j', clock, (this._lastSnapshot || {}).clock)

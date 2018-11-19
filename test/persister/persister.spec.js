@@ -193,7 +193,7 @@ async function createCollabWithKeys (id, keys) {
   c.store.on('error', err => console.error('Error from %s store', id, err))
   await store.start()
 
-  const shared = await Shared(c.name, id, Type, c, store, keys)
+  const shared = await Shared(null, id, Type, c, store, keys)
   shared.on('error', err => console.error('Error from %s shared', id, err))
   c.shared = shared
   c.store.setShared(shared)
@@ -241,13 +241,15 @@ async function getStateValue (state) {
 function addDeltasAndAwaitPropagation (collab, persister, values) {
   return new Promise(resolve => {
     // Wait for all the deltas to be processed
-    const onBranchDeltaCount = (count, cid) => {
+    const onBranchDeltaCount = async (count, cid) => {
       if (count >= values.length) {
         persister.removeListener('branch delta count', onBranchDeltaCount)
 
         // Wait for the HEAD to be updated with the last delta
-        const onPublish = (pubCid) => {
+        const onPublish = async (pubCid) => {
           if (pubCid.equals(cid)) {
+            // Wait for the queue to be idle
+            await persister.onIdle()
             resolve()
             persister.removeListener('publish', onPublish)
           }
