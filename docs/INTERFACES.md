@@ -21,13 +21,21 @@ Plain JS Array with the following items in the following positions:
 * 0: Clock
 * 1: States
 
+### `Delta`
+
+A JS array containing the following entries:
+
+* 0: forName : String|null — the name of the collaboration. `null` refers to the root collaboration
+* 1: typeName : String — the name of the type of CRDT
+* 2: encryptedState : Buffer
+
 ### `DeltaRecord`
 
 Array with the following positions:
 
 * 0: previousClock:Clock
 * 1: authorClock:Clock
-* 2: delta:Any
+* 2: delta:Delta
 
 ## Local Collaboration Store
 
@@ -67,7 +75,7 @@ Options:
 
 ### Produced events
 
-#### `delta (delta : Any, newClock : Clock)`
+#### `delta (delta : Delta, newClock : Clock)`
 
 #### `clock changed (clock : Clock)`
 
