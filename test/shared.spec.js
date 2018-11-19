@@ -9,7 +9,7 @@ const MemoryDatastore = require('interface-datastore').MemoryDatastore
 const crypto = require('libp2p-crypto')
 
 const Shared = require('../src/collaboration/shared')
-const Store = require('../src/collaboration/store')
+const Store = require('../src/store')
 const CRDT = require('../src/collaboration/crdt')
 const Keys = require('../src/keys')
 require('./utils/fake-crdt')
@@ -49,7 +49,7 @@ describe('shared', () => {
     const collaboration = {
       name: 'shared test collaboration'
     }
-    const store = new Store(ipfs, collaboration, storeOptions)
+    const store = Store(ipfs, collaboration, storeOptions)
     await store.start()
     const keys = await Keys.generate()
     shared = await Shared('name', 'replica id', CRDT('fake'), {}, store, keys)

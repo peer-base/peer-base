@@ -2,8 +2,6 @@
 
 const debug = require('debug')('peer-star:collaboration:store')
 const EventEmitter = require('events')
-const NamespaceStore = require('datastore-core').NamespaceDatastore
-const Key = require('interface-datastore').Key
 const Queue = require('p-queue')
 const vectorclock = require('../common/vectorclock')
 const leftpad = require('leftpad')
@@ -11,7 +9,7 @@ const pull = require('pull-stream')
 
 const { encode, decode } = require('delta-crdts-msgpack-codec')
 
-module.exports = class CollaborationStore extends EventEmitter {
+module.exports = class LocalCollaborationStore extends EventEmitter {
   constructor (ipfs, collaboration, options) {
     super()
     this._ipfs = ipfs
@@ -25,12 +23,6 @@ module.exports = class CollaborationStore extends EventEmitter {
     this._shareds = []
   }
 
-  async start () {
-    this._store = await datastore(this._ipfs, this._collaboration)
-    this._seq = await this.getSequence()
-    this._id = (await this._ipfs.id()).id
-  }
-
   setShared (shared) {
     this._shareds.push(shared)
   }
@@ -39,27 +31,12 @@ module.exports = class CollaborationStore extends EventEmitter {
     return this._shareds.find((shared) => shared.name === name)
   }
 
-  stop () {
-    // TO DO
-  }
-
   async getSequence () {
     return (await this._get('/seq')) || 0
   }
 
   async getLatestClock () {
     return (await this._get('/clock')) || {}
-  }
-
-  _get (key) {
-    return new Promise((resolve, reject) => {
-      this._store.get(key, this._parsingResult((err, value) => {
-        if (err) {
-          return reject(err)
-        }
-        resolve(value)
-      }))
-    })
   }
 
   getClockAndStates () {
@@ -207,29 +184,6 @@ module.exports = class CollaborationStore extends EventEmitter {
     }, new Map())
   }
 
-  deltaStream (_since = {}) {
-    let since = Object.assign({}, _since)
-    debug('%s: delta stream since %j', this._id, since)
-
-    return pull(
-      this._store.query({
-        prefix: '/d:'
-      }),
-      pull.asyncMap(({ value }, cb) => this._decode(value, cb)),
-      pull.asyncMap((entireDelta, callback) => {
-        const [previousClock, authorClock] = entireDelta
-        if (vectorclock.isIdentical(previousClock, since)) {
-          debug('accepting delta %j', [previousClock, authorClock])
-          since = vectorclock.incrementAll(previousClock, authorClock)
-          callback(null, entireDelta)
-        } else {
-          callback(null, null)
-        }
-      }),
-      pull.filter(Boolean) // only allow non-null values
-    )
-  }
-
   deltaBatch (since = {}) {
     debug('%s: delta batch since %j', this._id, since)
     return new Promise((resolve, reject) => {
@@ -296,18 +250,6 @@ module.exports = class CollaborationStore extends EventEmitter {
     }
   }
 
-  _saveEncoded (key, value) {
-    return new Promise((resolve, reject) => {
-      this._store.put(key, value, (err) => {
-        if (err) {
-          reject(err)
-        } else {
-          resolve()
-        }
-      })
-    })
-  }
-
   _scheduleDeltaTrim () {
     if (this._deltaTrimTimeout) {
       clearTimeout(this._deltaTrimTimeout)
@@ -319,38 +261,6 @@ module.exports = class CollaborationStore extends EventEmitter {
       }
       this._trimDeltas()
     }, this._options.deltaTrimTimeoutMS)
-  }
-
-  _trimDeltas () {
-    this._trimmingDeltas = true
-    return new Promise((resolve, reject) => {
-      const seq = this._seq
-      const first = Math.max(seq - this._options.maxDeltaRetention, 0)
-      pull(
-        this._store.query({
-          prefix: '/d:',
-          keysOnly: true
-        }),
-        pull.map((d) => d.key),
-        pull.asyncMap((key, callback) => {
-          const thisSeq = parseInt(key.toString().slice(3), 16)
-          if (thisSeq < first) {
-            debug('%s: trimming delta with sequence %s', this._id, thisSeq)
-            this._store.delete(key, callback)
-          } else {
-            callback()
-          }
-        }),
-        pull.onEnd((err) => {
-          this._trimmingDeltas = false
-          if (err) {
-            reject(err)
-          } else {
-            resolve()
-          }
-        })
-      )
-    })
   }
 
   _encode (value) {
@@ -390,10 +300,14 @@ module.exports = class CollaborationStore extends EventEmitter {
     }).catch(callback)
   }
 
+  _isNotFoundError () {
+    return false
+  }
+
   _parsingResult (callback) {
     return (err, result) => {
       if (err) {
-        if (isNotFoundError(err)) {
+        if (this._isNotFoundError(err)) {
           return callback(null, undefined)
         }
         return callback(err)
@@ -401,25 +315,4 @@ module.exports = class CollaborationStore extends EventEmitter {
       this._decode(result, callback)
     }
   }
-}
-
-function datastore (ipfs, collaboration) {
-  return new Promise((resolve, reject) => {
-    const ds = ipfs._repo.datastore
-    if (!ds) {
-      return ipfs.once('start', () => {
-        datastore(ipfs, collaboration).then(resolve).catch(reject)
-      })
-    }
-    // resolve(ds)
-    resolve(new NamespaceStore(ds, new Key(`peer-star-collab-${collaboration.name}`)))
-  })
-}
-
-function isNotFoundError (err) {
-  return (
-    err.message.indexOf('Key not found') >= 0 ||
-    err.message.indexOf('No value') >= 0 ||
-    err.code === 'ERR_NOT_FOUND'
-  )
 }

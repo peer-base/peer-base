@@ -3,7 +3,7 @@
 const debug = require('debug')('peer-star:collaboration')
 const EventEmitter = require('events')
 const Membership = require('./membership')
-const Store = require('./store')
+const Store = require('../store')
 const Shared = require('./shared')
 const CRDT = require('./crdt')
 const Gossip = require('./gossip')
@@ -54,7 +54,7 @@ class Collaboration extends EventEmitter {
       this._options.createCipher = deriveCreateCipherFromKeys(this._options.keys)
     }
 
-    this._store = this._options.store || new Store(ipfs, this, this._options)
+    this._store = this._options.store || Store(ipfs, this, this._options)
 
     this._membership = this._options.membership || new Membership(
       ipfs, globalConnectionManager, app, this, this._store, this._clocks, this.replication, this._options)

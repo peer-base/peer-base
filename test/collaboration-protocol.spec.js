@@ -9,7 +9,7 @@ const pair = require('pull-pair')
 const MemoryDatastore = require('interface-datastore').MemoryDatastore
 const crypto = require('libp2p-crypto')
 
-const Store = require('../src/collaboration/store')
+const Store = require('../src/store')
 const Shared = require('../src/collaboration/shared')
 const Protocol = require('../src/collaboration/protocol')
 const Clocks = require('../src/collaboration/clocks')
@@ -66,7 +66,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    pusher.store = new Store(ipfs, collaboration, storeOptions)
+    pusher.store = Store(ipfs, collaboration, storeOptions)
     await pusher.store.start()
     const clocks = new Clocks()
     const replication = Replication(ipfs.id().id, clocks)
@@ -86,7 +86,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    puller.store = new Store(ipfs, collaboration, storeOptions)
+    puller.store = Store(ipfs, collaboration, storeOptions)
     await puller.store.start()
     const clocks = new Clocks()
     const replication = Replication(ipfs.id().id, clocks)
@@ -135,7 +135,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    pusher2.store = new Store(ipfs, collaboration, storeOptions)
+    pusher2.store = Store(ipfs, collaboration, storeOptions)
     await pusher2.store.start()
     const clocks = new Clocks()
     const replication = Replication(ipfs.id().id, clocks)
@@ -215,7 +215,7 @@ describe('collaboration protocol', function () {
       }
     }
     const collaboration = { name: 'collaboration protocol test' }
-    puller2.store = new Store(ipfs, collaboration, storeOptions)
+    puller2.store = Store(ipfs, collaboration, storeOptions)
     await puller2.store.start()
     const clocks = new Clocks()
     const replication = Replication(ipfs.id().id, clocks)
