@@ -9,7 +9,7 @@ const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
 
 describe('stats', function () {
-  this.timeout(20000)
+  this.timeout(30000)
 
   const peerCount = 4
 

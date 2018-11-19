@@ -12,7 +12,7 @@ const waitForValue = require('./utils/wait-for-value')
 require('./utils/fake-crdt')
 
 describe('sub-collaboration', function () {
-  this.timeout(20000)
+  this.timeout(30000)
 
   const peerCount = 2 // 10
   const collaborationOptions = {
