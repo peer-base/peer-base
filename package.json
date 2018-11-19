@@ -4,9 +4,10 @@
   "description": "Peer-Star App support for real-time collaborative DApps built on top of IPFS",
   "main": "src/index.js",
   "scripts": {
-    "test": "npm run lint && npm run test:node && npm run test:browser",
+    "test": "npm run lint && npm run test:node && npm run test:browser && npm run test:webworker",
     "test:node": "aegir test -t node",
     "test:browser": "aegir test -t browser",
+    "test:webworker": "aegir test -t webworker",
     "lint": "aegir lint",
     "test:perf": "mocha test/performance/all.js",
     "pinner": "node bin/pinner",
