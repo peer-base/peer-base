@@ -32,6 +32,7 @@ describe('store', () => {
       let collaboration = {}
       let state = CRDT.initial()
       let verifyApply
+
       let shared = {
         apply (remoteClock, encodedDelta, isPartial) {
           expect(Buffer.isBuffer(encodedDelta)).to.be.true()
@@ -223,6 +224,10 @@ describe('store', () => {
         const delta = decode(encodedDelta)
         expect(state).to.deep.equal(delta)
         expect(CRDT.value(delta)).to.deep.equal(['a', 'b', 'c'])
+      })
+
+      it('can get state', async () => {
+        expect(decode(await store.getState())).to.deep.equal([null, null, state])
       })
 
       it('can be stopped', () => store.stop())
