@@ -1,0 +1,112 @@
+'use strict'
+
+const debug = require('debug')('peer-star:collaboration:store')
+const pull = require('pull-stream')
+const MemoryDatastore = require('datastore-core').MemoryDatastore
+const vectorclock = require('../common/vectorclock')
+
+const LocalCollaborationPersistentStore = require('./local-collaboration-persistent-store')
+
+module.exports = class DatastoreStore extends LocalCollaborationPersistentStore {
+  async start () {
+    await super.start()
+    this._store = await this._createDatastore(this._ipfs, this._collaboration)
+    this._seq = await this.getSequence()
+  }
+
+  stop () {
+    // TO DO
+  }
+
+  deltaStream (_since = {}) {
+    let started = false
+    let since = Object.assign({}, _since)
+    debug('%s: delta stream since %j', this._id, since)
+
+    return pull(
+      this._store.query({
+        prefix: '/d:'
+      }),
+      pull.asyncMap(({ value }, cb) => this._decode(value, cb)),
+      pull.asyncMap((entireDelta, callback) => {
+        const [previousClock, authorClock] = entireDelta
+        if (!started && vectorclock.isIdentical(previousClock, since)) {
+          started = true
+        }
+        if (started) {
+          callback(null, entireDelta)
+        } else {
+          callback(null, null)
+        }
+      }),
+      pull.filter(Boolean) // only allow non-null values
+    )
+  }
+
+  async _id () {
+    return this._ipfsId
+  }
+
+  _get (key) {
+    return new Promise((resolve, reject) => {
+      this._store.get(key, this._parsingResult((err, value) => {
+        if (err) {
+          return reject(err)
+        }
+        resolve(value)
+      }))
+    })
+  }
+
+  _saveEncoded (key, value) {
+    return new Promise((resolve, reject) => {
+      this._store.put(key, value, (err) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve()
+        }
+      })
+    })
+  }
+
+  _trimDeltas () {
+    this._trimmingDeltas = true
+    return new Promise((resolve, reject) => {
+      const seq = this._seq
+      const first = Math.max(seq - this._options.maxDeltaRetention, 0)
+      pull(
+        this._store.query({
+          prefix: '/d:',
+          keysOnly: true
+        }),
+        pull.map((d) => d.key),
+        pull.asyncMap((key, callback) => {
+          const thisSeq = parseInt(key.toString().slice(3), 16)
+          if (thisSeq < first) {
+            debug('%s: trimming delta with sequence %s', this._id, thisSeq)
+            this._store.delete(key, callback)
+          } else {
+            callback()
+          }
+        }),
+        pull.onEnd((err) => {
+          this._trimmingDeltas = false
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
+      )
+    })
+  }
+
+  _isNotFoundError (err) {
+    return (
+      err.message.indexOf('Key not found') >= 0 ||
+      err.message.indexOf('No value') >= 0 ||
+      err.code === 'ERR_NOT_FOUND'
+    )
+  }
+}

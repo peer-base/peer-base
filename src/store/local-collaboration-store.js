@@ -277,40 +277,17 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
   }
 
   _encode (value) {
-    if (!this._cipher) {
-      return Promise.resolve(encode(value))
-    }
-    return this._cipher().then((cipher) => {
-      return new Promise((resolve, reject) => {
-        cipher.encrypt(encode(value), (err, encrypted) => {
-          if (err) {
-            return reject(err)
-          }
-          resolve(encrypted)
-        })
-      })
-    })
+    return Promise.resolve(encode(value))
   }
 
   _decode (bytes, callback) {
-    if (!this._cipher) {
-      let decoded
-      try {
-        decoded = decode(bytes)
-      } catch (err) {
-        return callback(err)
-      }
-      return callback(null, decoded)
+    let decoded
+    try {
+      decoded = decode(bytes)
+    } catch (err) {
+      return callback(err)
     }
-    this._cipher().then((cipher) => {
-      cipher.decrypt(bytes, (err, decrypted) => {
-        if (err) {
-          return callback(err)
-        }
-        const decoded = decode(decrypted)
-        callback(null, decoded)
-      })
-    }).catch(callback)
+    return callback(null, decoded)
   }
 
   _isNotFoundError () {
