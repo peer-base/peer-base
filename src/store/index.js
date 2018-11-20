@@ -2,7 +2,8 @@
 
 const strategies = {
   'ipfs-repo': require('./ipfs-repo-store'),
-  'memory': require('./memory-store')
+  'memory': require('./memory-store'),
+  'hybrid': require('./hybrid-store')
 }
 
 module.exports = (ipfs, collaboration, options = {}) => {

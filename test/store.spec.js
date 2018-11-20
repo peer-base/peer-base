@@ -143,9 +143,9 @@ describe('store', () => {
       })
 
       it('can save concurrent delta', async () => {
-        let applyCalleds = 0
+        let applyCallCount = 0
         verifyApply = (remoteClock, encodedDelta, isPartial) => {
-          applyCalleds++
+          applyCallCount++
           expect(remoteClock).to.deep.equal({'fake peer id': 1, 'other peer id': 1})
           expect(Array.isArray(encodedDelta)).to.be.true()
           expect(encodedDelta[0]).to.be.null()
@@ -155,7 +155,7 @@ describe('store', () => {
         }
         const delta = encode([null, 'fake', CRDT.mutators.push('other peer id', state, 'b')])
         expect(await store.saveDelta([{}, {'other peer id': 1}, delta])).to.deep.equal({'fake peer id': 1, 'other peer id': 1})
-        expect(applyCalleds).to.be.equal(1)
+        expect(applyCallCount).to.be.equal(1)
         expect(CRDT.value(state)).to.deep.equal(['a', 'b'])
       })
 
@@ -224,6 +224,24 @@ describe('store', () => {
         const delta = decode(encodedDelta)
         expect(state).to.deep.equal(delta)
         expect(CRDT.value(delta)).to.deep.equal(['a', 'b', 'c'])
+      })
+
+      it('can save another concurrent delta', async () => {
+        let applyCallCount = 0
+        verifyApply = (remoteClock, encodedDelta, isPartial) => {
+          applyCallCount++
+          expect(remoteClock).to.deep.equal({'fake peer id': 2, 'other peer id': 2})
+          expect(Array.isArray(encodedDelta)).to.be.true()
+          expect(encodedDelta[0]).to.be.null()
+          expect(encodedDelta[1]).to.equal('fake')
+          expect(typeof encodedDelta[2]).to.equal('object')
+          expect(isPartial).to.be.true()
+        }
+        const delta = encode([null, 'fake', CRDT.mutators.push('other peer id', state, 'd')])
+        expect(await store.saveDelta([{'fake peer id': 2, 'other peer id': 1}, {'other peer id': 1}, delta]))
+          .to.deep.equal({'fake peer id': 2, 'other peer id': 2})
+        expect(applyCallCount).to.be.equal(1)
+        expect(CRDT.value(state)).to.deep.equal(['a', 'b', 'c', 'd'])
       })
 
       it('can get state', async () => {
