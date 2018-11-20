@@ -8,9 +8,15 @@ class IpfsRepoStore extends DatastorePersistentStore {
   _createDatastore () {
     return datastore(this._ipfs, this._collaboration)
   }
+
+  async save () {
+    // nothing to do here, all saved by default
+  }
 }
 
 module.exports = (...args) => new IpfsRepoStore(...args)
+
+module.exports.datastore = datastore
 
 function datastore (ipfs, collaboration) {
   return new Promise((resolve, reject) => {

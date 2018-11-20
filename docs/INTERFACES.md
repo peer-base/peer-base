@@ -76,6 +76,10 @@ Returns the new vector clock if delta was causally (type Clock) consistent, `fal
 
 #### `async getClockAndStates () : ClockAndStates`
 
+#### `async save ()`
+
+Saves data to persistent storage
+
 
 ### Produced events
 

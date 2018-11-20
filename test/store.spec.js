@@ -15,62 +15,69 @@ const vectorclock = require('../src/common/vectorclock')
 const Store = require('../src/store')
 
 describe('store', () => {
+  let ipfs
+  let collaboration
   let shared
+  let store
+  let state
 
-  const strategyNames = ['ipfs-repo', 'memory']
+  const strategyNames = ['ipfs-repo', 'memory', 'hybrid-ipfs-repo']
 
   strategyNames.forEach((strategyName) => {
     describe(strategyName, () => {
-      let ipfs = {
-        _repo: {
-          datastore: new MemoryDatastore()
-        },
-        id: () => ({
-          id: 'fake peer id'
-        })
-      }
-      let collaboration = {}
-      let state = CRDT.initial()
+
       let verifyApply
 
-      let shared = {
-        apply (remoteClock, encodedDelta, isPartial) {
-          expect(Buffer.isBuffer(encodedDelta)).to.be.true()
-          const delta = decode(encodedDelta)
+      before(() => {
+        ipfs = {
+          _repo: {
+            datastore: new MemoryDatastore()
+          },
+          id: () => ({
+            id: 'fake peer id'
+          })
+        }
+        collaboration = {}
+        state = CRDT.initial()
+        verifyApply
 
-          if (verifyApply) {
-            verifyApply(remoteClock, delta, isPartial)
-          }
-          const [forName, typeName, deltaState] = delta
-          state = CRDT.join(state, deltaState)
-          return [null, encode([null, null, state])]
-        },
-        initial () {
-          return Promise.resolve(new Map())
-        },
-        async join (acc, delta) {
-          acc = await acc
-          const [previousClock, authorClock, encodedDelta] = delta
-          const [forName, typeName, encryptedDelta] = decode(encodedDelta)
-          const name = forName
+        shared = {
+          apply (remoteClock, encodedDelta, isPartial) {
+            expect(Buffer.isBuffer(encodedDelta)).to.be.true()
+            const delta = decode(encodedDelta)
 
-          if (!acc.has(name)) {
-            acc.set(name, [name, typeName, previousClock, {}, CRDT.initial()])
-          }
-          let [, , clock, previousAuthorClock, s1] = acc.get(name)
-          const newAuthorClock = vectorclock.incrementAll(previousAuthorClock, authorClock)
+            if (verifyApply) {
+              verifyApply(remoteClock, delta, isPartial)
+            }
+            const [forName, typeName, deltaState] = delta
+            state = CRDT.join(state, deltaState)
+            return [null, encode([null, null, state])]
+          },
+          initial () {
+            return Promise.resolve(new Map())
+          },
+          async join (acc, delta) {
+            acc = await acc
+            const [previousClock, authorClock, encodedDelta] = delta
+            const [forName, typeName, encryptedDelta] = decode(encodedDelta)
+            const name = forName
 
-          const newState = CRDT.join(s1, encryptedDelta)
-          acc.set(forName, [forName, typeName, clock, newAuthorClock, newState])
-          return acc
-        },
-        async signAndEncrypt (message) {
-          return message
-        },
-        name: null
-      }
+            if (!acc.has(name)) {
+              acc.set(name, [name, typeName, previousClock, {}, CRDT.initial()])
+            }
+            let [, , clock, previousAuthorClock, s1] = acc.get(name)
+            const newAuthorClock = vectorclock.incrementAll(previousAuthorClock, authorClock)
 
-      let store
+            const newState = CRDT.join(s1, encryptedDelta)
+            acc.set(forName, [forName, typeName, clock, newAuthorClock, newState])
+            return acc
+          },
+          async signAndEncrypt (message) {
+            return message
+          },
+          name: null
+        }
+      })
 
       it('can be created', () => {
         store = Store(ipfs, collaboration, {
@@ -248,8 +255,27 @@ describe('store', () => {
         expect(decode(await store.getState())).to.deep.equal([null, null, state])
       })
 
+      it('can be saved', () => strategyName !== 'memory' ? store.save() : null)
+
       it('can be stopped', () => store.stop())
     })
   })
 
+  describe('hybrid persistence', () => {
+    it('can be saved', () => store.save())
+
+    it('can be restored from copy', async () => {
+      store = Store(ipfs, collaboration, {
+        storeStrategyName: 'hybrid-ipfs-repo'
+      })
+
+      await store.start()
+    })
+
+    it('can get state', async () => {
+      const storeState = decode(await store.getState())
+      expect(storeState).to.deep.equal([null, null, state])
+      expect(CRDT.value(storeState[2])).to.deep.equal(['a', 'b', 'c', 'd'])
+    })
+  })
 })
