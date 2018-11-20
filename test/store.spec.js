@@ -17,7 +17,7 @@ const Store = require('../src/store')
 describe('store', () => {
   let shared
 
-  const strategyNames = ['ipfs-repo']
+  const strategyNames = ['ipfs-repo', 'memory']
 
   strategyNames.forEach((strategyName) => {
     describe(strategyName, () => {

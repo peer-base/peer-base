@@ -2,12 +2,11 @@
 
 const debug = require('debug')('peer-star:collaboration:store')
 const pull = require('pull-stream')
-const MemoryDatastore = require('datastore-core').MemoryDatastore
 const vectorclock = require('../common/vectorclock')
 
-const LocalCollaborationPersistentStore = require('./local-collaboration-persistent-store')
+const LocalCollaborationStore = require('./local-collaboration-store')
 
-module.exports = class DatastoreStore extends LocalCollaborationPersistentStore {
+module.exports = class DatastoreStore extends LocalCollaborationStore {
   async start () {
     await super.start()
     this._store = await this._createDatastore(this._ipfs, this._collaboration)

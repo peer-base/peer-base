@@ -1,8 +1,8 @@
 'use strict'
 
-const LocalCollaborationStore = require('./local-collaboration-store')
+const DataStoreStore = require('./datastore-store')
 
-module.exports = class LocalCollaborationPersistentStore extends LocalCollaborationStore {
+module.exports = class DataStorePersistentStore extends DataStoreStore {
   _encode (value) {
     if (!this._cipher) {
       return super._encode(value)

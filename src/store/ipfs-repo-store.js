@@ -2,9 +2,9 @@
 
 const NamespaceStore = require('datastore-core').NamespaceDatastore
 const Key = require('interface-datastore').Key
-const DatastoreStore = require('./datastore-store')
+const DatastorePersistentStore = require('./datastore-persistent-store')
 
-class IpfsRepoStore extends DatastoreStore {
+class IpfsRepoStore extends DatastorePersistentStore {
   _createDatastore () {
     return datastore(this._ipfs, this._collaboration)
   }

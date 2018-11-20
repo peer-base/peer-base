@@ -1,7 +1,8 @@
 'use strict'
 
 const strategies = {
-  'ipfs-repo': require('./ipfs-repo-store')
+  'ipfs-repo': require('./ipfs-repo-store'),
+  'memory': require('./memory-store')
 }
 
 module.exports = (ipfs, collaboration, options = {}) => {
@@ -14,5 +15,5 @@ module.exports = (ipfs, collaboration, options = {}) => {
     }
   }
 
-  return Strategy(ipfs, collaboration, options)
+  return Strategy(ipfs, collaboration, options || {})
 }
