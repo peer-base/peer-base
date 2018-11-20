@@ -20,6 +20,7 @@ class IpfsRepoStore extends LocalCollaborationStore {
   }
 
   deltaStream (_since = {}) {
+    let started = false
     let since = Object.assign({}, _since)
     debug('%s: delta stream since %j', this._id, since)
 
@@ -30,9 +31,10 @@ class IpfsRepoStore extends LocalCollaborationStore {
       pull.asyncMap(({ value }, cb) => this._decode(value, cb)),
       pull.asyncMap((entireDelta, callback) => {
         const [previousClock, authorClock] = entireDelta
-        if (vectorclock.isIdentical(previousClock, since)) {
-          debug('accepting delta %j', [previousClock, authorClock])
-          since = vectorclock.incrementAll(previousClock, authorClock)
+        if (!started && vectorclock.isIdentical(previousClock, since)) {
+          started = true
+        }
+        if (started) {
           callback(null, entireDelta)
         } else {
           callback(null, null)
