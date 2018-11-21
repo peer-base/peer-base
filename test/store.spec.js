@@ -6,7 +6,6 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const MemoryDatastore = require('interface-datastore').MemoryDatastore
-const crypto = require('libp2p-crypto')
 const { encode, decode } = require('delta-crdts-msgpack-codec')
 const pull = require('pull-stream')
 const CRDT = require('delta-crdts').type('rga')
@@ -25,7 +24,6 @@ describe('store', () => {
 
   strategyNames.forEach((strategyName) => {
     describe(strategyName, () => {
-
       let verifyApply
 
       before(() => {
@@ -39,7 +37,6 @@ describe('store', () => {
         }
         collaboration = {}
         state = CRDT.initial()
-        verifyApply
 
         shared = {
           apply (remoteClock, encodedDelta, isPartial) {
@@ -49,7 +46,7 @@ describe('store', () => {
             if (verifyApply) {
               verifyApply(remoteClock, delta, isPartial)
             }
-            const [forName, typeName, deltaState] = delta
+            const [, , deltaState] = delta
             state = CRDT.join(state, deltaState)
             return [null, encode([null, null, state])]
           },
@@ -176,7 +173,7 @@ describe('store', () => {
       })
 
       if (strategyName !== 'memory') {
-        it('can be saved', () =>  store.save())
+        it('can be saved', () => store.save())
       }
 
       it('can save another self delta', async () => {
@@ -231,7 +228,7 @@ describe('store', () => {
         expect(baseClock).to.deep.equal({})
         expect(authorClock).to.deep.equal({'fake peer id': 2, 'other peer id': 1})
         const decodedDeltaRecord = decode(encodedDeltaRecord)
-        const [forName, type, encodedDelta] = decodedDeltaRecord
+        const [, , encodedDelta] = decodedDeltaRecord
         const delta = decode(encodedDelta)
         expect(state).to.deep.equal(delta)
         expect(CRDT.value(delta)).to.deep.equal(['a', 'b', 'c'])
@@ -260,7 +257,7 @@ describe('store', () => {
       })
 
       if (strategyName !== 'memory') {
-        it('can be saved', () =>  store.save())
+        it('can be saved', () => store.save())
       }
 
       it('can be stopped', () => store.stop())

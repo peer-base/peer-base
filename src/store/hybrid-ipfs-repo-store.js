@@ -1,6 +1,5 @@
 'use strict'
 
-const pull = require('pull-stream')
 const MemoryStore = require('./memory-store').klass
 const { datastore } = require('./ipfs-repo-store')
 const replicateStore = require('./replicate-store')

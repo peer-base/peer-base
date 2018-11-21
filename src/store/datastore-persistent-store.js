@@ -1,6 +1,7 @@
 'use strict'
 
 const DataStoreStore = require('./datastore-store')
+const { encode, decode } = require('delta-crdts-msgpack-codec')
 
 module.exports = class DataStorePersistentStore extends DataStoreStore {
   _encode (value) {

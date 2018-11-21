@@ -24,7 +24,7 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
     this._shareds = []
   }
 
-  async start () {
+  async start () {
     this._id = (await this._ipfs.id()).id
   }
 

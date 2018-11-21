@@ -1,7 +1,6 @@
 'use strict'
 
-const { NamespaceStore} = require('datastore-core')
-const { Key, MemoryDatastore }  = require('interface-datastore')
+const { MemoryDatastore } = require('interface-datastore')
 const DatastoreStore = require('./datastore-store')
 
 class MemoryStore extends DatastoreStore {
@@ -17,4 +16,3 @@ class MemoryStore extends DatastoreStore {
 module.exports = (...args) => new MemoryStore(...args)
 
 module.exports.klass = MemoryStore
-

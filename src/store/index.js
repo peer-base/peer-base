@@ -2,7 +2,7 @@
 
 const strategies = {
   'ipfs-repo': require('./ipfs-repo-store'),
-  'memory': require('./memory-store'),
+  memory: require('./memory-store'),
   'hybrid-ipfs-repo': require('./hybrid-ipfs-repo-store')
 }
 

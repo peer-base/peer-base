@@ -28,7 +28,7 @@ module.exports = class DatastoreStore extends LocalCollaborationStore {
       }),
       pull.asyncMap(({ value }, cb) => this._decode(value, cb)),
       pull.asyncMap((entireDelta, callback) => {
-        const [previousClock, authorClock] = entireDelta
+        const [previousClock] = entireDelta
         if (!started && vectorclock.isIdentical(previousClock, since)) {
           started = true
         }
