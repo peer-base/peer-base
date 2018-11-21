@@ -175,6 +175,10 @@ describe('store', () => {
         expect(applyCalls).to.equal(0)
       })
 
+      if (strategyName !== 'memory') {
+        it('can be saved', () =>  store.save())
+      }
+
       it('can save another self delta', async () => {
         let applyCalls = 0
         verifyApply = (remoteClock, encodedDelta, isPartial) => {
@@ -255,7 +259,9 @@ describe('store', () => {
         expect(decode(await store.getState())).to.deep.equal([null, null, state])
       })
 
-      it('can be saved', () => strategyName !== 'memory' ? store.save() : null)
+      if (strategyName !== 'memory') {
+        it('can be saved', () =>  store.save())
+      }
 
       it('can be stopped', () => store.stop())
     })

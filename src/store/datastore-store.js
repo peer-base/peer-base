@@ -69,6 +69,10 @@ module.exports = class DatastoreStore extends LocalCollaborationStore {
     })
   }
 
+  _delete (key, callback) {
+    this._store.delete(key, callback)
+  }
+
   _trimDeltas () {
     this._trimmingDeltas = true
     return new Promise((resolve, reject) => {
@@ -84,7 +88,7 @@ module.exports = class DatastoreStore extends LocalCollaborationStore {
           const thisSeq = parseInt(key.toString().slice(3), 16)
           if (thisSeq < first) {
             debug('%s: trimming delta with sequence %s', this._id, thisSeq)
-            this._store.delete(key, callback)
+            this._delete(key, callback)
           } else {
             callback()
           }

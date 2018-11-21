@@ -2,35 +2,80 @@
 
 const pull = require('pull-stream')
 
-module.exports = (fromStore, toStore) => {
-  const keys = new Set()
-  return new Promise((resolve, reject) => {
-    pull(
-      fromStore.query({}),
-      pull.asyncMap((entry, done) => {
-        keys.add(entry.key.toString())
-        toStore.get(entry.key, (err, result) => {
-          if (err && err.code !== 'ERR_NOT_FOUND') {
-            return done(err)
-          }
-          if (areDifferent(entry.value, result)) {
-            toStore.put(entry.key, entry.value, done)
+module.exports = (fromStore, toStore, addedKeys, removedKeys) => {
+  if (!addedKeys) {
+    addedKeys = new Set()
+    return replicateAll(addedKeys).then(() => removeKeysNotIn(addedKeys))
+  } else {
+    return replicateSome(addedKeys).then(() => removeKeysIn(removedKeys))
+  }
+
+  function replicateAll (addedKeys) {
+    return new Promise((resolve, reject) => {
+      pull(
+        fromStore.query({}),
+        pull.asyncMap((entry, done) => {
+          addedKeys.add(entry.key.toString())
+          toStore.get(entry.key, (err, result) => {
+            if (err && err.code !== 'ERR_NOT_FOUND') {
+              return done(err)
+            }
+            if (areDifferent(entry.value, result)) {
+              toStore.put(entry.key, entry.value, done)
+            } else {
+              done()
+            }
+          })
+        }),
+        pull.onEnd((err) => {
+          if (err) {
+            reject(err)
           } else {
-            done()
+            resolve()
           }
         })
-      }),
-      pull.onEnd((err) => {
+      )
+    })
+  }
+
+  function replicateSome (keys) {
+    return Promise.all([...keys].map(replicateKey))
+  }
+
+  function replicateKey (key) {
+    return new Promise((resolve, reject) => {
+      fromStore.get(key, (err, value) => {
+        if (err) {
+          return reject(err)
+        }
+        toStore.put(key, value, (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
+      })
+    })
+  }
+
+  function removeKeysIn (keys = new Set()) {
+    return Promise.all([...keys].map(removeKey))
+  }
+
+  function removeKey (key) {
+    return new Promise((resolve, reject) => {
+      toStore.delete(key, (err) => {
         if (err) {
           reject(err)
         } else {
-          resolve(removeKeysNotIn(keys))
+          resolve()
         }
       })
-    )
-  })
+    })
+  }
 
-  function removeKeysNotIn(keys) {
+  function removeKeysNotIn (keys) {
     return new Promise((resolve, reject) => {
       pull(
         toStore.query({}),
