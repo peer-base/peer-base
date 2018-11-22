@@ -5,6 +5,10 @@ const datastore = require('./datastore-from-ipfs')
 const replicateStore = require('./replicate-store')
 
 class HybridIpfsRepoStore extends MemoryStore {
+  get isPersistent () {
+    return true
+  }
+
   async start () {
     await super.start()
     this._changedKeys = new Set()

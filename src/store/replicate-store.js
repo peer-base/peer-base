@@ -93,7 +93,7 @@ module.exports = (fromStore, toStore, { encrypt, decrypt, addedKeys, removedKeys
   function removeKeysNotIn (keys) {
     return new Promise((resolve, reject) => {
       pull(
-        toStore.query({}),
+        toStore.query({ prefix: '/'}),
         pull.asyncMap((entry, done) => {
           if (!keys.has(entry.key.toString())) {
             toStore.delete(entry.key, done)
