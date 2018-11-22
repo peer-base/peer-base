@@ -235,6 +235,8 @@ class Collaboration extends EventEmitter {
       this.shared.removeListener('state changed', this._debouncedStateChangedSaver)
     }
 
+    await this.save()
+
     this.emit('stopped')
   }
 
