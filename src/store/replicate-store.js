@@ -2,7 +2,7 @@
 
 const pull = require('pull-stream')
 
-module.exports = (fromStore, toStore, addedKeys, removedKeys) => {
+module.exports = (fromStore, toStore, { encrypt, decrypt, addedKeys, removedKeys }) => {
   if (!addedKeys) {
     addedKeys = new Set()
     return replicateAll(addedKeys).then(() => removeKeysNotIn(addedKeys))
@@ -16,15 +16,27 @@ module.exports = (fromStore, toStore, addedKeys, removedKeys) => {
         fromStore.query({}),
         pull.asyncMap((entry, done) => {
           addedKeys.add(entry.key.toString())
-          toStore.get(entry.key, (err, result) => {
+          toStore.get(entry.key, (err, existingValue) => {
             if (err && err.code !== 'ERR_NOT_FOUND') {
               return done(err)
             }
-            if (areDifferent(entry.value, result)) {
-              toStore.put(entry.key, entry.value, done)
-            } else {
-              done()
-            }
+            maybeDecrypt(entry.value, (err, decryptedValue) => {
+              if (err) {
+                return done(err)
+              }
+
+              maybeEncrypt(entry.value, (err, encryptedValue) => {
+                if (err) {
+                  return done(err)
+                }
+
+                if (areDifferent(encryptedValue, existingValue)) {
+                  toStore.put(entry.key, entry.value, done)
+                } else {
+                  done()
+                }
+              })
+            })
           })
         }),
         pull.onEnd((err) => {
@@ -95,6 +107,22 @@ module.exports = (fromStore, toStore, addedKeys, removedKeys) => {
         })
       )
     })
+  }
+
+  function maybeEncrypt (buffer, callback) {
+    if (encrypt) {
+      encrypt(buffer, callback)
+    } else {
+      callback(null, buffer)
+    }
+  }
+
+  function maybeDecrypt (buffer, callback) {
+    if (decrypt) {
+      decrypt(buffer, callback)
+    } else {
+      callback(null, buffer)
+    }
   }
 }
 
