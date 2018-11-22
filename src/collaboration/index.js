@@ -90,6 +90,8 @@ class Collaboration extends EventEmitter {
     })
 
     this._saveQueue = new Queue({ concurrency: 1 })
+
+    this._stopped = true
   }
 
   async start () {
@@ -97,6 +99,7 @@ class Collaboration extends EventEmitter {
       return this._starting
     }
 
+    this._stopped = false
     this._starting = this._start()
     await this._starting
   }
@@ -190,13 +193,18 @@ class Collaboration extends EventEmitter {
   }
 
   _save () {
-    if (this._store.isPersistent) {
+    if (!this._stopped && this._store.isPersistent) {
       return this._store.save()
     }
   }
 
   async stop () {
     debug('stopping collaboration %s', this.name)
+    await this.save()
+    await this._saveQueue.onEmpty()
+
+    this._stopped = true
+
     this.stats.stop()
 
     if (this._unregisterObserver) {
@@ -234,8 +242,6 @@ class Collaboration extends EventEmitter {
     if (this._debouncedStateChangedSaver) {
       this.shared.removeListener('state changed', this._debouncedStateChangedSaver)
     }
-
-    await this.save()
 
     this.emit('stopped')
   }
