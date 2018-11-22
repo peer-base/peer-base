@@ -6,12 +6,18 @@ const delay = require('delay')
 
 const SWARM = [ '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star' ]
 
-module.exports = (appName, transportOptions, ipfsOptions) => {
+module.exports = (appName, transportOptions = {}, ipfsOptions = {}) => {
   if (!appName) {
     throw new Error('need app name')
   }
 
-  const repo = Repo()
+  let repo = ipfsOptions.repo
+
+  if (!repo) {
+    repo = Repo()
+  } else {
+    console.log('using given repo')
+  }
 
   ipfsOptions = Object.assign({
     repo,
