@@ -10,6 +10,7 @@
 * [Create collaboration](#create-collaboration)
 * [App Events](#app-events)
 * [Collaboration](#collaboration)
+* [Local store strategies](#local-store-strategies)
 * [IPFS Circuit Relay support](#ipfs-circui-relay-support)
 * [Pinner](#pinner)
 
@@ -410,6 +411,10 @@ await collaboration.stop()
 ```js
 await app.stop()
 ```
+
+## Local store strategies
+
+If you want to know or change the way that peer-star persists the collaboration locally, you can read [docs/LOCAL_STORES.md](docs/LOCAL_STORES.md).
 
 ## IPFS Circuit Relay support
 
