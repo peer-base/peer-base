@@ -2,6 +2,8 @@
 
 const debug = require('debug')('peer-star:collaboration')
 const EventEmitter = require('events')
+const Queue = require('p-queue')
+const debounce = require('lodash/debounce')
 const Membership = require('./membership')
 const Store = require('../store')
 const Shared = require('./shared')
@@ -23,7 +25,8 @@ const defaultOptions = {
   replicateOnly: false,
   debouncePushMS: 500,
   debouncePushToPinnerMS: 5000,
-  receiveTimeoutMS: 3000
+  receiveTimeoutMS: 3000,
+  saveDebounceMS: 3000
 }
 
 module.exports = (...args) => new Collaboration(...args)
@@ -85,6 +88,8 @@ class Collaboration extends EventEmitter {
     this.stats.on('error', (err) => {
       console.error('error in stats:', err)
     })
+
+    this._saveQueue = new Queue({ concurrency: 1 })
   }
 
   async start () {
@@ -172,7 +177,22 @@ class Collaboration extends EventEmitter {
     this.stats.start()
     this._unregisterObserver = this._membership.connectionManager.observe(this.stats.observer)
 
+    this._debouncedStateChangedSaver = debounce(() => this.save())
+    this.shared.on('state changed', this._debouncedStateChangedSaver)
+
+    this._store.on('saved', () => this.emit('saved'))
+
     await Array.from(this._subs.values()).map((sub) => sub.start())
+  }
+
+  save () {
+    return this._saveQueue.add(() => this._save())
+  }
+
+  _save () {
+    if (this._store.isPersistent) {
+      return this._store.save()
+    }
   }
 
   async stop () {
@@ -209,6 +229,10 @@ class Collaboration extends EventEmitter {
       } catch (err) {
         console.error('error stopping:', err)
       }
+    }
+
+    if (this._debouncedStateChangedSaver) {
+      this.shared.removeListener('state changed', this._debouncedStateChangedSaver)
     }
 
     this.emit('stopped')

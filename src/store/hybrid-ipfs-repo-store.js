@@ -1,7 +1,7 @@
 'use strict'
 
 const MemoryStore = require('./memory-store').klass
-const { datastore } = require('./ipfs-repo-store')
+const datastore = require('./datastore-from-ipfs')
 const replicateStore = require('./replicate-store')
 
 class HybridIpfsRepoStore extends MemoryStore {
@@ -51,6 +51,7 @@ class HybridIpfsRepoStore extends MemoryStore {
     const removedKeys = this._removedKeys
     this._removedKeys = new Set()
     return replicateStore(this._store, this._persistentStore, { encrypt: this._encrypt, changedKeys, removedKeys })
+      .then(() => this.emit('saved'))
   }
 }
 

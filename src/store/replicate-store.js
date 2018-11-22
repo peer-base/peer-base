@@ -3,17 +3,20 @@
 const pull = require('pull-stream')
 
 module.exports = (fromStore, toStore, { encrypt, decrypt, addedKeys, removedKeys }) => {
+  let task
   if (!addedKeys) {
     addedKeys = new Set()
-    return replicateAll(addedKeys).then(() => removeKeysNotIn(addedKeys))
+    task = replicateAll(addedKeys).then(() => removeKeysNotIn(addedKeys))
   } else {
-    return replicateSome(addedKeys).then(() => removeKeysIn(removedKeys))
+    task = replicateSome(addedKeys).then(() => removeKeysIn(removedKeys))
   }
+
+  return task
 
   function replicateAll (addedKeys) {
     return new Promise((resolve, reject) => {
       pull(
-        fromStore.query({}),
+        fromStore.query({ prefix: '/' }),
         pull.asyncMap((entry, done) => {
           addedKeys.add(entry.key.toString())
           toStore.get(entry.key, (err, existingValue) => {

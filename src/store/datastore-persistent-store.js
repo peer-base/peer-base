@@ -4,6 +4,10 @@ const DataStoreStore = require('./datastore-store')
 const { encode, decode } = require('delta-crdts-msgpack-codec')
 
 module.exports = class DataStorePersistentStore extends DataStoreStore {
+  get isPersistent () {
+    return true
+  }
+
   _encode (value) {
     if (!this._cipher) {
       return super._encode(value)
