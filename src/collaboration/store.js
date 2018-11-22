@@ -67,6 +67,11 @@ module.exports = class CollaborationStore extends EventEmitter {
       [this.getLatestClock(), this.getStates()]))
   }
 
+  getClockAndState (name) {
+    return this._queue.add(() => Promise.all(
+      [this.getLatestClock(), this.getState(name)]))
+  }
+
   saveDelta ([previousClock, authorClock, delta]) {
     return this._queue.add(async () => {
       debug('%s: save delta: %j', this._id, [previousClock, authorClock, delta])
