@@ -5,10 +5,7 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const PeerStar = require('../')
 const App = require('./utils/create-app')
-const waitForMembers = require('./utils/wait-for-members')
-const waitForValue = require('./utils/wait-for-value')
 
 describe('local-persistence', function () {
   this.timeout(30000)
@@ -44,5 +41,6 @@ describe('local-persistence', function () {
     const collaboration = await app.app.collaborate('local persistence test collaboration', 'rga')
     console.log('started collaboration')
     expect(collaboration.shared.value()).to.deep.equal(['a', 'b'])
+    await app.stop()
   })
 })
