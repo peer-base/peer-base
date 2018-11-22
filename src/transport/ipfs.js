@@ -12,6 +12,11 @@ const AppTransport = require('./app-transport')
 const Relay = require('./ipfs-relay')
 
 module.exports = (app, options) => {
+  if (options.ipfs) {
+    console.log('using given IPFS node in options.ipfs')
+    return options.ipfs
+  }
+
   const ipfsOptions = {
     repo: options && options.repo,
     EXPERIMENTAL: {

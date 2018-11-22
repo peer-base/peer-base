@@ -10,6 +10,7 @@
 * [Create collaboration](#create-collaboration)
 * [App Events](#app-events)
 * [Collaboration](#collaboration)
+* [Local store strategies](#local-store-strategies)
 * [IPFS Circuit Relay support](#ipfs-circui-relay-support)
 * [Pinner](#pinner)
 
@@ -154,6 +155,7 @@ Arguments:
   * `debouncePushMS`: (defaults to `200`): debounce time from collboration mutations into pushing them.
   * `debouncePushToPinnerMS`: (defaults to `5000`): debounce time from collboration mutations into pushing them into a pinner.
   * `receiveTimeoutMS`: (defaults to `3000`): time after which a connection is turned to eager mode to receive missing data.
+  * `saveDebounceMS`: (defaults to `3000`): debouncing between changes and saving changes
 
 ### Create your own collaboration type
 
@@ -330,6 +332,11 @@ collaboration.on('state changed', (fromSelf) => {
 
 __NOTE__: When receiving remote updates, this event may fire many times per second. You may want to use a debounce or a throttle mechanism when handling this event. If you do that, beware that the state in your UI may be out of sync with the state of the CRDT.
 
+#### `"saved"`
+
+When the collaboration data is saved to a local persistent store.
+
+
 #### `"stopped"`
 
 When the collaboration is stopped locally.
@@ -404,6 +411,10 @@ await collaboration.stop()
 ```js
 await app.stop()
 ```
+
+## Local store strategies
+
+If you want to know or change the way that peer-star persists the collaboration locally, you can read [docs/LOCAL_STORES.md](docs/LOCAL_STORES.md).
 
 ## IPFS Circuit Relay support
 

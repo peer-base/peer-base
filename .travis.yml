@@ -7,7 +7,7 @@ matrix:
     env: CXX=g++-4.8
 
 script:
-  - npm test
+  - npm run test:browser
 
 before_script:
   - export DISPLAY=:99.0
