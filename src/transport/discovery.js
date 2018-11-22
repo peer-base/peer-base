@@ -5,6 +5,10 @@ const EventEmitter = require('events')
 const Queue = require('p-queue')
 const delay = require('delay')
 
+const HAPPENS_ERROR_CODES = [
+  'CONNECTION_FAILED'
+]
+
 const HAPPENS_ERRORS = [
   'The libp2p node is not started yet',
   'Stream ended prematurely',
@@ -177,7 +181,7 @@ module.exports = class Discovery extends EventEmitter {
   }
 
   _maybeLogError (err) {
-    if (HAPPENS_ERRORS.indexOf(err.message) < 0) {
+    if ((HAPPENS_ERROR_CODES.indexOf(err.code) < 0) && (HAPPENS_ERRORS.indexOf(err.message) < 0)) {
       console.error('error caught while finding out if peer is interested in app', err)
     }
   }
