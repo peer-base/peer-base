@@ -10,7 +10,6 @@ const { encode, decode } = require('delta-crdts-msgpack-codec')
 const pull = require('pull-stream')
 const CRDT = require('delta-crdts').type('rga')
 const vectorclock = require('../src/common/vectorclock')
-const generateKeys = require('../src/keys/generate')
 const crypto = require('libp2p-crypto')
 
 const Store = require('../src/store')
@@ -26,30 +25,29 @@ describe('store', () => {
 
   strategyNames.forEach((strategyName) => {
     describe(strategyName, () => {
-      let keys
       let verifyApply
       let storeOptions
-
-      before(async () => {
-        keys = await generateKeys()
-      })
 
       before(() => {
         const key = crypto.randomBytes(16)
         const iv = crypto.randomBytes(16)
 
+        const createCipher = () => {
+          return new Promise((resolve, reject) => {
+            /* eslint-disable max-nested-callbacks */
+            crypto.aes.create(Buffer.from(key), Buffer.from(iv), (err, key) => {
+              if (err) {
+                return reject(err)
+              }
+              resolve(key)
+            })
+            /* eslint-enable max-nested-callbacks */
+          })
+        }
+
         storeOptions = {
           storeStrategyName: strategyName,
-          createCipher: () => {
-            return new Promise((resolve, reject) => {
-              crypto.aes.create(Buffer.from(key), Buffer.from(iv), (err, key) => {
-                if (err) {
-                  return reject(err)
-                }
-                resolve(key)
-              })
-            })
-          }
+          createCipher
         }
       })
 

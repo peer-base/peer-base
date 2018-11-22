@@ -28,8 +28,8 @@ class HybridIpfsRepoStore extends MemoryStore {
   _encrypt (buffer, callback) {
     if (this._cipher) {
       this._cipher()
-      .then((cipher) => cipher.encrypt(buffer, callback))
-      .catch(callback)
+        .then((cipher) => cipher.encrypt(buffer, callback))
+        .catch(callback)
     } else {
       callback(null, buffer)
     }
@@ -50,7 +50,7 @@ class HybridIpfsRepoStore extends MemoryStore {
     this._changedKeys = new Set()
     const removedKeys = this._removedKeys
     this._removedKeys = new Set()
-    return replicateStore(this._store, this._persistentStore, { encrypt: this._encrypt , changedKeys, removedKeys })
+    return replicateStore(this._store, this._persistentStore, { encrypt: this._encrypt, changedKeys, removedKeys })
   }
 }
 
