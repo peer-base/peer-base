@@ -73,7 +73,7 @@ module.exports = class PullProtocol {
             debug('%s: received clock from %s: %j', this._peerId(), remotePeerId, clock)
             if (await this._store.contains(clock)) {
               // we already have this state
-              // send a "prune" messagere
+              // send a "prune" message
               debug('%s: store contains clock', this._peerId(), clock)
               debug('%s: setting %s to lazy mode (1)', this._peerId(), remotePeerId)
               output.push(encode([null, true]))
