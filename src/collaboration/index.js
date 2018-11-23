@@ -13,6 +13,7 @@ const Clocks = require('./clocks')
 const Replication = require('./replication')
 const deriveCreateCipherFromKeys = require('../keys/derive-cipher-from-keys')
 const Stats = require('../stats')
+const delay = require('delay')
 
 const defaultOptions = {
   preambleByteCount: 2,
@@ -180,30 +181,38 @@ class Collaboration extends EventEmitter {
     this.stats.start()
     this._unregisterObserver = this._membership.connectionManager.observe(this.stats.observer)
 
-    this._debouncedStateChangedSaver = debounce(() => this.save())
+    this._debouncedStateChangedSaver = debounce(() => this.save(), this._options.saveDebounceMS)
     this.shared.on('state changed', this._debouncedStateChangedSaver)
 
-    this._store.on('saved', () => this.emit('saved'))
+    this._store.on('saved', () => {
+      if (!this._saveQueue.pending) {
+        this.emit('saved')
+      } else {
+        this._saveQueue.onEmpty().then(() => this.emit('saved'))
+      }
+    })
 
     await Array.from(this._subs.values()).map((sub) => sub.start())
   }
 
-  save () {
-    return this._saveQueue.add(() => this._save())
+  save (force = false) {
+    if (!this._stopped || force) {
+      return this._saveQueue.add(() => this._save(force))
+    }
   }
 
-  _save () {
-    if (!this._stopped && this._store.isPersistent) {
+  _save (force) {
+    if (this._store.isPersistent && (!this._stopped | force)) {
       return this._store.save()
     }
   }
 
   async stop () {
     debug('stopping collaboration %s', this.name)
-    await this.save()
-    await this._saveQueue.onEmpty()
-
     this._stopped = true
+    await delay(0) // wait for shared deltas to flush
+    await this.save(true)
+    await this._saveQueue.onEmpty()
 
     this.stats.stop()
 
