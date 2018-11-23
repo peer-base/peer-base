@@ -45,11 +45,13 @@ class App extends EventEmitter {
             this.emit('error', err)
           }
         } else {
+          reject(err)
           this.emit('error', err)
         }
       }
       this.ipfs.on('error', onError)
       if (this.ipfs.isOnline()) {
+        this.ipfs.removeListener('error', onError)
         this.ipfs.on('error', (err) => this._handleIPFSError(err))
         resolve()
       } else {
