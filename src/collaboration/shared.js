@@ -17,6 +17,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   let state = crdtType.initial()
   let deltaBuffer = []
   const memo = {}
+  let saving = false
   // let clock = await store.getLatestClock()
 
   const saveDeltaBuffer = debounce(() => {
@@ -32,7 +33,9 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
       // clock = vectorclock.increment(clock, id)
       // debug('%s: clock before save delta:', id, clock)
       // const newClock =
+      saving = true
       const newClock = await store.saveDelta([null, null, encode(namedDelta)])
+      saving = false
       if (newClock) {
         clock = vectorclock.merge(clock, newClock)
       }
@@ -163,6 +166,9 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   return shared
 
   function apply (s, fromSelf) {
+    if (saving) {
+      return state
+    }
     debug('%s: apply ', id, s)
     state = crdtType.join.call(changeEmitter, state, s)
     shared.emit('delta', s)
