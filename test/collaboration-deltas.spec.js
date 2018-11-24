@@ -19,8 +19,6 @@ describe('collaboration deltas', function () {
   const evenMoreCharacters = ['å', '∫', '©', '∂']
   const yetMoreCharacters = ['Å', 'ß', '©', '∆']
 
-  const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
-
   const peerCount = characters.length
   const collaborationOptions = {}
 
@@ -63,7 +61,7 @@ describe('collaboration deltas', function () {
     const listeners = collaborations.map((collaboration, idx) => {
       const onDelta = (delta, fromSelf) => {
         if (!fromSelf) {
-          const [added, removed, edges] = delta
+          const [added, , edges] = delta
           expect(added.size).to.be.most(4)
           expect(edges.size).to.be.most(4)
           deltaCounts[idx] = (deltaCounts[idx] || 0) + 1
@@ -90,7 +88,7 @@ describe('collaboration deltas', function () {
     const listeners = collaborations.map((collaboration, idx) => {
       const onDelta = (delta, fromSelf) => {
         if (!fromSelf) {
-          const [added, removed, edges] = delta
+          const [added, , edges] = delta
           expect(added.size).to.be.most(5)
           expect(edges.size).to.be.most(5)
           deltaCounts[idx] = (deltaCounts[idx] || 0) + 1
@@ -117,7 +115,7 @@ describe('collaboration deltas', function () {
     const listeners = collaborations.map((collaboration, idx) => {
       const onDelta = (delta, fromSelf) => {
         if (!fromSelf) {
-          const [added, removed, edges] = delta
+          const [added, , edges] = delta
           expect(added.size).to.be.most(5)
           expect(edges.size).to.be.most(5)
           expect(edges.has(null)).to.be.true()

@@ -9,7 +9,6 @@ const delay = require('delay')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
-const waitForValue = require('./utils/wait-for-value')
 const debounceEvent = require('./utils/debounce-event')
 
 describe('collaboration with random changes', function () {
@@ -58,16 +57,13 @@ describe('collaboration with random changes', function () {
     let expectedCharacterCount = 0
     let expectedValue
     const modifications = async (collaboration, index) => {
-      const characters = []
       collaboration.shared.on('delta', (delta, fromSelf) => {
-        if (!fromSelf) {
+        if (!fromSelf) {
           console.log('%d: ', index, delta)
         }
       })
-      for (let i = 0; i < 100; i ++) {
+      for (let i = 0; i < 100; i++) {
         const character = characterFrom(manyCharacters, i)
-        //randomCharacter()
-        // console.log('%d: pushing', index, character)
         collaboration.shared.push(character)
         expectedCharacterCount++
         await delay(randomShortTime())
@@ -96,9 +92,6 @@ describe('collaboration with random changes', function () {
 
     function characterFrom (characters, index) {
       return characters[index % characters.length]
-    }
-    function randomCharacter () {
-      return manyCharacters[Math.floor(Math.random() * manyCharacters.length)]
     }
   })
 })
