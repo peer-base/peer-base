@@ -17,8 +17,6 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   let state = crdtType.initial()
   let deltaBuffer = []
   const memo = {}
-  let saving = false
-  // let clock = await store.getLatestClock()
 
   const saveDeltaBuffer = debounce(() => {
     queue.add(async () => {
@@ -33,9 +31,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
       // clock = vectorclock.increment(clock, id)
       // debug('%s: clock before save delta:', id, clock)
       // const newClock =
-      saving = true
-      const newClock = await store.saveDelta([null, null, encode(namedDelta)])
-      saving = false
+      const newClock = await store.saveDelta([null, null, encode(namedDelta)], true)
       if (newClock) {
         clock = vectorclock.merge(clock, newClock)
       }
@@ -55,11 +51,11 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   // shared mutators
   Object.keys(crdtType.mutators).forEach((mutatorName) => {
     const mutator = crdtType.mutators[mutatorName]
-    shared[mutatorName] = (...args) => {
+    shared[mutatorName] = async (...args) => {
       const delta = mutator(id, state, ...args)
       apply(delta, true)
       deltaBuffer.push(delta)
-      saveDeltaBuffer()
+      await saveDeltaBuffer()
     }
   })
 
@@ -76,7 +72,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
     return memo.value
   }
 
-  shared.apply = (remoteClock, encodedDelta, isPartial) => {
+  shared.apply = (remoteClock, encodedDelta, isPartial, fromSelf) => {
     debug('%s: apply', id, remoteClock, encodedDelta)
     if (!Buffer.isBuffer(encodedDelta)) {
       throw new Error('encoded delta should have been buffer')
@@ -85,7 +81,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
       const [forName, typeName, encryptedState] = decode(encodedDelta)
       debug('%s: shared.apply %j', id, remoteClock, forName)
       if (forName === name) {
-        if (vectorclock.compare(remoteClock, clock) >= 0) {
+        if (!fromSelf && vectorclock.compare(remoteClock, clock) >= 0) {
           clock = vectorclock.merge(clock, remoteClock)
           const encodedState = await decryptAndVerify(encryptedState)
           if (!options.replicateOnly) {
@@ -96,10 +92,8 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
           }
         }
         debug('%s state after apply:', id, state)
-        if (!keys.public || keys.write) {
-          const saveState = options.replicateOnly ? state : await signAndEncrypt(encode(state))
-          return [name, encode([name, forName && crdtType.typeName, saveState])]
-        }
+        const saveState = options.replicateOnly ? state : await signAndEncrypt(encode(state))
+        return [name, encode([name, forName && crdtType.typeName, saveState])]
       } else if (typeName) {
         const sub = await collaboration.sub(forName, typeName)
         return sub.shared.apply(remoteClock, encodedDelta)
@@ -166,12 +160,10 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   return shared
 
   function apply (s, fromSelf) {
-    if (saving) {
-      return state
-    }
     debug('%s: apply ', id, s)
     state = crdtType.join.call(changeEmitter, state, s)
     shared.emit('delta', s, fromSelf)
+
     debug('%s: new state after join is', id, state)
     try {
       changeEmitter.emitAll()

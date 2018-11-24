@@ -49,7 +49,7 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
       [this.getLatestClock(), this.getStates()]))
   }
 
-  saveDelta ([previousClock, authorClock, delta]) {
+  saveDelta ([previousClock, authorClock, delta], fromSelf) {
     return this._queue.add(async () => {
       debug('%s: save delta: %j', this._id, [previousClock, authorClock, delta])
 
@@ -83,7 +83,7 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
       debug('%s: saving delta %j = %j', this._id, deltaKey, deltaRecord)
 
       const newStateAndName = (await Promise.all(
-        this._shareds.map((shared) => shared.apply(nextClock, delta, true)))).filter(Boolean)[0]
+        this._shareds.map((shared) => shared.apply(nextClock, delta, true, fromSelf)))).filter(Boolean)[0]
 
       const [name, newState] = newStateAndName || []
 
