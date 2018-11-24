@@ -81,14 +81,16 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
       const [forName, typeName, encryptedState] = decode(encodedDelta)
       debug('%s: shared.apply %j', id, remoteClock, forName)
       if (forName === name) {
-        if (!fromSelf && vectorclock.compare(remoteClock, clock) >= 0) {
+        if (vectorclock.compare(remoteClock, clock) >= 0) {
           clock = vectorclock.merge(clock, remoteClock)
-          const encodedState = await decryptAndVerify(encryptedState)
-          if (!options.replicateOnly) {
-            const newState = decode(encodedState)
-            apply(newState)
-          } else if (!isPartial) {
-            state = encodedState
+          if (!fromSelf) {
+            const encodedState = await decryptAndVerify(encryptedState)
+            if (!options.replicateOnly) {
+              const newState = decode(encodedState)
+              apply(newState)
+            } else if (!isPartial) {
+              state = encodedState
+            }
           }
         }
         debug('%s state after apply:', id, state)
