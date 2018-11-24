@@ -18,7 +18,6 @@ module.exports = class DatastoreStore extends LocalCollaborationStore {
   }
 
   deltaStream (_since = {}) {
-    let started = false
     let since = Object.assign({}, _since)
     debug('%s: delta stream since %j', this._id, since)
 
@@ -28,15 +27,14 @@ module.exports = class DatastoreStore extends LocalCollaborationStore {
       }),
       pull.asyncMap(({ value }, cb) => this._decode(value, cb)),
       pull.asyncMap((entireDelta, callback) => {
-        const [previousClock] = entireDelta
-        if (!started && vectorclock.isIdentical(previousClock, since)) {
-          started = true
+        if (!vectorclock.isDeltaInteresting(entireDelta, since)) {
+          return callback(null, null)
         }
-        if (started) {
-          callback(null, entireDelta)
-        } else {
-          callback(null, null)
-        }
+
+        const [previousClock, authorClock] = entireDelta
+        const deltaClock = vectorclock.incrementAll(previousClock, authorClock)
+        since = vectorclock.merge(since, deltaClock)
+        callback(null, entireDelta)
       }),
       pull.filter(Boolean) // only allow non-null values
     )
