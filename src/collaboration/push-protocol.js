@@ -34,25 +34,6 @@ module.exports = class PushProtocol {
       return clockDiff
     }
 
-    const pushDeltaStream = async () => {
-      debug('%s: push deltas to %s', this._peerId(), remotePeerId)
-      const since = this._clocks.getFor(remotePeerId)
-      pull(
-        this._store.deltaStream(since),
-        pull.map((delta) => {
-          let [clock, authorClock] = delta
-          clock = vectorclock.incrementAll(clock, authorClock)
-          this._clocks.setFor(remotePeerId, clock)
-          output.push(encode([delta]))
-        }),
-        pull.onEnd((err) => {
-          if (err) {
-            onEnd(err)
-          }
-        })
-      )
-    }
-
     const pushDeltaBatch = async () => {
       debug('%s: push deltas to %s', this._peerId(), remotePeerId)
       const since = this._clocks.getFor(remotePeerId)
@@ -67,15 +48,13 @@ module.exports = class PushProtocol {
       }
     }
 
-    const pushDeltas = this._options.replicateOnly ? pushDeltaStream : pushDeltaBatch
-
     const updateRemote = async (myClock) => {
       debug('%s: updateRemote %s', this._peerId(), remotePeerId)
       if (pushing) {
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
         if (!isPinner) {
-          await pushDeltas(myClock)
+          await pushDeltaBatch()
         }
 
         if (isPinner || remoteNeedsUpdate(myClock)) {
