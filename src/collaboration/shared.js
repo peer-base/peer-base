@@ -171,7 +171,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
     }
     debug('%s: apply ', id, s)
     state = crdtType.join.call(changeEmitter, state, s)
-    shared.emit('delta', s)
+    shared.emit('delta', s, fromSelf)
     debug('%s: new state after join is', id, state)
     try {
       changeEmitter.emitAll()
