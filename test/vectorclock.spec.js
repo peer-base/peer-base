@@ -33,30 +33,28 @@ describe('vectorclock', () => {
       expect(vectorclock.isDeltaInteresting(delta, currentClock)).to.be.false()
     })
 
-
     it('accepts concurrent that starts from inside', () => {
-      const delta = [{ a: 1}, { a: 1 }]
+      const delta = [{ a: 1 }, { a: 1 }]
       const currentClock = { b: 1, a: 1 }
       expect(vectorclock.isDeltaInteresting(delta, currentClock)).to.be.true()
     })
 
     it('does not accept concurrent that starts from outside', () => {
-      const delta = [{ a: 1}, { a: 1 }]
+      const delta = [{ a: 1 }, { a: 1 }]
       const currentClock = { b: 1 }
       expect(vectorclock.isDeltaInteresting(delta, currentClock)).to.be.false()
     })
 
     it('accepts concurrent that starts from inside and expands multiple', () => {
-      const delta = [{ a: 1}, { a: 2 }]
+      const delta = [{ a: 1 }, { a: 2 }]
       const currentClock = { b: 1, a: 1 }
       expect(vectorclock.isDeltaInteresting(delta, currentClock)).to.be.true()
     })
 
     it('does not accept concurrent that starts from inside and ends in self', () => {
-      const delta = [{ b: 1}, { b: 1 }]
+      const delta = [{ b: 1 }, { b: 1 }]
       const currentClock = { b: 2 }
       expect(vectorclock.isDeltaInteresting(delta, currentClock)).to.be.false()
     })
-
   })
 })
