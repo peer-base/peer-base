@@ -202,7 +202,7 @@ class Collaboration extends EventEmitter {
   }
 
   _save (force) {
-    if (this._store.isPersistent && (!this._stopped | force)) {
+    if (this._store.isPersistent && (!this._stopped || force)) {
       return this._store.save()
     }
   }
