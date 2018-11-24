@@ -29,6 +29,29 @@ exports.delta = (c1, c2) => {
   return deltas
 }
 
+exports.isDeltaInteresting = (delta, currentClock) => {
+  const [previousClock, authorClock] = delta
+
+  // find out if previous clock is inside currentClock
+  const authors = new Set([...Object.keys(currentClock), Object.keys(previousClock)])
+  for (let author of authors) {
+    if ((previousClock[author] || 0) > (currentClock[author] || 0)) {
+      return false
+    }
+  }
+
+  // find out if new clock lands outside of  current clock
+  const deltaClock = exports.incrementAll(previousClock, authorClock)
+
+  for (let [author, seq] of Object.entries(deltaClock)) {
+    if (seq > (currentClock[author] || 0)) {
+      return true
+    }
+  }
+
+  return false
+}
+
 exports.isFirstDirectChildOfSecond = (first, second) => {
   let diff = 0
   for (let key of Object.keys(first)) {
@@ -78,9 +101,7 @@ exports.isFirstImmediateToSecond = (first, second) => {
 exports.incrementAll = (_clock, authorClock) => {
   const clock = Object.assign({}, _clock)
   Object.keys(authorClock).forEach((author) => {
-    let current = clock[author] || 0
-    current += authorClock[author]
-    clock[author] = current
+    clock[author] = (clock[author] || 0) + authorClock[author]
   })
   return clock
 }
