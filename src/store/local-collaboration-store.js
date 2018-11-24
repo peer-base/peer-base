@@ -67,21 +67,11 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
         currentClock = await this.getLatestClock()
       }
 
-      if (!vectorclock.isInFirstEqualToSecond(previousClock, currentClock)) {
-        debug('%s: did not save because previous clock and current clock are not contained', this._id)
-        debug('%s previous clock:', this._id, previousClock)
-        debug('%s current clock:', this._id, currentClock)
+      if (!vectorclock.isDeltaInteresting([previousClock, authorClock], currentClock)) {
         return false
       }
 
       const nextClock = vectorclock.merge(currentClock, vectorclock.incrementAll(previousClock, authorClock))
-
-      if (vectorclock.isIdentical(nextClock, currentClock) || vectorclock.compare(nextClock, currentClock) < 0) {
-        debug('%s: did not save because already contain this clock', this._id)
-        debug('%s previous clock:', this._id, previousClock)
-        debug('%s current clock:', this._id, currentClock)
-        return false
-      }
 
       debug('%s: next clock is', this._id, nextClock)
 
