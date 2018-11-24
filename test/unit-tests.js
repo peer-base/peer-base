@@ -1,5 +1,6 @@
 'use strict'
 
+require('./vectorclock.spec')
 require('./ring.spec')
 require('./dias-set.spec')
 require('./dias-set-inbound-conns.spec')
