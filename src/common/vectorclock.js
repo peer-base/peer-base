@@ -41,10 +41,11 @@ exports.isDeltaInteresting = (delta, currentClock) => {
   }
 
   // find out if new clock lands outside of  current clock
+  Object.keys(authorClock).forEach((author) => authors.add(author))
   const deltaClock = exports.incrementAll(previousClock, authorClock)
 
-  for (let [author, seq] of Object.entries(deltaClock)) {
-    if (seq > (currentClock[author] || 0)) {
+  for (let author of authors) {
+    if ((deltaClock[author] || 0) > (currentClock[author] || 0)) {
       return true
     }
   }
