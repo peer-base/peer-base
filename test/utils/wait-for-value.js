@@ -14,14 +14,12 @@ function waitForCollaborationValue (collaboration, value) {
   return new Promise((resolve) => {
     const onStateChanged = () => {
       const currentValue = collaboration.shared.value()
-      console.log('current value:', currentValue)
       if (isEqual(currentValue, value)) {
         collaboration.shared.removeListener('state changed', onStateChanged)
         setTimeout(resolve, 100)
       }
     }
     const currentValue = collaboration.shared.value()
-    console.log('current value:', currentValue)
     if (isEqual(currentValue, value)) {
       resolve()
     } else {
