@@ -12,7 +12,7 @@ const waitForMembers = require('./utils/wait-for-members')
 const debounceEvent = require('./utils/debounce-event')
 
 describe('collaboration with random changes', function () {
-  this.timeout(60000)
+  this.timeout(70000)
 
   const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
 
@@ -48,7 +48,7 @@ describe('collaboration with random changes', function () {
 
   it('can be created', async () => {
     collaborations = await Promise.all(
-      swarm.map((peer) => peer.app.collaborate('test array collaboration', 'rga', collaborationOptions)))
+      swarm.map((peer) => peer.app.collaborate('test random collaboration', 'rga', collaborationOptions)))
     expect(collaborations.length).to.equal(peerCount)
     await waitForMembers(collaborations)
   })
@@ -57,11 +57,6 @@ describe('collaboration with random changes', function () {
     let expectedCharacterCount = 0
     let expectedValue
     const modifications = async (collaboration, index) => {
-      collaboration.shared.on('delta', (delta, fromSelf) => {
-        if (!fromSelf) {
-          console.log('%d: ', index, delta)
-        }
-      })
       for (let i = 0; i < 100; i++) {
         const character = characterFrom(manyCharacters, i)
         collaboration.shared.push(character)
@@ -72,7 +67,6 @@ describe('collaboration with random changes', function () {
       await debounceEvent(collaboration, 'state changed', 10000)
 
       const value = collaboration.shared.value()
-      // console.log('VALUE:', value)
       expect(value.length).to.equal(expectedCharacterCount)
       if (!expectedValue) {
         expectedValue = value

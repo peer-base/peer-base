@@ -51,7 +51,7 @@ describe('collaboration deltas', function () {
 
   it('can be created', async () => {
     collaborations = await Promise.all(
-      swarm.map((peer) => peer.app.collaborate('test array collaboration', 'rga', collaborationOptions)))
+      swarm.map((peer) => peer.app.collaborate('test delta collaboration', 'rga', collaborationOptions)))
     expect(collaborations.length).to.equal(peerCount)
     await waitForMembers(collaborations)
   })
