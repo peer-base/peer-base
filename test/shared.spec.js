@@ -66,6 +66,8 @@ describe('shared', () => {
   })
 })
 
+/*
 process.on('unhandledRejection', (err) => {
   console.error(err)
 })
+*/

@@ -121,14 +121,14 @@ describe('store', () => {
       })
 
       it('does not contains other clock', async () => {
-        expect(await store.contains({'some peer id': 1})).to.equal(false)
+        expect(await store.contains({ 'some peer id': 1 })).to.equal(false)
       })
 
       it('can save self delta', async () => {
         let applyCalls = 0
         verifyApply = (remoteClock, delta, isPartial) => {
           applyCalls++
-          expect(remoteClock).to.deep.equal({'fake peer id': 1})
+          expect(remoteClock).to.deep.equal({ 'fake peer id': 1 })
           expect(Array.isArray(delta)).to.be.true()
           expect(delta[0]).to.be.null()
           expect(delta[1]).to.equal('fake')
@@ -136,7 +136,7 @@ describe('store', () => {
           expect(isPartial).to.be.true()
         }
         const delta = encode([null, 'fake', CRDT.mutators.push('fake peer id', state, 'a')])
-        expect(await store.saveDelta([null, null, delta])).to.deep.equal({'fake peer id': 1})
+        expect(await store.saveDelta([null, null, delta])).to.deep.equal({ 'fake peer id': 1 })
         expect(applyCalls).to.be.equal(1)
       })
 
@@ -153,7 +153,7 @@ describe('store', () => {
             const deltaRecord = deltas[0]
             const [previousClock, authorClock, delta] = deltaRecord
             expect(previousClock).to.deep.equal({})
-            expect(authorClock).to.deep.equal({'fake peer id': 1})
+            expect(authorClock).to.deep.equal({ 'fake peer id': 1 })
             expect(typeof delta).to.equal('object')
             done()
           })
@@ -165,7 +165,7 @@ describe('store', () => {
         verifyApply = (remoteClock, encodedDelta, isPartial) => {
           applyCalls++
         }
-        expect(await store.saveDelta([{}, {'fake peer id': 1}, 'some delta'])).to.equal(false)
+        expect(await store.saveDelta([{}, { 'fake peer id': 1 }, 'some delta'])).to.equal(false)
         expect(applyCalls).to.equal(0)
       })
 
@@ -173,7 +173,7 @@ describe('store', () => {
         let applyCallCount = 0
         verifyApply = (remoteClock, encodedDelta, isPartial) => {
           applyCallCount++
-          expect(remoteClock).to.deep.equal({'fake peer id': 1, 'other peer id': 1})
+          expect(remoteClock).to.deep.equal({ 'fake peer id': 1, 'other peer id': 1 })
           expect(Array.isArray(encodedDelta)).to.be.true()
           expect(encodedDelta[0]).to.be.null()
           expect(encodedDelta[1]).to.equal('fake')
@@ -181,7 +181,7 @@ describe('store', () => {
           expect(isPartial).to.be.true()
         }
         const delta = encode([null, 'fake', CRDT.mutators.push('other peer id', state, 'b')])
-        expect(await store.saveDelta([{}, {'other peer id': 1}, delta])).to.deep.equal({'fake peer id': 1, 'other peer id': 1})
+        expect(await store.saveDelta([{}, { 'other peer id': 1 }, delta])).to.deep.equal({ 'fake peer id': 1, 'other peer id': 1 })
         expect(applyCallCount).to.be.equal(1)
         expect(CRDT.value(state)).to.deep.equal(['a', 'b'])
       })
@@ -191,7 +191,7 @@ describe('store', () => {
         verifyApply = (remoteClock, encodedDelta, isPartial) => {
           applyCalls++
         }
-        expect(await store.saveDelta([{'third peer id': 1}, {'some other peer id': 1}, 'some delta'])).to.equal(false)
+        expect(await store.saveDelta([{ 'third peer id': 1 }, { 'some other peer id': 1 }, 'some delta'])).to.equal(false)
         expect(applyCalls).to.equal(0)
       })
 
@@ -203,7 +203,7 @@ describe('store', () => {
         let applyCalls = 0
         verifyApply = (remoteClock, encodedDelta, isPartial) => {
           applyCalls++
-          expect(remoteClock).to.deep.equal({'fake peer id': 2, 'other peer id': 1})
+          expect(remoteClock).to.deep.equal({ 'fake peer id': 2, 'other peer id': 1 })
           expect(Array.isArray(encodedDelta)).to.be.true()
           expect(encodedDelta[0]).to.be.null()
           expect(encodedDelta[1]).to.equal('fake')
@@ -211,7 +211,7 @@ describe('store', () => {
           expect(isPartial).to.be.true()
         }
         const delta = encode([null, 'fake', CRDT.mutators.push('fake peer id', state, 'c')])
-        expect(await store.saveDelta([null, null, delta])).to.deep.equal({'fake peer id': 2, 'other peer id': 1})
+        expect(await store.saveDelta([null, null, delta])).to.deep.equal({ 'fake peer id': 2, 'other peer id': 1 })
         expect(applyCalls).to.be.equal(1)
         expect(CRDT.value(state)).to.deep.equal(['a', 'b', 'c'])
       })
@@ -225,17 +225,17 @@ describe('store', () => {
 
             const delta0 = deltas[0]
             expect(delta0[0]).to.deep.equal({})
-            expect(delta0[1]).to.deep.equal({'fake peer id': 1})
+            expect(delta0[1]).to.deep.equal({ 'fake peer id': 1 })
             expect(typeof delta0[2]).to.equal('object')
 
             const delta1 = deltas[1]
             expect(delta1[0]).to.deep.equal({})
-            expect(delta1[1]).to.deep.equal({'other peer id': 1})
+            expect(delta1[1]).to.deep.equal({ 'other peer id': 1 })
             expect(typeof delta1[2]).to.equal('object')
 
             const delta2 = deltas[2]
-            expect(delta2[0]).to.deep.equal({'fake peer id': 1, 'other peer id': 1})
-            expect(delta2[1]).to.deep.equal({'fake peer id': 1})
+            expect(delta2[0]).to.deep.equal({ 'fake peer id': 1, 'other peer id': 1 })
+            expect(delta2[1]).to.deep.equal({ 'fake peer id': 1 })
             expect(typeof delta2[2]).to.equal('object')
 
             done()
@@ -249,7 +249,7 @@ describe('store', () => {
         expect(rootDelta.length).to.equal(3)
         const [baseClock, authorClock, encodedDeltaRecord] = rootDelta
         expect(baseClock).to.deep.equal({})
-        expect(authorClock).to.deep.equal({'fake peer id': 2, 'other peer id': 1})
+        expect(authorClock).to.deep.equal({ 'fake peer id': 2, 'other peer id': 1 })
         const decodedDeltaRecord = decode(encodedDeltaRecord)
         const [, , encodedDelta] = decodedDeltaRecord
         const delta = decode(encodedDelta)
@@ -261,7 +261,7 @@ describe('store', () => {
         let applyCallCount = 0
         verifyApply = (remoteClock, encodedDelta, isPartial) => {
           applyCallCount++
-          expect(remoteClock).to.deep.equal({'fake peer id': 2, 'other peer id': 2})
+          expect(remoteClock).to.deep.equal({ 'fake peer id': 2, 'other peer id': 2 })
           expect(Array.isArray(encodedDelta)).to.be.true()
           expect(encodedDelta[0]).to.be.null()
           expect(encodedDelta[1]).to.equal('fake')
@@ -269,8 +269,8 @@ describe('store', () => {
           expect(isPartial).to.be.true()
         }
         const delta = encode([null, 'fake', CRDT.mutators.push('other peer id', state, 'd')])
-        expect(await store.saveDelta([{'fake peer id': 2, 'other peer id': 1}, {'other peer id': 1}, delta]))
-          .to.deep.equal({'fake peer id': 2, 'other peer id': 2})
+        expect(await store.saveDelta([{ 'fake peer id': 2, 'other peer id': 1 }, { 'other peer id': 1 }, delta]))
+          .to.deep.equal({ 'fake peer id': 2, 'other peer id': 2 })
         expect(applyCallCount).to.be.equal(1)
         expect(CRDT.value(state)).to.deep.equal(['a', 'b', 'c', 'd'])
       })

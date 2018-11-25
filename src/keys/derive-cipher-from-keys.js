@@ -1,3 +1,4 @@
+/* eslint no-warning-comments: "off" */
 'use strict'
 
 const crypto = require('libp2p-crypto')

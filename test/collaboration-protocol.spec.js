@@ -286,6 +286,8 @@ function fakePeerInfoFor (id) {
   }
 }
 
+/*
 process.on('unhandledRejection', (err) => {
   console.error(err)
 })
+*/

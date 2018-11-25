@@ -1,3 +1,4 @@
+/* eslint no-warning-comments: "off" */
 'use strict'
 
 const debug = require('debug')('peer-star:collaboration:store')
