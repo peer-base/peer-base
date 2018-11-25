@@ -80,6 +80,18 @@ describe('collaboration with random changes', function () {
 
     expect(collaborations[0].shared.value().length).to.equal(expectedCharacterCount)
 
+    // validate all vector clocks are correct
+    const peerIds = (await Promise.all(collaborations.map(async (collaboration) => (await collaboration.app.ipfs.id()).id))).sort()
+    for (let collaboration of collaborations) {
+      for (let peerId of peerIds) {
+        const clock = collaboration.vectorClock(peerId)
+        expect(Object.keys(clock).sort()).to.deep.equal(peerIds)
+        for (let replica of peerIds) {
+          expect(clock[replica]).to.equal(100)
+        }
+      }
+    }
+
     function randomShortTime () {
       return Math.floor(Math.random() * 10)
     }

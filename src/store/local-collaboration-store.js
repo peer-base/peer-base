@@ -71,7 +71,7 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
         return false
       }
 
-      const nextClock = vectorclock.merge(currentClock, vectorclock.incrementAll(previousClock, authorClock))
+      const nextClock = vectorclock.merge(currentClock, vectorclock.sumAll(previousClock, authorClock))
 
       debug('%s: next clock is', this._id, nextClock)
 
@@ -120,16 +120,11 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
     return this._queue.add(async () => {
       const latest = await this.getLatestClock()
       debug('%s: latest vector clock:', this._id, latest)
-      if (!clock) {
-        clock = vectorclock.increment(latest, this._id)
-        debug('%s: new vector clock is:', this._id, clock)
-      } else {
-        if (await this._contains(clock)) {
-          // we have already seen this state change, so discard it
-          return
-        }
-        clock = vectorclock.merge(latest, clock)
+      if (await this._contains(clock)) {
+        // we have already seen this state change, so discard it
+        return
       }
+      clock = vectorclock.merge(latest, clock)
 
       for (let state of states.values()) {
         await this._saveState(clock, state)
@@ -185,47 +180,6 @@ module.exports = class LocalCollaborationStore extends EventEmitter {
       acc.set(name, states[index])
       return acc
     }, new Map())
-  }
-
-  deltaBatch (since = {}) {
-    debug('%s: delta batch since %j', this._id, since)
-    return new Promise((resolve, reject) => {
-      pull(
-        this.deltaStream(since),
-        pull.reduce(
-          (acc, delta) => {
-            const encodedDelta = delta[2]
-            const [forName] = decode(encodedDelta)
-            const shared = this._findShared(forName)
-            if (!shared) {
-              reject(new Error('could not find share for name', forName))
-              return
-            }
-            return shared.join(acc, delta)
-          },
-          this._shareds[0].initial(),
-          (err, deltaBatch) => {
-            if (err) {
-              return reject(err)
-            }
-
-            deltaBatch
-              .then(async (batch) => {
-                for (let collabKey of batch.keys()) {
-                  const collab = batch.get(collabKey)
-                  const [name, type, clock, authorClock, state] = collab
-                  const shared = this._findShared(collabKey)
-                  const finalBatch = [clock, authorClock, encode([name, type, await shared.signAndEncrypt(encode(state))])]
-                  batch.set(collabKey, finalBatch)
-                }
-
-                resolve(batch)
-              })
-              .catch((err) => reject(err))
-          }
-        )
-      )
-    })
   }
 
   contains (clock) {

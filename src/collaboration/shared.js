@@ -18,7 +18,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   let deltaBuffer = []
   const memo = {}
 
-  const saveDeltaBuffer = debounce(() => {
+  const saveDeltaBuffer = () => {
     queue.add(async () => {
       const deltas = deltaBuffer
       // reset the delta buffer
@@ -40,7 +40,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
       //   clock = vectorclock.merge(clock, newClock)
       // }
     }).catch((err) => shared.emit('error', err))
-  }, 0)
+  }
 
   // Change emitter
   const voidChangeEmitter = new VoidChangeEmitter()
@@ -87,7 +87,7 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
             const encodedState = await decryptAndVerify(encryptedState)
             if (!options.replicateOnly) {
               const newState = decode(encodedState)
-              apply(newState)
+              apply(newState, fromSelf)
             } else if (!isPartial) {
               state = encodedState
             }
@@ -110,31 +110,6 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
   }
 
   shared.initial = () => Promise.resolve(new Map())
-
-  shared.join = async (_acc, delta) => {
-    const acc = await _acc
-    debug('%s: shared.join', id, delta, acc)
-    const [previousClock, authorClock, encodedDelta] = delta
-    const [forName, typeName, encryptedDelta] = decode(encodedDelta)
-    debug('%s: shared.join [forName, type, encryptedDelta] = ', [forName, typeName, encryptedDelta])
-    if (forName !== name) {
-      throw new Error('delta name does not match:', forName)
-    }
-    if (!acc.has(name)) {
-      acc.set(name, [name, typeName, previousClock, {}, crdtType.initial()])
-    }
-    let [, , clock, previousAuthorClock, s1] = acc.get(name)
-    const encodedState = await decryptAndVerify(encryptedDelta)
-    const s2 = decode(encodedState)
-
-    const newAuthorClock = vectorclock.incrementAll(previousAuthorClock, authorClock)
-    const newState = crdtType.join.call(voidChangeEmitter, s1, s2)
-    acc.set(name, [name, typeName, clock, newAuthorClock, newState])
-
-    debug('%s: shared.join: new state is', id, newState)
-
-    return acc
-  }
 
   shared.signAndEncrypt = async (message) => {
     let encrypted

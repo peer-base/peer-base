@@ -88,7 +88,7 @@ describe('store', () => {
               acc.set(name, [name, typeName, previousClock, {}, CRDT.initial()])
             }
             let [, , clock, previousAuthorClock, s1] = acc.get(name)
-            const newAuthorClock = vectorclock.incrementAll(previousAuthorClock, authorClock)
+            const newAuthorClock = vectorclock.sumAll(previousAuthorClock, authorClock)
 
             const newState = CRDT.join(s1, encryptedDelta)
             acc.set(forName, [forName, typeName, clock, newAuthorClock, newState])

@@ -52,7 +52,7 @@ module.exports = class PullProtocol {
         if (deltaRecord) {
           const [previousClock, authorClock] = deltaRecord
           delta = deltaRecord[2]
-          clock = vectorclock.incrementAll(previousClock, authorClock)
+          clock = vectorclock.sumAll(previousClock, authorClock)
         } else if (newState) {
           clock = newState[0]
           states = newState[1]

@@ -32,7 +32,7 @@ module.exports = class DatastoreStore extends LocalCollaborationStore {
         }
 
         const [previousClock, authorClock] = entireDelta
-        const deltaClock = vectorclock.incrementAll(previousClock, authorClock)
+        const deltaClock = vectorclock.sumAll(previousClock, authorClock)
         since = vectorclock.merge(since, deltaClock)
         callback(null, entireDelta)
       }),

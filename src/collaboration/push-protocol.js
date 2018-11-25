@@ -34,18 +34,23 @@ module.exports = class PushProtocol {
       return clockDiff
     }
 
-    const pushDeltaBatch = async () => {
+    const pushDeltaStream = async () => {
       debug('%s: push deltas to %s', this._peerId(), remotePeerId)
       const since = this._clocks.getFor(remotePeerId)
-      const batch = await this._store.deltaBatch(since)
-      debug('%s: batch to %s:', this._peerId(), remotePeerId, batch)
-      for (let collab of batch.keys()) {
-        const collabBatch = batch.get(collab)
-        let [clock, authorClock] = collabBatch
-        clock = vectorclock.incrementAll(clock, authorClock)
-        this._clocks.setFor(remotePeerId, clock)
-        output.push(encode([collabBatch]))
-      }
+      pull(
+        this._store.deltaStream(since),
+        pull.map((delta) => {
+          let [clock, authorClock] = delta
+          clock = vectorclock.sumAll(clock, authorClock)
+          this._clocks.setFor(remotePeerId, clock)
+          output.push(encode([delta]))
+        }),
+        pull.onEnd((err) => {
+          if (err) {
+            onEnd(err)
+          }
+        })
+      )
     }
 
     const updateRemote = async (myClock) => {
@@ -54,7 +59,7 @@ module.exports = class PushProtocol {
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
         if (!isPinner) {
-          await pushDeltaBatch()
+          await pushDeltaStream()
         }
 
         if (isPinner || remoteNeedsUpdate(myClock)) {
@@ -66,6 +71,7 @@ module.exports = class PushProtocol {
             const [clock] = clockAndStates
             if (Object.keys(clock).length) {
               debug('%s: clock of %s now is %j', this._peerId(), remotePeerId, clock)
+              // console.log(`${remotePeerId}: %j => %j`, this._clocks.getFor(remotePeerId), clock)
               this._clocks.setFor(remotePeerId, clock)
               debug('%s: sending clock and states to %s:', this._peerId(), remotePeerId, clockAndStates)
               output.push(encode([null, clockAndStates]))

@@ -42,7 +42,7 @@ exports.isDeltaInteresting = (delta, currentClock) => {
 
   // find out if new clock lands outside of  current clock
   Object.keys(authorClock).forEach((author) => authors.add(author))
-  const deltaClock = exports.incrementAll(previousClock, authorClock)
+  const deltaClock = exports.sumAll(previousClock, authorClock)
 
   for (let author of authors) {
     if ((deltaClock[author] || 0) > (currentClock[author] || 0)) {
@@ -99,7 +99,7 @@ exports.isFirstImmediateToSecond = (first, second) => {
   return diff === 1
 }
 
-exports.incrementAll = (_clock, authorClock) => {
+exports.sumAll = (_clock, authorClock) => {
   const clock = Object.assign({}, _clock)
   Object.keys(authorClock).forEach((author) => {
     clock[author] = (clock[author] || 0) + authorClock[author]
