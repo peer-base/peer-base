@@ -91,6 +91,8 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
             } else if (!isPartial) {
               state = encodedState
             }
+          } else {
+            shared.emit('state changed', state)
           }
         }
         debug('%s state after apply:', id, state)
