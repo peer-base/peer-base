@@ -9,9 +9,9 @@ const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PullProtocol {
-  constructor (ipfs, store, clocks, keys, replication, options) {
+  constructor (ipfs, shared, clocks, keys, replication, options) {
     this._ipfs = ipfs
-    this._store = store
+    this._shared = shared
     this._clocks = clocks
     this._keys = keys
     this._replication = replication
@@ -39,7 +39,7 @@ module.exports = class PullProtocol {
       this._clocks.setFor(this._peerId(), clock)
       output.push(encode([sendClockDiff(clock)]))
     }
-    this._store.on('clock changed', onNewLocalClock)
+    this._shared.on('clock changed', onNewLocalClock)
 
     const onNewData = (data) => {
       debug('%s got new data from %s :', this._peerId(), remotePeerId, data)
@@ -71,7 +71,7 @@ module.exports = class PullProtocol {
               }
             }
             debug('%s: received clock from %s: %j', this._peerId(), remotePeerId, clock)
-            if (await this._store.contains(clock)) {
+            if (await this._shared.contains(clock)) {
               // we already have this state
               // send a "prune" message
               debug('%s: store contains clock', this._peerId(), clock)
@@ -82,10 +82,11 @@ module.exports = class PullProtocol {
               let saved
               if (states) {
                 debug('%s: saving states', this._peerId(), states)
-                saved = await this._store.saveStates(clock, states)
+                throw new Error('IMPLEMENT!')
+                // saved = await this._shared.apply(clock, states)
               } else if (delta) {
                 debug('%s: saving delta', this._peerId(), deltaRecord)
-                saved = await this._store.saveDelta(deltaRecord)
+                saved = await this._shared.apply(deltaRecord, true)
               }
               if (!saved) {
                 debug('%s: did not save', this._peerId())
@@ -143,20 +144,16 @@ module.exports = class PullProtocol {
           debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)
         }
         ended = true
-        this._store.removeListener('clock changed', onNewLocalClock)
+        this._shared.removeListener('clock changed', onNewLocalClock)
         output.end(err)
       }
     }
     const input = pull.drain(handlingData(onData), onEnd)
     const output = pushable()
 
-    this._store.getLatestClock()
-      .then((vectorClock) => {
-        debug('%s: sending latest vector clock to %s:', this._peerId(), remotePeerId, vectorClock)
-        sentClock = vectorClock
-        output.push(encode([vectorClock, null, null, this._options.replicateOnly || false]))
-      })
-      .catch(onEnd)
+    const vectorClock = this._shared.clock()
+    sentClock = vectorClock
+    output.push(encode([vectorClock, null, null, this._options.replicateOnly || false]))
 
     return { sink: input, source: output }
   }

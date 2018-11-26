@@ -64,7 +64,7 @@ describe('collaboration with random changes', function () {
         await delay(randomShortTime())
       }
 
-      await debounceEvent(collaboration, 'state changed', 10000)
+      await debounceEvent(collaboration, 'state changed', 20000)
 
       const value = collaboration.shared.value()
       expect(value.length).to.equal(expectedCharacterCount)

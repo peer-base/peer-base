@@ -3,16 +3,15 @@
 const debug = require('debug')('peer-star:collaboration:push-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
-const Queue = require('p-queue')
 const debounce = require('lodash/debounce')
 const handlingData = require('../common/handling-data')
 const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PushProtocol {
-  constructor (ipfs, store, clocks, keys, replication, options) {
+  constructor (ipfs, shared, clocks, keys, replication, options) {
     this._ipfs = ipfs
-    this._store = store
+    this._shared = shared
     this._clocks = clocks
     this._keys = keys
     this._replication = replication
@@ -22,7 +21,6 @@ module.exports = class PushProtocol {
   forPeer (peerInfo) {
     const remotePeerId = peerInfo.id.toB58String()
     debug('%s: push protocol to %s', this._peerId(), remotePeerId)
-    const queue = new Queue({ concurrency: 1 })
     let ended = false
     let pushing = true
     let isPinner = false
@@ -34,51 +32,42 @@ module.exports = class PushProtocol {
       return clockDiff
     }
 
-    const pushDeltaStream = async () => {
+    const pushDeltas = () => {
       debug('%s: push deltas to %s', this._peerId(), remotePeerId)
-      const since = this._clocks.getFor(remotePeerId)
-      pull(
-        this._store.deltaStream(since),
-        pull.map((delta) => {
-          let [clock, authorClock] = delta
-          clock = vectorclock.sumAll(clock, authorClock)
-          this._clocks.setFor(remotePeerId, clock)
-          output.push(encode([delta]))
-        }),
-        pull.onEnd((err) => {
-          if (err) {
-            onEnd(err)
-          }
-        })
-      )
+      for (let delta of this._shared.deltas(this._clocks.getFor(remotePeerId))) {
+        let [clock, authorClock] = delta
+        clock = vectorclock.sumAll(clock, authorClock)
+        this._clocks.setFor(remotePeerId, clock)
+        output.push(encode([delta]))
+      }
     }
 
-    const updateRemote = async (myClock) => {
+    const updateRemote = (myClock) => {
       debug('%s: updateRemote %s', this._peerId(), remotePeerId)
       if (pushing) {
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
         if (!isPinner) {
-          await pushDeltaStream()
+          pushDeltas()
         }
 
         if (isPinner || remoteNeedsUpdate(myClock)) {
           if (pushing) {
             debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
             // remote still needs update
-            const clockAndStates = await this._store.getClockAndStates()
-            debug('clock and states: ', clockAndStates)
-            const [clock] = clockAndStates
-            if (Object.keys(clock).length) {
-              debug('%s: clock of %s now is %j', this._peerId(), remotePeerId, clock)
-              // console.log(`${remotePeerId}: %j => %j`, this._clocks.getFor(remotePeerId), clock)
-              this._clocks.setFor(remotePeerId, clock)
-              debug('%s: sending clock and states to %s:', this._peerId(), remotePeerId, clockAndStates)
-              output.push(encode([null, clockAndStates]))
-            }
+            // const clockAndStates = await this._store.getClockAndStates()
+            // debug('clock and states: ', clockAndStates)
+            // const [clock] = clockAndStates
+            // if (Object.keys(clock).length) {
+            //   debug('%s: clock of %s now is %j', this._peerId(), remotePeerId, clock)
+            //   // console.log(`${remotePeerId}: %j => %j`, this._clocks.getFor(remotePeerId), clock)
+            //   this._clocks.setFor(remotePeerId, clock)
+            //   debug('%s: sending clock and states to %s:', this._peerId(), remotePeerId, clockAndStates)
+            //   output.push(encode([null, clockAndStates]))
+            // }
           } else {
             // send only clock
-            output.push(encode([null, [this._clocks.getFor(this._peerId())]]))
+            output.push(encode([null, [this.shared.clock()]]))
           }
         } else {
           debug('%s: remote %s does not need update', this._peerId(), remotePeerId)
@@ -109,9 +98,7 @@ module.exports = class PushProtocol {
 
     const debounceReduceEntropyMS = () => isPinner ? this._options.debouncePushToPinnerMS : this._options.debouncePushMS
 
-    let debouncedReduceEntropy = debounce(() => {
-      queue.add(reduceEntropy).catch(onEnd)
-    }, debounceReduceEntropyMS())
+    let debouncedReduceEntropy = debounce(reduceEntropy, debounceReduceEntropyMS())
 
     const onClockChanged = (newClock) => {
       debug('%s: clock changed to %j', this._peerId(), newClock)
@@ -119,7 +106,7 @@ module.exports = class PushProtocol {
       debouncedReduceEntropy()
     }
 
-    this._store.on('clock changed', onClockChanged)
+    this._shared.on('clock changed', onClockChanged)
     debug('%s: registered state change handler', this._peerId())
 
     const gotPresentation = (message) => {
@@ -138,9 +125,7 @@ module.exports = class PushProtocol {
 
       if ((typeof _isPinner) === 'boolean') {
         isPinner = _isPinner
-        debouncedReduceEntropy = debounce(() => {
-          queue.add(reduceEntropy).catch(onEnd)
-        }, debounceReduceEntropyMS())
+        debouncedReduceEntropy = debounce(reduceEntropy, debounceReduceEntropyMS())
       }
 
       if (newRemoteClock) {
@@ -149,11 +134,9 @@ module.exports = class PushProtocol {
       }
 
       if (newRemoteClock || startEager) {
-        queue.add(async () => {
-          const myClock = await this._store.getLatestClock()
-          this._clocks.setFor(this._peerId(), myClock)
-          await reduceEntropy()
-        }).catch(onEnd)
+        const myClock = this._shared.clock()
+        this._clocks.setFor(this._peerId(), myClock)
+        reduceEntropy()
       }
     }
 
@@ -182,7 +165,7 @@ module.exports = class PushProtocol {
           debug(err)
         }
         ended = true
-        this._store.removeListener('clock changed', onClockChanged)
+        this._shared.removeListener('clock changed', onClockChanged)
         output.end(err)
       }
     }

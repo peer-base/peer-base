@@ -5,7 +5,6 @@ const EventEmitter = require('events')
 const Queue = require('p-queue')
 const vectorclock = require('../common/vectorclock')
 const leftpad = require('leftpad')
-const pull = require('pull-stream')
 
 const { encode, decode } = require('delta-crdts-msgpack-codec')
 

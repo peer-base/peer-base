@@ -3,9 +3,7 @@
 const debug = require('debug')('peer-star:collaboration')
 const EventEmitter = require('events')
 const Queue = require('p-queue')
-const debounce = require('lodash/debounce')
 const Membership = require('./membership')
-const Store = require('../store')
 const Shared = require('./shared')
 const CRDT = require('./crdt')
 const Gossip = require('./gossip')
@@ -58,23 +56,31 @@ class Collaboration extends EventEmitter {
       this._options.createCipher = deriveCreateCipherFromKeys(this._options.keys)
     }
 
-    this._store = this._options.store || Store(ipfs, this, this._options)
-
-    this._membership = this._options.membership || new Membership(
-      ipfs, globalConnectionManager, app, this, this._store, this._clocks, this.replication, this._options)
-    this._membership.on('changed', () => {
-      debug('membership changed')
-      this.emit('membership changed', this._membership.peers())
-    })
-
     if (!type) {
       throw new Error('need collaboration type')
     }
+
     this.typeName = type
     this._type = CRDT(type)
     if (!this._type) {
       throw new Error('invalid collaboration type:' + type)
     }
+
+    this.shared = Shared(name, selfId, this._type, this, this._options.keys, this._options)
+    this.shared.on('error', (err) => this.emit('error', err))
+    this.shared.on('clock changed', (clock) => {
+      this._clocks.setFor(selfId, clock)
+    })
+    this.shared.on('state changed', (fromSelf) => {
+      this.emit('state changed', fromSelf)
+    })
+
+    this._membership = this._options.membership || new Membership(
+      ipfs, globalConnectionManager, app, this, this.shared, this._clocks, this.replication, this._options)
+    this._membership.on('changed', () => {
+      debug('membership changed')
+      this.emit('membership changed', this._membership.peers())
+    })
 
     this._subs = new Map()
 
@@ -163,34 +169,9 @@ class Collaboration extends EventEmitter {
   async _start () {
     if (this._isRoot) {
       await this._membership.start()
-      await this._store.start()
     }
-    const id = (await this._ipfs.id()).id
-    const name = this._storeName()
-    this.shared = await Shared(name, id, this._type, this, this._store, this._options.keys, this._options)
-    this.shared.on('error', (err) => this.emit('error', err))
-    this._store.on('clock changed', (clock) => {
-      this._clocks.setFor(id, clock)
-    })
-    this.shared.on('state changed', (fromSelf) => {
-      this.emit('state changed', fromSelf)
-    })
-    this._clocks.setFor(id, await this._store.getLatestClock())
-    this._store.setShared(this.shared, name)
-
     this.stats.start()
     this._unregisterObserver = this._membership.connectionManager.observe(this.stats.observer)
-
-    this._debouncedStateChangedSaver = debounce(() => this.save(), this._options.saveDebounceMS)
-    this.shared.on('state changed', this._debouncedStateChangedSaver)
-
-    this._store.on('saved', () => {
-      if (!this._saveQueue.pending) {
-        this.emit('saved')
-      } else {
-        this._saveQueue.onEmpty().then(() => this.emit('saved'))
-      }
-    })
 
     await Array.from(this._subs.values()).map((sub) => sub.start())
   }
@@ -202,8 +183,8 @@ class Collaboration extends EventEmitter {
   }
 
   _save (force) {
-    if (this._store.isPersistent && (!this._stopped || force)) {
-      return this._store.save()
+    if (!this._stopped || force) {
+      return this.shared.save()
     }
   }
 
@@ -232,24 +213,12 @@ class Collaboration extends EventEmitter {
       console.error('error stopping gossip:', err)
     }
 
-    try {
-      if (this.shared) {
-        this.shared.stop()
-      }
-    } catch (err) {
-      console.error('error stopping shared collaboration:', err)
-    }
-
     if (this._isRoot) {
       try {
-        await Promise.all([this._membership.stop(), this._store.stop()])
+        await this._membership.stop()
       } catch (err) {
         console.error('error stopping:', err)
       }
-    }
-
-    if (this._debouncedStateChangedSaver) {
-      this.shared.removeListener('state changed', this._debouncedStateChangedSaver)
     }
 
     this.emit('stopped')
