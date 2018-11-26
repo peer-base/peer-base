@@ -66,7 +66,7 @@ class Collaboration extends EventEmitter {
       throw new Error('invalid collaboration type:' + type)
     }
 
-    this.shared = Shared(name, selfId, this._type, this, this._options.keys, this._options)
+    this.shared = Shared(name, selfId, this._type, this, this._options)
     this.shared.on('error', (err) => this.emit('error', err))
     this.shared.on('clock changed', (clock) => {
       this._clocks.setFor(selfId, clock)

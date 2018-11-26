@@ -4,6 +4,7 @@ const debug = require('debug')('peer-star:collaboration:push-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const debounce = require('lodash/debounce')
+const Queue = require('p-queue')
 const handlingData = require('../common/handling-data')
 const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
@@ -21,6 +22,8 @@ module.exports = class PushProtocol {
   forPeer (peerInfo) {
     const remotePeerId = peerInfo.id.toB58String()
     debug('%s: push protocol to %s', this._peerId(), remotePeerId)
+
+    const queue = new Queue({ concurrency: 1 })
     let ended = false
     let pushing = true
     let isPinner = false
@@ -32,23 +35,23 @@ module.exports = class PushProtocol {
       return clockDiff
     }
 
-    const pushDeltas = () => {
+    const pushDeltas = async () => {
       debug('%s: push deltas to %s', this._peerId(), remotePeerId)
       for (let delta of this._shared.deltas(this._clocks.getFor(remotePeerId))) {
         let [clock, authorClock] = delta
         clock = vectorclock.sumAll(clock, authorClock)
         this._clocks.setFor(remotePeerId, clock)
-        output.push(encode([delta]))
+        output.push(encode([await this._signAndEncryptDelta(delta)]))
       }
     }
 
-    const updateRemote = (myClock) => {
+    const updateRemote = async (myClock) => {
       debug('%s: updateRemote %s', this._peerId(), remotePeerId)
       if (pushing) {
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
         if (!isPinner) {
-          pushDeltas()
+          await pushDeltas()
         }
 
         if (isPinner || remoteNeedsUpdate(myClock)) {
@@ -67,19 +70,19 @@ module.exports = class PushProtocol {
             // }
           } else {
             // send only clock
-            output.push(encode([null, [this.shared.clock()]]))
+            output.push(encode([null, [sendClockDiff(this.shared.clock())]]))
           }
         } else {
           debug('%s: remote %s does not need update', this._peerId(), remotePeerId)
         }
       } else {
         debug('%s: NOT pushing to %s', this._peerId(), remotePeerId)
-        output.push(encode([null, [sendClockDiff(this._clocks.getFor(this._peerId()))]]))
+        output.push(encode([null, [sendClockDiff(this._shared.clock())]]))
       }
     }
 
     const remoteNeedsUpdate = (_myClock) => {
-      const myClock = _myClock || this._clocks.getFor(this._peerId())
+      const myClock = _myClock || this._shared.clock()
       const remoteClock = this._clocks.getFor(remotePeerId)
       debug('%s: comparing local clock %j to remote clock %j', this._peerId(), myClock, remoteClock)
       const needs = !vectorclock.doesSecondHaveFirst(myClock, remoteClock)
@@ -88,12 +91,14 @@ module.exports = class PushProtocol {
     }
 
     const reduceEntropy = () => {
-      debug('%s: reduceEntropy to %s', this._peerId(), remotePeerId)
-      if (remoteNeedsUpdate()) {
-        return updateRemote(this._clocks.getFor(this._peerId()))
-      } else {
-        debug('remote is up to date')
-      }
+      queue.add(() => {
+        debug('%s: reduceEntropy to %s', this._peerId(), remotePeerId)
+        if (remoteNeedsUpdate()) {
+          return updateRemote(this._shared.clock())
+        } else {
+          debug('remote is up to date')
+        }
+      })
     }
 
     const debounceReduceEntropyMS = () => isPinner ? this._options.debouncePushToPinnerMS : this._options.debouncePushMS
@@ -180,5 +185,39 @@ module.exports = class PushProtocol {
       this._cachedPeerId = this._ipfs._peerInfo.id.toB58String()
     }
     return this._cachedPeerId
+  }
+
+  async _signAndEncryptDelta (deltaRecord) {
+    const [previousClock, authorClock, [forName, typeName, decryptedState]] = deltaRecord
+    const encryptedState = await this._signAndEncrypt(encode(decryptedState))
+    return [previousClock, authorClock, [forName, typeName, encryptedState]]
+  }
+
+  _signAndEncrypt (data) {
+    const { keys } = this._options
+    return new Promise((resolve, reject) => {
+      if (!keys.write) {
+        return resolve(data)
+      }
+      keys.write.sign(data, (err, signature) => {
+        if (err) {
+          return reject(err)
+        }
+
+        const toEncrypt = encode([data, signature])
+
+        keys.cipher()
+          .then((cipher) => {
+            cipher.encrypt(toEncrypt, (err, encrypted) => {
+              if (err) {
+                return reject(err)
+              }
+
+              resolve(encrypted)
+            })
+          })
+          .catch(reject)
+      })
+    })
   }
 }

@@ -2,14 +2,10 @@
 
 const debug = require('debug')('peer-star:collaboration:shared')
 const EventEmitter = require('events')
-const Queue = require('p-queue')
 const b58Decode = require('bs58').decode
-
-const { encode, decode } = require('delta-crdts-msgpack-codec')
 const vectorclock = require('../common/vectorclock')
 
-module.exports = (name, id, crdtType, collaboration, keys, options) => {
-  const applyQueue = new Queue({ concurrency: 1 })
+module.exports = (name, id, crdtType, collaboration, options) => {
   const shared = new EventEmitter()
   const changeEmitter = new ChangeEmitter(shared)
   let clock = {}
@@ -19,16 +15,13 @@ module.exports = (name, id, crdtType, collaboration, keys, options) => {
 
   const applyAndPushDelta = (delta) => {
     const previousClock = clock
-    clock = vectorclock.increment(clock, id)
     apply(delta, true)
+    clock = vectorclock.increment(clock, id)
     const author = {}
     author[id] = 1
-    return applyQueue.add(async () => {
-      const namedDelta = [name, crdtType.typeName, await signAndEncrypt(encode(delta))]
-      const deltaRecord = [previousClock, author, namedDelta]
-      deltas.push(deltaRecord)
-      shared.emit('clock changed', clock)
-    })
+    const deltaRecord = [previousClock, author, [name, crdtType.typeName, delta]]
+    deltas.push(deltaRecord)
+    shared.emit('clock changed', clock)
   }
 
   const crdtId = (() => {
@@ -62,16 +55,12 @@ module.exports = (name, id, crdtType, collaboration, keys, options) => {
     if (!vectorclock.isDeltaInteresting(deltaRecord, clock)) {
       return false
     }
-    const [previousClock, authorClock, namedDelta] = deltaRecord
-    const [forName, typeName, encryptedState] = namedDelta
+    const [previousClock, authorClock, [forName, typeName, delta]] = deltaRecord
     if (forName === name) {
-      return applyQueue.add(async () => {
-        const delta = decode(await decryptAndVerify(encryptedState))
-        deltas.push(deltaRecord)
-        clock = vectorclock.merge(clock, vectorclock.sumAll(previousClock, authorClock))
-        apply(delta)
-        shared.emit('clock changed', clock)
-      })
+      deltas.push(deltaRecord)
+      apply(delta)
+      clock = vectorclock.merge(clock, vectorclock.sumAll(previousClock, authorClock))
+      shared.emit('clock changed', clock)
     } else if (typeName) {
       throw new Error('sub collaborations not yet supported!')
     }
@@ -115,62 +104,6 @@ module.exports = (name, id, crdtType, collaboration, keys, options) => {
 
     shared.emit('state changed', fromSelf)
     return state
-  }
-
-  function signAndEncrypt (data) {
-    return new Promise((resolve, reject) => {
-      if (!keys.write) {
-        return resolve(data)
-      }
-      keys.write.sign(data, (err, signature) => {
-        if (err) {
-          return reject(err)
-        }
-
-        const toEncrypt = encode([data, signature])
-
-        keys.cipher()
-          .then((cipher) => {
-            cipher.encrypt(toEncrypt, (err, encrypted) => {
-              if (err) {
-                return reject(err)
-              }
-
-              resolve(encrypted)
-            })
-          })
-          .catch(reject)
-      })
-    })
-  }
-
-  function decryptAndVerify (encrypted) {
-    return new Promise((resolve, reject) => {
-      if (!keys.cipher && !keys.read) {
-        return resolve(encrypted)
-      }
-      keys.cipher()
-        .then((cipher) => cipher.decrypt(encrypted, (err, decrypted) => {
-          if (err) {
-            return reject(err)
-          }
-          const decoded = decode(decrypted)
-          const [encoded, signature] = decoded
-
-          keys.read.verify(encoded, signature, (err, valid) => {
-            if (err) {
-              return reject(err)
-            }
-
-            if (!valid) {
-              return reject(new Error('delta has invalid signature'))
-            }
-
-            resolve(encoded)
-          })
-        }))
-        .catch(reject)
-    })
   }
 }
 

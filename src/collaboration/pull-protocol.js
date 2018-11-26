@@ -5,7 +5,7 @@ const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const Queue = require('p-queue')
 const handlingData = require('../common/handling-data')
-const encode = require('delta-crdts-msgpack-codec').encode
+const { encode, decode } = require('delta-crdts-msgpack-codec')
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PullProtocol {
@@ -86,7 +86,7 @@ module.exports = class PullProtocol {
                 // saved = await this._shared.apply(clock, states)
               } else if (delta) {
                 debug('%s: saving delta', this._peerId(), deltaRecord)
-                saved = await this._shared.apply(deltaRecord, true)
+                saved = this._shared.apply(await this._decryptAndVerifyDelta(deltaRecord), true)
               }
               if (!saved) {
                 debug('%s: did not save', this._peerId())
@@ -163,5 +163,41 @@ module.exports = class PullProtocol {
       this._cachedPeerId = this._ipfs._peerInfo.id.toB58String()
     }
     return this._cachedPeerId
+  }
+
+  async _decryptAndVerifyDelta (deltaRecord) {
+    const [previousClock, authorClock, [forName, typeName, encryptedDelta]] = deltaRecord
+    const decrytedDelta = decode(await this._decryptAndVerify(encryptedDelta))
+    return [previousClock, authorClock, [forName, typeName, decrytedDelta]]
+  }
+
+  _decryptAndVerify (encrypted) {
+    const { keys } = this._options
+    return new Promise((resolve, reject) => {
+      if (!keys.cipher && !keys.read) {
+        return resolve(encrypted)
+      }
+      keys.cipher()
+        .then((cipher) => cipher.decrypt(encrypted, (err, decrypted) => {
+          if (err) {
+            return reject(err)
+          }
+          const decoded = decode(decrypted)
+          const [encoded, signature] = decoded
+
+          keys.read.verify(encoded, signature, (err, valid) => {
+            if (err) {
+              return reject(err)
+            }
+
+            if (!valid) {
+              return reject(new Error('delta has invalid signature'))
+            }
+
+            resolve(encoded)
+          })
+        }))
+        .catch(reject)
+    })
   }
 }
