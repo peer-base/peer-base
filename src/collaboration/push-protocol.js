@@ -37,45 +37,19 @@ module.exports = class PushProtocol {
     let remoteClock = {}
 
     const sendClockDiff = (clock) => {
+      return clock
       const clockDiff = vectorclock.diff(sentClock, clock)
       sentClock = clock
       return clockDiff
     }
 
-    // const deltas = async () => {
-    //   return this._shared.deltas(this._clocks.getFor(remotePeerId))
+    // const pushDeltaBatch = async (peerClock) => {
+    //   const batch = this._shared.deltaBatch(peerClock)
+    //   let [clock, authorClock, [, , batchState]] = batch
+    //   const batchClock = vectorclock.sumAll(clock, authorClock)
+    //   output.push(encode([await this._signAndEncryptDelta(batch)]))
+    //   return vectorclock.merge(peerClock, batchClock)
     // }
-
-    const pushDeltaBatch = async (peerClock) => {
-      // const deltas = this._shared.deltas(peerClock)
-      // let deltaClock = {}
-
-      // let deltaState = RGA.initial()
-
-      // for (let delta of deltas) {
-      //   const [clock, authorClock, [, , d]] = delta
-      //   deltaClock = vectorclock.merge(deltaClock, vectorclock.sumAll(clock, authorClock))
-      //   deltaState = RGA.join(deltaState, d)
-      // }
-
-      const batch = this._shared.deltaBatch(peerClock)
-      let [clock, authorClock, [, , batchState]] = batch
-
-      // let finalBatchState = RGA.join(RGA.initial(), batchState)
-
-      // expect(finalBatchState).to.deep.equal(deltaState)
-
-      const batchClock = vectorclock.sumAll(clock, authorClock)
-
-      // if (!vectorclock.isIdentical(deltaClock, batchClock)) {
-      //   console.log('SHOULD NOT HAPPEN:', deltaClock, batchClock)
-      //   throw new Error('SHOULD NOT HAPPEN!')
-      // }
-
-      output.push(encode([await this._signAndEncryptDelta(batch)]))
-
-      return vectorclock.merge(peerClock, batchClock)
-    }
 
     const pushDeltas = async (peerClock) => {
       const ds = this._shared.deltas(peerClock)
@@ -87,6 +61,13 @@ module.exports = class PushProtocol {
       }
 
       return vectorclock.merge(peerClock, newRemoteClock)
+    }
+
+    const pushState = async () => {
+      const state = this._shared.stateAsDelta()
+      const [clock, authorClock] = state
+      output.push(encode([await this._signAndEncryptDelta(state)]))
+      return vectorclock.sumAll(clock, authorClock)
     }
 
     const updateRemote = async (myClock) => {
@@ -102,17 +83,7 @@ module.exports = class PushProtocol {
         if (isPinner || remoteNeedsUpdate(myClock)) {
           if (pushing) {
             debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
-            // remote still needs update
-            // const clockAndStates = await this._store.getClockAndStates()
-            // debug('clock and states: ', clockAndStates)
-            // const [clock] = clockAndStates
-            // if (Object.keys(clock).length) {
-            //   debug('%s: clock of %s now is %j', this._peerId(), remotePeerId, clock)
-            //   // console.log(`${remotePeerId}: %j => %j`, this._clocks.getFor(remotePeerId), clock)
-            //   this._clocks.setFor(remotePeerId, clock)
-            //   debug('%s: sending clock and states to %s:', this._peerId(), remotePeerId, clockAndStates)
-            //   output.push(encode([null, clockAndStates]))
-            // }
+            remoteClock = await pushState()
           } else {
             // send only clock
             output.push(encode([null, [sendClockDiff(this._shared.clock())]]))

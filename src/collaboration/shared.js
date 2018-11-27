@@ -42,6 +42,10 @@ module.exports = (name, id, crdtType, collaboration, clocks, options) => {
 
   shared.state = () => state
 
+  shared.stateAsDelta = () => {
+    return [{}, clocks.getFor(id), [name, crdtType.typeName, state]]
+  }
+
   // shared value
   shared.value = () => {
     if ((!memo.state) || (memo.state !== state)) {
@@ -61,7 +65,7 @@ module.exports = (name, id, crdtType, collaboration, clocks, options) => {
     if (forName === name) {
       deltas.push(deltaRecord)
       apply(delta)
-      const newClock = vectorclock.merge(clocks.getFor(id), vectorclock.sumAll(previousClock, authorClock))
+      const newClock = vectorclock.merge(clock, vectorclock.sumAll(previousClock, authorClock))
       shared.emit('clock changed', newClock)
       return newClock
     } else if (typeName) {
@@ -112,7 +116,6 @@ module.exports = (name, id, crdtType, collaboration, clocks, options) => {
         // console.log('new delta:', newDelta)
         const minimumPreviousClock = vectorclock.minimum(oldPreviousClock, newPreviousClock)
         const nextAuthorClock = vectorclock.subtract(minimumPreviousClock, nextClock)
-
 
         // console.log('previous clock', previousClock)
         // console.log('next author clock', nextAuthorClock)
