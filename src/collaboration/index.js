@@ -12,6 +12,7 @@ const Replication = require('./replication')
 const deriveCreateCipherFromKeys = require('../keys/derive-cipher-from-keys')
 const Stats = require('../stats')
 const delay = require('delay')
+const debounce = require('lodash/debounce')
 
 const defaultOptions = {
   preambleByteCount: 2,
@@ -39,6 +40,7 @@ class Collaboration extends EventEmitter {
     this.app = app
     this.name = name
 
+    this._stopped = true
     const selfId = this._ipfs._peerInfo.id.toB58String()
 
     this._options = Object.assign({}, defaultOptions, options)
@@ -98,7 +100,9 @@ class Collaboration extends EventEmitter {
 
     this._saveQueue = new Queue({ concurrency: 1 })
 
-    this._stopped = true
+    this._debouncedStateChangedHandler = debounce(() => {
+      this._saveQueue.add(() => this.save())
+    }, this._options.saveDebounceMS)
   }
 
   async start () {

@@ -27,7 +27,6 @@ module.exports = class PushProtocol {
   forPeer (peerInfo) {
     const remotePeerId = peerInfo.id.toB58String()
     debug('%s: push protocol to %s', this._peerId(), remotePeerId)
-    console.log('%s: push protocol to %s', this._peerId(), remotePeerId)
 
     const queue = new Queue({ concurrency: 1 })
     let ended = false
@@ -64,7 +63,6 @@ module.exports = class PushProtocol {
     }
 
     const pushState = async () => {
-      console.log('pushing state...')
       const state = this._shared.stateAsDelta()
       const [clock, authorClock] = state
       output.push(encode([await this._signAndEncryptDelta(state)]))
@@ -205,7 +203,12 @@ module.exports = class PushProtocol {
 
   async _signAndEncryptDelta (deltaRecord) {
     const [previousClock, authorClock, [forName, typeName, decryptedState]] = deltaRecord
-    const encryptedState = await this._signAndEncrypt(encode(decryptedState))
+    let encryptedState
+    if (this._options.replicateOnly) {
+      encryptedState = decryptedState
+    } else {
+      encryptedState = await this._signAndEncrypt(encode(decryptedState))
+    }
     return [previousClock, authorClock, [forName, typeName, encryptedState]]
   }
 

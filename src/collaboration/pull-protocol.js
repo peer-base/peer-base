@@ -159,7 +159,12 @@ module.exports = class PullProtocol {
 
   async _decryptAndVerifyDelta (deltaRecord) {
     const [previousClock, authorClock, [forName, typeName, encryptedDelta]] = deltaRecord
-    const decrytedDelta = decode(await this._decryptAndVerify(encryptedDelta))
+    let decrytedDelta
+    if (this._options.replicateOnly) {
+      decrytedDelta = encryptedDelta
+    } else {
+      decrytedDelta = decode(await this._decryptAndVerify(encryptedDelta))
+    }
     return [previousClock, authorClock, [forName, typeName, decrytedDelta]]
   }
 

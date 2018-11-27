@@ -162,14 +162,18 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   function apply (s, fromSelf) {
     debug('%s: apply ', id, s)
     // console.log('%s: apply ', id, s)
-    state = crdtType.join.call(changeEmitter, state, s)
-    shared.emit('delta', s, fromSelf)
+    if (options.replicateOnly) {
+      state = s
+    } else {
+      state = crdtType.join.call(changeEmitter, state, s)
+      shared.emit('delta', s, fromSelf)
 
-    debug('%s: new state after join is', id, state)
-    try {
-      changeEmitter.emitAll()
-    } catch (err) {
-      console.error('Error caught while emitting changes:', err)
+      debug('%s: new state after join is', id, state)
+      try {
+        changeEmitter.emitAll()
+      } catch (err) {
+        console.error('Error caught while emitting changes:', err)
+      }
     }
 
     shared.emit('state changed', fromSelf)
