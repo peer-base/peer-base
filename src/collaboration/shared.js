@@ -13,6 +13,13 @@ module.exports = (name, id, crdtType, collaboration, clocks, options) => {
   let state = crdtType.initial()
   const memo = {}
 
+  const pushDelta = (delta) => {
+    deltas.push(delta)
+    if (deltas.length > options.maxDeltaRetention) {
+      deltas.splice(0, deltas.length - options.maxDeltaRetention)
+    }
+  }
+
   const applyAndPushDelta = (delta) => {
     const previousClock = clocks.getFor(id)
     apply(delta, true)
@@ -20,7 +27,7 @@ module.exports = (name, id, crdtType, collaboration, clocks, options) => {
     const author = {}
     author[id] = 1
     const deltaRecord = [previousClock, author, [name, crdtType.typeName, delta]]
-    deltas.push(deltaRecord)
+    pushDelta(deltaRecord)
     shared.emit('clock changed', newClock)
   }
 
@@ -63,7 +70,7 @@ module.exports = (name, id, crdtType, collaboration, clocks, options) => {
     // console.log(deltaRecord)
     const [previousClock, authorClock, [forName, typeName, delta]] = deltaRecord
     if (forName === name) {
-      deltas.push(deltaRecord)
+      pushDelta(deltaRecord)
       apply(delta)
       const newClock = vectorclock.merge(clock, vectorclock.sumAll(previousClock, authorClock))
       shared.emit('clock changed', newClock)

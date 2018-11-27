@@ -64,6 +64,7 @@ module.exports = class PushProtocol {
     }
 
     const pushState = async () => {
+      console.log('pushing state...')
       const state = this._shared.stateAsDelta()
       const [clock, authorClock] = state
       output.push(encode([await this._signAndEncryptDelta(state)]))
@@ -80,7 +81,7 @@ module.exports = class PushProtocol {
           // remoteClock = await pushDeltaBatch(remoteClock)
         }
 
-        if (isPinner || remoteNeedsUpdate(myClock)) {
+        if (isPinner || remoteNeedsUpdate(myClock, remoteClock)) {
           if (pushing) {
             debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
             remoteClock = await pushState()
@@ -97,9 +98,9 @@ module.exports = class PushProtocol {
       }
     }
 
-    const remoteNeedsUpdate = (_myClock) => {
+    const remoteNeedsUpdate = (_myClock, _remoteClock) => {
       const myClock = _myClock || this._shared.clock()
-      const remoteClock = this._clocks.getFor(remotePeerId)
+      const remoteClock = _remoteClock || this._clocks.getFor(remotePeerId)
       debug('%s: comparing local clock %j to remote clock %j', this._peerId(), myClock, remoteClock)
       const needs = !vectorclock.doesSecondHaveFirst(myClock, remoteClock)
       debug('%s: remote %s needs update?', this._peerId(), remotePeerId, needs)
