@@ -2,67 +2,75 @@
 
 const debug = require('debug')('peer-star:collaboration:shared')
 const EventEmitter = require('events')
-const Queue = require('p-queue')
-const debounce = require('lodash/debounce')
-
-const { encode, decode } = require('delta-crdts-msgpack-codec')
+const b58Decode = require('bs58').decode
 const vectorclock = require('../common/vectorclock')
+const Store = require('./store')
 
-module.exports = async (name, id, crdtType, collaboration, store, keys, _options) => {
-  const options = Object.assign({}, _options)
-  const queue = new Queue({ concurrency: 1 })
-  const applyQueue = new Queue({ concurrency: 1 })
+module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   const shared = new EventEmitter()
-  let clock = {}
-  let state = crdtType.initial()
-  let deltaBuffer = []
-  const memo = {}
-  // let clock = await store.getLatestClock()
-
-  const saveDeltaBuffer = debounce(() => {
-    queue.add(async () => {
-      const deltas = deltaBuffer
-      // reset the delta buffer
-      deltaBuffer = []
-      const jointDelta = deltas.reduce(
-        (D, d) => crdtType.join.call(voidChangeEmitter, D, d),
-        crdtType.initial())
-      const namedDelta = [name, crdtType.typeName, await signAndEncrypt(encode(jointDelta))]
-      debug('%s: named delta: ', id, namedDelta)
-      // clock = vectorclock.increment(clock, id)
-      // debug('%s: clock before save delta:', id, clock)
-      // const newClock =
-      const newClock = await store.saveDelta([null, null, encode(namedDelta)])
-      if (newClock) {
-        clock = vectorclock.merge(clock, newClock)
-      }
-      // if (newClock) {
-      //   debug('%s: NEW clock after save delta:', id, newClock)
-      //   clock = vectorclock.merge(clock, newClock)
-      // }
-    }).catch((err) => shared.emit('error', err))
-  }, 0)
-
-  // Change emitter
-  const voidChangeEmitter = new VoidChangeEmitter()
   const changeEmitter = new ChangeEmitter(shared)
+  const voidChangeEmitter = new VoidChangeEmitter()
 
-  // Populate shared methods
+  const store = new Store(ipfs, collaboration, options)
+
+  let deltas = []
+  let state = crdtType.initial()
+  const memo = {}
+
+  const pushDelta = (delta) => {
+    deltas.push(delta)
+    if (deltas.length > options.maxDeltaRetention) {
+      deltas.splice(0, deltas.length - options.maxDeltaRetention)
+    }
+  }
+
+  const applyAndPushDelta = (delta) => {
+    const previousClock = clocks.getFor(id)
+    apply(delta, true)
+    const newClock = vectorclock.increment(previousClock, id)
+    const author = {}
+    author[id] = 1
+    const deltaRecord = [previousClock, author, [name, crdtType.typeName, delta]]
+    pushDelta(deltaRecord)
+    shared.emit('clock changed', newClock)
+  }
+
+  const crdtId = (() => {
+    const crdtIdBuffer = b58Decode(id)
+    return crdtIdBuffer.slice(crdtIdBuffer.length - 4)
+  })()
 
   // shared mutators
   Object.keys(crdtType.mutators).forEach((mutatorName) => {
     const mutator = crdtType.mutators[mutatorName]
-    shared[mutatorName] = (...args) => {
-      const delta = mutator(id, state, ...args)
-      apply(delta, true)
-      deltaBuffer.push(delta)
-      saveDeltaBuffer()
+    shared[mutatorName] = async (...args) => {
+      const delta = mutator(crdtId, state, ...args)
+      return applyAndPushDelta(delta)
     }
   })
+
+  shared.start = async () => {
+    await store.start()
+    const [loadedState, loadedDeltas] = await store.load()
+    if (loadedState) {
+      state = loadedState
+    }
+    if (loadedDeltas) {
+      deltas = loadedDeltas
+    }
+  }
+
+  shared.stop = () => {
+    return store.stop()
+  }
 
   shared.name = name
 
   shared.state = () => state
+
+  shared.stateAsDelta = () => {
+    return [{}, clocks.getFor(id), [name, crdtType.typeName, state]]
+  }
 
   // shared value
   shared.value = () => {
@@ -73,163 +81,103 @@ module.exports = async (name, id, crdtType, collaboration, store, keys, _options
     return memo.value
   }
 
-  shared.apply = (remoteClock, encodedDelta, isPartial) => {
-    debug('%s: apply', id, remoteClock, encodedDelta)
-    if (!Buffer.isBuffer(encodedDelta)) {
-      throw new Error('encoded delta should have been buffer')
+  shared.apply = (deltaRecord, isPartial) => {
+    const clock = clocks.getFor(id)
+    if (!vectorclock.isDeltaInteresting(deltaRecord, clock)) {
+      return false
     }
-    return applyQueue.add(async () => {
-      const [forName, typeName, encryptedState] = decode(encodedDelta)
-      debug('%s: shared.apply %j', id, remoteClock, forName)
-      if (forName === name) {
-        if (vectorclock.compare(remoteClock, clock) >= 0) {
-          clock = vectorclock.merge(clock, remoteClock)
-          const encodedState = await decryptAndVerify(encryptedState)
-          if (!options.replicateOnly) {
-            const newState = decode(encodedState)
-            apply(newState)
-          } else if (!isPartial) {
-            state = encodedState
-          }
-        }
-        debug('%s state after apply:', id, state)
-        if (!keys.public || keys.write) {
-          const saveState = options.replicateOnly ? state : await signAndEncrypt(encode(state))
-          return [name, encode([name, forName && crdtType.typeName, saveState])]
-        }
-      } else if (typeName) {
-        const sub = await collaboration.sub(forName, typeName)
-        return sub.shared.apply(remoteClock, encodedDelta)
-      }
-    })
-  }
-
-  shared.stop = () => {
-    // nothing to do here...
+    // console.log(deltaRecord)
+    const [previousClock, authorClock, [forName, typeName, delta]] = deltaRecord
+    if (forName === name) {
+      pushDelta(deltaRecord)
+      apply(delta)
+      const newClock = vectorclock.merge(clock, vectorclock.sumAll(previousClock, authorClock))
+      shared.emit('clock changed', newClock)
+      return newClock
+    } else if (typeName) {
+      throw new Error('sub collaborations not yet supported!')
+    }
   }
 
   shared.initial = () => Promise.resolve(new Map())
 
-  shared.join = async (_acc, delta) => {
-    const acc = await _acc
-    debug('%s: shared.join', id, delta, acc)
-    const [previousClock, authorClock, encodedDelta] = delta
-    const [forName, typeName, encryptedDelta] = decode(encodedDelta)
-    debug('%s: shared.join [forName, type, encryptedDelta] = ', [forName, typeName, encryptedDelta])
-    if (forName !== name) {
-      throw new Error('delta name does not match:', forName)
-    }
-    if (!acc.has(name)) {
-      acc.set(name, [name, typeName, previousClock, {}, crdtType.initial()])
-    }
-    let [, , clock, previousAuthorClock, s1] = acc.get(name)
-    const encodedState = await decryptAndVerify(encryptedDelta)
-    const s2 = decode(encodedState)
+  shared.clock = () => clocks.getFor(id)
 
-    const newAuthorClock = vectorclock.incrementAll(previousAuthorClock, authorClock)
-    const newState = crdtType.join.call(voidChangeEmitter, s1, s2)
-    acc.set(name, [name, typeName, clock, newAuthorClock, newState])
-
-    debug('%s: shared.join: new state is', id, newState)
-
-    return acc
+  shared.contains = (otherClock) => {
+    const clock = clocks.getFor(id)
+    return (vectorclock.compare(otherClock, clock) < 0) || vectorclock.isIdentical(otherClock, clock)
   }
 
-  shared.signAndEncrypt = async (message) => {
-    let encrypted
-    if (!keys.public || keys.write) {
-      encrypted = await signAndEncrypt(message)
-    } else {
-      encrypted = message
-    }
-    return encrypted
-  }
-
-  const encryptedStoreState = await store.getState(name)
-  try {
-    if (encryptedStoreState) {
-      const [, , encryptedState] = decode(encryptedStoreState)
-      const storeState = decode(await decryptAndVerify(encryptedState))
-      if (keys && keys.read) {
-        apply(storeState, true)
-      } else {
-        state = storeState
+  shared.deltas = (since = {}) => {
+    const interestingDeltas = deltas.filter((deltaRecord) => {
+      if (vectorclock.isDeltaInteresting(deltaRecord, since)) {
+        const [previousClock, authorClock] = deltaRecord
+        since = vectorclock.merge(since, vectorclock.sumAll(previousClock, authorClock))
+        return true
       }
+      return false
+    })
+
+    return interestingDeltas
+  }
+
+  shared.deltaBatch = (since = {}) => {
+    const deltas = shared.deltas(since)
+    if (!deltas.length) {
+      return [since, {}, [name, crdtType.typeName, crdtType.initial()]]
     }
-  } catch (err) {
-    shared.emit('error', err)
+
+    const batch = deltas
+      .reduce((acc, newDeltaRecord) => {
+        // console.log('~~~~~ since', since)
+        const [oldPreviousClock, oldAuthorClock, [, , state]] = acc
+        // console.log([oldPreviousClock, oldAuthorClock])
+        const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
+        const [newPreviousClock, newAuthorClock, [, , newDelta]] = newDeltaRecord
+        const newClock = vectorclock.sumAll(newPreviousClock, newAuthorClock)
+        const nextClock = vectorclock.merge(oldClock, newClock)
+
+        // console.log('new since is', since)
+
+        // console.log('new delta:', newDelta)
+        const minimumPreviousClock = vectorclock.minimum(oldPreviousClock, newPreviousClock)
+        const nextAuthorClock = vectorclock.subtract(minimumPreviousClock, nextClock)
+
+        // console.log('previous clock', previousClock)
+        // console.log('next author clock', nextAuthorClock)
+
+        const newState = crdtType.join.call(voidChangeEmitter, state, newDelta)
+        return [minimumPreviousClock, nextAuthorClock, [name, crdtType.typeName, newState]]
+      })
+    // console.log('~~~~~')
+    return batch
+  }
+
+  shared.save = () => {
+    return store.save(state, deltas)
   }
 
   return shared
 
   function apply (s, fromSelf) {
     debug('%s: apply ', id, s)
-    state = crdtType.join.call(changeEmitter, state, s)
-    debug('%s: new state after join is', id, state)
-    try {
-      changeEmitter.emitAll()
-    } catch (err) {
-      console.error('Error caught while emitting changes:', err)
+    // console.log('%s: apply ', id, s)
+    if (options.replicateOnly) {
+      state = s
+    } else {
+      state = crdtType.join.call(changeEmitter, state, s)
+      shared.emit('delta', s, fromSelf)
+
+      debug('%s: new state after join is', id, state)
+      try {
+        changeEmitter.emitAll()
+      } catch (err) {
+        console.error('Error caught while emitting changes:', err)
+      }
     }
 
     shared.emit('state changed', fromSelf)
     return state
-  }
-
-  function signAndEncrypt (data) {
-    return new Promise((resolve, reject) => {
-      if (!keys.write) {
-        return resolve(data)
-      }
-      keys.write.sign(data, (err, signature) => {
-        if (err) {
-          return reject(err)
-        }
-
-        const toEncrypt = encode([data, signature])
-
-        keys.cipher()
-          .then((cipher) => {
-            cipher.encrypt(toEncrypt, (err, encrypted) => {
-              if (err) {
-                return reject(err)
-              }
-
-              resolve(encrypted)
-            })
-          })
-          .catch(reject)
-      })
-    })
-  }
-
-  function decryptAndVerify (encrypted) {
-    return new Promise((resolve, reject) => {
-      if (!keys.cipher && !keys.read) {
-        return resolve(encrypted)
-      }
-      keys.cipher()
-        .then((cipher) => cipher.decrypt(encrypted, (err, decrypted) => {
-          if (err) {
-            return reject(err)
-          }
-          const decoded = decode(decrypted)
-          const [encoded, signature] = decoded
-
-          keys.read.verify(encoded, signature, (err, valid) => {
-            if (err) {
-              return reject(err)
-            }
-
-            if (!valid) {
-              return reject(new Error('delta has invalid signature'))
-            }
-
-            resolve(encoded)
-          })
-        }))
-        .catch(reject)
-    })
   }
 }
 
@@ -253,6 +201,11 @@ class ChangeEmitter {
 }
 
 class VoidChangeEmitter {
-  changed (event) {}
-  emitAll () {}
+  changed (event) {
+    // DO NOTHING
+  }
+
+  emitAll () {
+    // DO NOTHING
+  }
 }

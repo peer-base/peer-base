@@ -5,13 +5,13 @@ const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const Queue = require('p-queue')
 const handlingData = require('../common/handling-data')
-const encode = require('delta-crdts-msgpack-codec').encode
+const { encode, decode } = require('delta-crdts-msgpack-codec')
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class PullProtocol {
-  constructor (ipfs, store, clocks, keys, replication, options) {
+  constructor (ipfs, shared, clocks, keys, replication, options) {
     this._ipfs = ipfs
-    this._store = store
+    this._shared = shared
     this._clocks = clocks
     this._keys = keys
     this._replication = replication
@@ -23,23 +23,16 @@ module.exports = class PullProtocol {
     debug('%s: pull protocol to %s', this._peerId(), remotePeerId)
     const queue = new Queue({ concurrency: 1 })
     let ended = false
-    let sentClock = {}
     let waitingForClock = null
     let timeout
-
-    const sendClockDiff = (clock) => {
-      const clockDiff = vectorclock.diff(sentClock, clock)
-      sentClock = clock
-      return clockDiff
-    }
 
     const onNewLocalClock = (clock) => {
       debug('%s got new clock from state:', this._peerId(), clock)
       // TODO: only send difference from previous clock
       this._clocks.setFor(this._peerId(), clock)
-      output.push(encode([sendClockDiff(clock)]))
+      output.push(encode([clock]))
     }
-    this._store.on('clock changed', onNewLocalClock)
+    this._shared.on('clock changed', onNewLocalClock)
 
     const onNewData = (data) => {
       debug('%s got new data from %s :', this._peerId(), remotePeerId, data)
@@ -52,7 +45,7 @@ module.exports = class PullProtocol {
         if (deltaRecord) {
           const [previousClock, authorClock] = deltaRecord
           delta = deltaRecord[2]
-          clock = vectorclock.incrementAll(previousClock, authorClock)
+          clock = vectorclock.sumAll(previousClock, authorClock)
         } else if (newState) {
           clock = newState[0]
           states = newState[1]
@@ -71,31 +64,23 @@ module.exports = class PullProtocol {
               }
             }
             debug('%s: received clock from %s: %j', this._peerId(), remotePeerId, clock)
-            if (await this._store.contains(clock)) {
-              // we already have this state
-              // send a "prune" messagere
-              debug('%s: store contains clock', this._peerId(), clock)
-              debug('%s: setting %s to lazy mode (1)', this._peerId(), remotePeerId)
+
+            let saved
+            if (states) {
+              debug('%s: saving states', this._peerId(), states)
+              throw new Error('IMPLEMENT!')
+              // saved = await this._shared.apply(clock, states)
+            } else if (delta) {
+              debug('%s: saving delta', this._peerId(), deltaRecord)
+              saved = this._shared.apply(await this._decryptAndVerifyDelta(deltaRecord), true)
+            }
+            if (!saved) {
+              debug('%s: did not save', this._peerId())
+              debug('%s: setting %s to lazy mode (2)', this._peerId(), remotePeerId)
               output.push(encode([null, true]))
             } else {
-              debug('%s: store does not contain clock', this._peerId(), clock)
-              let saved
-              if (states) {
-                debug('%s: saving states', this._peerId(), states)
-                saved = await this._store.saveStates(clock, states)
-              } else if (delta) {
-                debug('%s: saving delta', this._peerId(), deltaRecord)
-                saved = await this._store.saveDelta(deltaRecord)
-              }
-              if (!saved) {
-                debug('%s: did not save', this._peerId())
-                debug('%s: setting %s to lazy mode (2)', this._peerId(), remotePeerId)
-                output.push(encode([null, true]))
-              } else {
-                this._replication.received(remotePeerId, clock)
-                debug('%s: saved with new clock %j', this._peerId(), saved)
-                output.push(encode([sendClockDiff(clock)]))
-              }
+              this._replication.received(remotePeerId, clock)
+              debug('%s: saved with new clock %j', this._peerId(), saved)
             }
           } else {
             // Only got the vector clock, which means that this connection
@@ -143,20 +128,15 @@ module.exports = class PullProtocol {
           debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)
         }
         ended = true
-        this._store.removeListener('clock changed', onNewLocalClock)
+        this._shared.removeListener('clock changed', onNewLocalClock)
         output.end(err)
       }
     }
     const input = pull.drain(handlingData(onData), onEnd)
     const output = pushable()
 
-    this._store.getLatestClock()
-      .then((vectorClock) => {
-        debug('%s: sending latest vector clock to %s:', this._peerId(), remotePeerId, vectorClock)
-        sentClock = vectorClock
-        output.push(encode([vectorClock, null, null, this._options.replicateOnly || false]))
-      })
-      .catch(onEnd)
+    const vectorClock = this._shared.clock()
+    output.push(encode([vectorClock, null, null, this._options.replicateOnly || false]))
 
     return { sink: input, source: output }
   }
@@ -166,5 +146,46 @@ module.exports = class PullProtocol {
       this._cachedPeerId = this._ipfs._peerInfo.id.toB58String()
     }
     return this._cachedPeerId
+  }
+
+  async _decryptAndVerifyDelta (deltaRecord) {
+    const [previousClock, authorClock, [forName, typeName, encryptedDelta]] = deltaRecord
+    let decrytedDelta
+    if (this._options.replicateOnly) {
+      decrytedDelta = encryptedDelta
+    } else {
+      decrytedDelta = decode(await this._decryptAndVerify(encryptedDelta))
+    }
+    return [previousClock, authorClock, [forName, typeName, decrytedDelta]]
+  }
+
+  _decryptAndVerify (encrypted) {
+    const { keys } = this._options
+    return new Promise((resolve, reject) => {
+      if (!keys.cipher && !keys.read) {
+        return resolve(encrypted)
+      }
+      keys.cipher()
+        .then((cipher) => cipher.decrypt(encrypted, (err, decrypted) => {
+          if (err) {
+            return reject(err)
+          }
+          const decoded = decode(decrypted)
+          const [encoded, signature] = decoded
+
+          keys.read.verify(encoded, signature, (err, valid) => {
+            if (err) {
+              return reject(err)
+            }
+
+            if (!valid) {
+              return reject(new Error('delta has invalid signature'))
+            }
+
+            resolve(encoded)
+          })
+        }))
+        .catch(reject)
+    })
   }
 }

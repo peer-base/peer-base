@@ -16,15 +16,17 @@ module.exports = (...args) => {
 }
 
 class Protocol extends EventEmitter {
-  constructor (ipfs, collaboration, store, keys, clocks, replication, options) {
+  constructor (ipfs, collaboration, shared, keys, clocks, replication, options) {
     super()
+    if (!shared) {
+      throw new Error('need shared!')
+    }
     this._ipfs = ipfs
     this._collaboration = collaboration
-    this._store = store
     this._clocks = clocks
     this._options = Object.assign({}, defaultOptions, options)
-    this._pushProtocol = new PushProtocol(ipfs, store, this._clocks, keys, replication, this._options)
-    this._pullProtocol = new PullProtocol(ipfs, store, this._clocks, keys, replication, this._options)
+    this._pushProtocol = new PushProtocol(ipfs, shared, this._clocks, keys, replication, this._options)
+    this._pullProtocol = new PullProtocol(ipfs, shared, this._clocks, keys, replication, this._options)
 
     this.handler = this.handler.bind(this)
   }

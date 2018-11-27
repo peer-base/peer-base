@@ -3,9 +3,7 @@
 const debug = require('debug')('peer-star:collaboration')
 const EventEmitter = require('events')
 const Queue = require('p-queue')
-const debounce = require('lodash/debounce')
 const Membership = require('./membership')
-const Store = require('../store')
 const Shared = require('./shared')
 const CRDT = require('./crdt')
 const Gossip = require('./gossip')
@@ -13,6 +11,8 @@ const Clocks = require('./clocks')
 const Replication = require('./replication')
 const deriveCreateCipherFromKeys = require('../keys/derive-cipher-from-keys')
 const Stats = require('../stats')
+const delay = require('delay')
+const debounce = require('lodash/debounce')
 
 const defaultOptions = {
   preambleByteCount: 2,
@@ -40,12 +40,13 @@ class Collaboration extends EventEmitter {
     this.app = app
     this.name = name
 
+    this._stopped = true
     const selfId = this._ipfs._peerInfo.id.toB58String()
 
     this._options = Object.assign({}, defaultOptions, options)
     this._parentCollab = parentCollab
     this._gossips = new Set()
-    this._clocks = new Clocks(selfId)
+    this._clocks = this._options.clocks || new Clocks(selfId)
     this.replication = Replication(selfId, this._clocks)
 
     if (!this._options.keys) {
@@ -57,23 +58,31 @@ class Collaboration extends EventEmitter {
       this._options.createCipher = deriveCreateCipherFromKeys(this._options.keys)
     }
 
-    this._store = this._options.store || Store(ipfs, this, this._options)
-
-    this._membership = this._options.membership || new Membership(
-      ipfs, globalConnectionManager, app, this, this._store, this._clocks, this.replication, this._options)
-    this._membership.on('changed', () => {
-      debug('membership changed')
-      this.emit('membership changed', this._membership.peers())
-    })
-
     if (!type) {
       throw new Error('need collaboration type')
     }
+
     this.typeName = type
     this._type = CRDT(type)
     if (!this._type) {
       throw new Error('invalid collaboration type:' + type)
     }
+
+    this.shared = Shared(name, selfId, this._type, this._ipfs, this, this._clocks, this._options)
+    this.shared.on('error', (err) => this.emit('error', err))
+    this.shared.on('clock changed', (clock) => {
+      this._clocks.setFor(selfId, clock)
+    })
+    this.shared.on('state changed', (fromSelf) => {
+      this.emit('state changed', fromSelf)
+    })
+
+    this._membership = this._options.membership || new Membership(
+      ipfs, globalConnectionManager, app, this, this.shared, this._clocks, this.replication, this._options)
+    this._membership.on('changed', () => {
+      debug('membership changed')
+      this.emit('membership changed', this._membership.peers())
+    })
 
     this._subs = new Map()
 
@@ -91,7 +100,9 @@ class Collaboration extends EventEmitter {
 
     this._saveQueue = new Queue({ concurrency: 1 })
 
-    this._stopped = true
+    this._debouncedStateChangedHandler = debounce(() => {
+      this._saveQueue.add(() => this.save())
+    }, this._options.saveDebounceMS)
   }
 
   async start () {
@@ -108,7 +119,7 @@ class Collaboration extends EventEmitter {
     let collab = this._subs.get(name)
     if (!collab) {
       const options = Object.assign({}, this._options, {
-        store: this._store,
+        clocks: this._clocks,
         membership: this._membership
       })
 
@@ -162,48 +173,32 @@ class Collaboration extends EventEmitter {
   async _start () {
     if (this._isRoot) {
       await this._membership.start()
-      await this._store.start()
     }
-    const id = (await this._ipfs.id()).id
-    const name = this._storeName()
-    this.shared = await Shared(name, id, this._type, this, this._store, this._options.keys, this._options)
-    this.shared.on('error', (err) => this.emit('error', err))
-    this._store.on('clock changed', (clock) => {
-      this._clocks.setFor(id, clock)
-    })
-    this.shared.on('state changed', (fromSelf) => {
-      this.emit('state changed', fromSelf)
-    })
-    this._clocks.setFor(id, await this._store.getLatestClock())
-    this._store.setShared(this.shared, name)
-
+    await this.shared.start()
     this.stats.start()
     this._unregisterObserver = this._membership.connectionManager.observe(this.stats.observer)
-
-    this._debouncedStateChangedSaver = debounce(() => this.save())
-    this.shared.on('state changed', this._debouncedStateChangedSaver)
-
-    this._store.on('saved', () => this.emit('saved'))
 
     await Array.from(this._subs.values()).map((sub) => sub.start())
   }
 
-  save () {
-    return this._saveQueue.add(() => this._save())
+  save (force = false) {
+    if (!this._stopped || force) {
+      return this._saveQueue.add(() => this._save(force))
+    }
   }
 
-  _save () {
-    if (!this._stopped && this._store.isPersistent) {
-      return this._store.save()
+  _save (force) {
+    if (!this._stopped || force) {
+      return this.shared.save()
     }
   }
 
   async stop () {
     debug('stopping collaboration %s', this.name)
-    await this.save()
-    await this._saveQueue.onEmpty()
-
     this._stopped = true
+    await delay(0) // wait for shared deltas to flush
+    await this.save(true)
+    await this._saveQueue.onEmpty()
 
     this.stats.stop()
 
@@ -223,24 +218,12 @@ class Collaboration extends EventEmitter {
       console.error('error stopping gossip:', err)
     }
 
-    try {
-      if (this.shared) {
-        this.shared.stop()
-      }
-    } catch (err) {
-      console.error('error stopping shared collaboration:', err)
-    }
-
     if (this._isRoot) {
       try {
-        await Promise.all([this._membership.stop(), this._store.stop()])
+        await this._membership.stop()
       } catch (err) {
         console.error('error stopping:', err)
       }
-    }
-
-    if (this._debouncedStateChangedSaver) {
-      this.shared.removeListener('state changed', this._debouncedStateChangedSaver)
     }
 
     this.emit('stopped')

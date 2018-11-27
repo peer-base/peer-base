@@ -1,3 +1,4 @@
 'use strict'
 
-require('./all')
+require('./unit-tests')
+require('./integration-tests')
