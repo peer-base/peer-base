@@ -23,22 +23,14 @@ module.exports = class PullProtocol {
     debug('%s: pull protocol to %s', this._peerId(), remotePeerId)
     const queue = new Queue({ concurrency: 1 })
     let ended = false
-    let sentClock = {}
     let waitingForClock = null
     let timeout
-
-    const sendClockDiff = (clock) => {
-      return clock
-      const clockDiff = vectorclock.diff(sentClock, clock)
-      sentClock = clock
-      return clockDiff
-    }
 
     const onNewLocalClock = (clock) => {
       debug('%s got new clock from state:', this._peerId(), clock)
       // TODO: only send difference from previous clock
       this._clocks.setFor(this._peerId(), clock)
-      output.push(encode([sendClockDiff(clock)]))
+      output.push(encode([clock]))
     }
     this._shared.on('clock changed', onNewLocalClock)
 
@@ -144,7 +136,6 @@ module.exports = class PullProtocol {
     const output = pushable()
 
     const vectorClock = this._shared.clock()
-    sentClock = vectorClock
     output.push(encode([vectorClock, null, null, this._options.replicateOnly || false]))
 
     return { sink: input, source: output }

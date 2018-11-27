@@ -36,7 +36,6 @@ module.exports = class PushProtocol {
     let remoteClock = {}
 
     const sendClockDiff = (clock) => {
-      return clock
       const clockDiff = vectorclock.diff(sentClock, clock)
       sentClock = clock
       return clockDiff
