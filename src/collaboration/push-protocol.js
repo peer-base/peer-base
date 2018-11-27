@@ -9,6 +9,11 @@ const handlingData = require('../common/handling-data')
 const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 
+// const RGA = require('delta-crdts').type('rga')
+// const chai = require('chai')
+// chai.use(require('dirty-chai'))
+// const expect = chai.expect
+
 module.exports = class PushProtocol {
   constructor (ipfs, shared, clocks, keys, replication, options) {
     this._ipfs = ipfs
@@ -28,6 +33,7 @@ module.exports = class PushProtocol {
     let pushing = true
     let isPinner = false
     let sentClock = {}
+    let remoteClock = {}
 
     const sendClockDiff = (clock) => {
       const clockDiff = vectorclock.diff(sentClock, clock)
@@ -35,14 +41,51 @@ module.exports = class PushProtocol {
       return clockDiff
     }
 
-    const pushDeltas = async () => {
-      debug('%s: push deltas to %s', this._peerId(), remotePeerId)
-      for (let delta of this._shared.deltas(this._clocks.getFor(remotePeerId))) {
-        let [clock, authorClock] = delta
-        clock = vectorclock.sumAll(clock, authorClock)
-        this._clocks.setFor(remotePeerId, clock)
-        output.push(encode([await this._signAndEncryptDelta(delta)]))
+    // const deltas = async () => {
+    //   return this._shared.deltas(this._clocks.getFor(remotePeerId))
+    // }
+
+    const pushDeltaBatch = async (peerClock) => {
+      // const deltas = this._shared.deltas(peerClock)
+      // let deltaClock = {}
+
+      // let deltaState = RGA.initial()
+
+      // for (let delta of deltas) {
+      //   const [clock, authorClock, [, , d]] = delta
+      //   deltaClock = vectorclock.merge(deltaClock, vectorclock.sumAll(clock, authorClock))
+      //   deltaState = RGA.join(deltaState, d)
+      // }
+
+      const batch = this._shared.deltaBatch(peerClock)
+      let [clock, authorClock, [, , batchState]] = batch
+
+      // let finalBatchState = RGA.join(RGA.initial(), batchState)
+
+      // expect(finalBatchState).to.deep.equal(deltaState)
+
+      const batchClock = vectorclock.sumAll(clock, authorClock)
+
+      // if (!vectorclock.isIdentical(deltaClock, batchClock)) {
+      //   console.log('SHOULD NOT HAPPEN:', deltaClock, batchClock)
+      //   throw new Error('SHOULD NOT HAPPEN!')
+      // }
+
+      output.push(encode([await this._signAndEncryptDelta(batch)]))
+
+      return vectorclock.merge(peerClock, batchClock)
+    }
+
+    const pushDeltas = async (peerClock) => {
+      const ds = this._shared.deltas(peerClock)
+      let newRemoteClock = {}
+      for (let d of ds) {
+        const [clock, authorClock] = d
+        newRemoteClock = vectorclock.merge(newRemoteClock, vectorclock.sumAll(clock, authorClock))
+        output.push(encode([await this._signAndEncryptDelta(d)]))
       }
+
+      return vectorclock.merge(peerClock, newRemoteClock)
     }
 
     const updateRemote = async (myClock) => {
@@ -51,7 +94,8 @@ module.exports = class PushProtocol {
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
         if (!isPinner) {
-          await pushDeltas()
+          remoteClock = await pushDeltas(remoteClock)
+          // remoteClock = await pushDeltaBatch(remoteClock)
         }
 
         if (isPinner || remoteNeedsUpdate(myClock)) {
@@ -70,7 +114,7 @@ module.exports = class PushProtocol {
             // }
           } else {
             // send only clock
-            output.push(encode([null, [sendClockDiff(this.shared.clock())]]))
+            output.push(encode([null, [sendClockDiff(this._shared.clock())]]))
           }
         } else {
           debug('%s: remote %s does not need update', this._peerId(), remotePeerId)
@@ -87,7 +131,7 @@ module.exports = class PushProtocol {
       debug('%s: comparing local clock %j to remote clock %j', this._peerId(), myClock, remoteClock)
       const needs = !vectorclock.doesSecondHaveFirst(myClock, remoteClock)
       debug('%s: remote %s needs update?', this._peerId(), remotePeerId, needs)
-      return needs
+      return needs && myClock
     }
 
     const reduceEntropy = () => {
@@ -134,13 +178,12 @@ module.exports = class PushProtocol {
       }
 
       if (newRemoteClock) {
+        remoteClock = newRemoteClock
         const mergedClock = this._clocks.setFor(remotePeerId, newRemoteClock, true, isPinner)
         this._replication.sent(remotePeerId, mergedClock, isPinner)
       }
 
       if (newRemoteClock || startEager) {
-        const myClock = this._shared.clock()
-        this._clocks.setFor(this._peerId(), myClock)
         reduceEntropy()
       }
     }

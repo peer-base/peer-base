@@ -8,6 +8,7 @@ const vectorclock = require('../common/vectorclock')
 module.exports = (name, id, crdtType, collaboration, options) => {
   const shared = new EventEmitter()
   const changeEmitter = new ChangeEmitter(shared)
+  const voidChangeEmitter = new VoidChangeEmitter()
   let clock = {}
   let deltas = []
   let state = crdtType.initial()
@@ -55,12 +56,14 @@ module.exports = (name, id, crdtType, collaboration, options) => {
     if (!vectorclock.isDeltaInteresting(deltaRecord, clock)) {
       return false
     }
+    // console.log(deltaRecord)
     const [previousClock, authorClock, [forName, typeName, delta]] = deltaRecord
     if (forName === name) {
       deltas.push(deltaRecord)
       apply(delta)
       clock = vectorclock.merge(clock, vectorclock.sumAll(previousClock, authorClock))
       shared.emit('clock changed', clock)
+      return clock
     } else if (typeName) {
       throw new Error('sub collaborations not yet supported!')
     }
@@ -73,14 +76,49 @@ module.exports = (name, id, crdtType, collaboration, options) => {
   shared.contains = (otherClock) => (vectorclock.compare(otherClock, clock) < 0) || vectorclock.isIdentical(otherClock, clock)
 
   shared.deltas = (since = {}) => {
-    return deltas.filter((delta) => {
-      if (vectorclock.isDeltaInteresting(delta, since)) {
-        const [previousClock, authorClock] = delta
+    const interestingDeltas = deltas.filter((deltaRecord) => {
+      if (vectorclock.isDeltaInteresting(deltaRecord, since)) {
+        const [previousClock, authorClock] = deltaRecord
         since = vectorclock.merge(since, vectorclock.sumAll(previousClock, authorClock))
         return true
       }
       return false
     })
+
+    return interestingDeltas
+  }
+
+  shared.deltaBatch = (since = {}) => {
+    const deltas = shared.deltas(since)
+    if (!deltas.length) {
+      return [since, {}, [name, crdtType.typeName, crdtType.initial()]]
+    }
+
+    const batch = deltas
+      .reduce((acc, newDeltaRecord) => {
+        // console.log('~~~~~ since', since)
+        const [oldPreviousClock, oldAuthorClock, [, , state]] = acc
+        // console.log([oldPreviousClock, oldAuthorClock])
+        const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
+        const [newPreviousClock, newAuthorClock, [, , newDelta]] = newDeltaRecord
+        const newClock = vectorclock.sumAll(newPreviousClock, newAuthorClock)
+        const nextClock = vectorclock.merge(oldClock, newClock)
+
+        // console.log('new since is', since)
+
+        // console.log('new delta:', newDelta)
+        const minimumPreviousClock = vectorclock.minimum(oldPreviousClock, newPreviousClock)
+        const nextAuthorClock = vectorclock.subtract(minimumPreviousClock, nextClock)
+
+
+        // console.log('previous clock', previousClock)
+        // console.log('next author clock', nextAuthorClock)
+
+        const newState = crdtType.join.call(voidChangeEmitter, state, newDelta)
+        return [minimumPreviousClock, nextAuthorClock, [name, crdtType.typeName, newState]]
+      })
+    // console.log('~~~~~')
+    return batch
   }
 
   shared.save = () => {
@@ -91,7 +129,7 @@ module.exports = (name, id, crdtType, collaboration, options) => {
 
   function apply (s, fromSelf) {
     debug('%s: apply ', id, s)
-    console.log('%s: apply ', id, s)
+    // console.log('%s: apply ', id, s)
     state = crdtType.join.call(changeEmitter, state, s)
     shared.emit('delta', s, fromSelf)
 
@@ -123,5 +161,15 @@ class ChangeEmitter {
     events.forEach((event) => {
       this._client.emit('change', event)
     })
+  }
+}
+
+class VoidChangeEmitter {
+  changed (event) {
+    // DO NOTHING
+  }
+
+  emitAll () {
+    // DO NOTHING
   }
 }

@@ -28,6 +28,7 @@ module.exports = class PullProtocol {
     let timeout
 
     const sendClockDiff = (clock) => {
+      return clock
       const clockDiff = vectorclock.diff(sentClock, clock)
       sentClock = clock
       return clockDiff
@@ -71,32 +72,23 @@ module.exports = class PullProtocol {
               }
             }
             debug('%s: received clock from %s: %j', this._peerId(), remotePeerId, clock)
-            if (await this._shared.contains(clock)) {
-              // we already have this state
-              // send a "prune" message
-              debug('%s: store contains clock', this._peerId(), clock)
-              debug('%s: setting %s to lazy mode (1)', this._peerId(), remotePeerId)
+
+            let saved
+            if (states) {
+              debug('%s: saving states', this._peerId(), states)
+              throw new Error('IMPLEMENT!')
+              // saved = await this._shared.apply(clock, states)
+            } else if (delta) {
+              debug('%s: saving delta', this._peerId(), deltaRecord)
+              saved = this._shared.apply(await this._decryptAndVerifyDelta(deltaRecord), true)
+            }
+            if (!saved) {
+              debug('%s: did not save', this._peerId())
+              debug('%s: setting %s to lazy mode (2)', this._peerId(), remotePeerId)
               output.push(encode([null, true]))
             } else {
-              debug('%s: store does not contain clock', this._peerId(), clock)
-              let saved
-              if (states) {
-                debug('%s: saving states', this._peerId(), states)
-                throw new Error('IMPLEMENT!')
-                // saved = await this._shared.apply(clock, states)
-              } else if (delta) {
-                debug('%s: saving delta', this._peerId(), deltaRecord)
-                saved = this._shared.apply(await this._decryptAndVerifyDelta(deltaRecord), true)
-              }
-              if (!saved) {
-                debug('%s: did not save', this._peerId())
-                debug('%s: setting %s to lazy mode (2)', this._peerId(), remotePeerId)
-                output.push(encode([null, true]))
-              } else {
-                this._replication.received(remotePeerId, clock)
-                debug('%s: saved with new clock %j', this._peerId(), saved)
-                output.push(encode([sendClockDiff(clock)]))
-              }
+              this._replication.received(remotePeerId, clock)
+              debug('%s: saved with new clock %j', this._peerId(), saved)
             }
           } else {
             // Only got the vector clock, which means that this connection

@@ -93,7 +93,7 @@ describe('collaboration with random changes', function () {
     }
 
     function randomShortTime () {
-      return Math.floor(Math.random() * 10)
+      return Math.floor(Math.random() * 50)
     }
 
     function characterFrom (characters, index) {

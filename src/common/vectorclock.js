@@ -2,9 +2,30 @@
 
 const vectorclock = require('vectorclock')
 
-exports.merge = vectorclock.merge
-exports.isIdentical = vectorclock.isIdentical
 exports.compare = vectorclock.compare
+
+exports.isIdentical = (a, b) => {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+
+  for (let key of keys) {
+    if ((a[key] || 0) !== (b[key] || 0)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+exports.merge = (a, b) => {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+  const result = {}
+
+  for (let key of keys) {
+    result[key] = Math.max(a[key] || 0, b[key] || 0)
+  }
+
+  return result
+}
 
 exports.increment = (clock, author) => {
   if (author) {
@@ -16,9 +37,7 @@ exports.increment = (clock, author) => {
 exports.delta = (c1, c2) => {
   const deltas = {}
 
-  const keys = new Set()
-  Object.keys(c1).forEach((k) => keys.add(k))
-  Object.keys(c2).forEach((k) => keys.add(k))
+  const keys = new Set([...Object.keys(c1), ...Object.keys[c2]])
 
   for (let k of keys) {
     if (c1[k] !== c2[k]) {
@@ -75,8 +94,9 @@ exports.isInFirstEqualToSecond = (first, second) => {
 }
 
 exports.doesSecondHaveFirst = (first, second) => {
-  for (let key of Object.keys(first)) {
-    if ((second[key] || 0) < first[key]) {
+  const keys = new Set([...Object.keys(first), ...Object.keys(second)])
+  for (let key of keys) {
+    if ((second[key] || 0) < (first[key] || 0)) {
       return false
     }
   }
@@ -99,12 +119,37 @@ exports.isFirstImmediateToSecond = (first, second) => {
   return diff === 1
 }
 
-exports.sumAll = (_clock, authorClock) => {
-  const clock = Object.assign({}, _clock)
-  Object.keys(authorClock).forEach((author) => {
-    clock[author] = (clock[author] || 0) + authorClock[author]
-  })
-  return clock
+exports.sumAll = (clock, authorClock) => {
+  const keys = new Set([...Object.keys(clock), ...Object.keys(authorClock)])
+  const result = {}
+
+  for (let key of keys) {
+    result[key] = (clock[key] || 0) + (authorClock[key] || 0)
+  }
+
+  return result
+}
+
+exports.minimum = (a, b) => {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+  const result = {}
+  for (let key of keys) {
+    result[key] = Math.min((a[key] || 0), (b[key] || 0))
+  }
+
+  return result
+}
+
+exports.subtract = (base, next) => {
+  const result = {}
+  const keys = new Set([...Object.keys(base), ...Object.keys(next)])
+  for (let key of keys) {
+    const clockDiff = (next[key] || 0) - (base[key] || 0)
+    if (clockDiff) {
+      result[key] = clockDiff
+    }
+  }
+  return result
 }
 
 exports.diff = (a, b) => {
