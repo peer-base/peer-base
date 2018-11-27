@@ -4,11 +4,15 @@ const debug = require('debug')('peer-star:collaboration:shared')
 const EventEmitter = require('events')
 const b58Decode = require('bs58').decode
 const vectorclock = require('../common/vectorclock')
+const Store = require('./store')
 
-module.exports = (name, id, crdtType, collaboration, clocks, options) => {
+module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   const shared = new EventEmitter()
   const changeEmitter = new ChangeEmitter(shared)
   const voidChangeEmitter = new VoidChangeEmitter()
+
+  const store = new Store(ipfs, collaboration, options)
+
   let deltas = []
   let state = crdtType.initial()
   const memo = {}
@@ -44,6 +48,21 @@ module.exports = (name, id, crdtType, collaboration, clocks, options) => {
       return applyAndPushDelta(delta)
     }
   })
+
+  shared.start = async () => {
+    await store.start()
+    const [loadedState, loadedDeltas] = await store.load()
+    if (loadedState) {
+      state = loadedState
+    }
+    if (loadedDeltas) {
+      deltas = loadedDeltas
+    }
+  }
+
+  shared.stop = () => {
+    return store.stop()
+  }
 
   shared.name = name
 
@@ -135,7 +154,7 @@ module.exports = (name, id, crdtType, collaboration, clocks, options) => {
   }
 
   shared.save = () => {
-    // TODO
+    return store.save(state, deltas)
   }
 
   return shared

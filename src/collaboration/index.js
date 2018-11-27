@@ -66,7 +66,7 @@ class Collaboration extends EventEmitter {
       throw new Error('invalid collaboration type:' + type)
     }
 
-    this.shared = Shared(name, selfId, this._type, this, this._clocks, this._options)
+    this.shared = Shared(name, selfId, this._type, this._ipfs, this, this._clocks, this._options)
     this.shared.on('error', (err) => this.emit('error', err))
     this.shared.on('clock changed', (clock) => {
       this._clocks.setFor(selfId, clock)
@@ -170,6 +170,7 @@ class Collaboration extends EventEmitter {
     if (this._isRoot) {
       await this._membership.start()
     }
+    await this.shared.start()
     this.stats.start()
     this._unregisterObserver = this._membership.connectionManager.observe(this.stats.observer)
 
