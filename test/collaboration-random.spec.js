@@ -11,7 +11,6 @@ const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
 const debounceEvent = require('./utils/debounce-event')
 
-
 describe('collaboration with random changes', function () {
   if (process.browser) {
     console.log('skipping...')
