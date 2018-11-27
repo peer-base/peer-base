@@ -11,12 +11,19 @@ const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
 const debounceEvent = require('./utils/debounce-event')
 
+
 describe('collaboration with random changes', function () {
+  if (process.browser) {
+    console.log('skipping...')
+    return
+  }
+
   this.timeout(70000)
 
   const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
 
   const peerCount = 4
+  const charsPerPeer = 100
   const collaborationOptions = {}
 
   let appName
@@ -57,14 +64,14 @@ describe('collaboration with random changes', function () {
     let expectedCharacterCount = 0
     let expectedValue
     const modifications = async (collaboration, index) => {
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < charsPerPeer; i++) {
         const character = characterFrom(manyCharacters, i)
         collaboration.shared.push(character)
         expectedCharacterCount++
         await delay(randomShortTime())
       }
 
-      await debounceEvent(collaboration, 'state changed', 20000)
+      await debounceEvent(collaboration, 'state changed', 10000)
 
       const value = collaboration.shared.value()
       expect(value.length).to.equal(expectedCharacterCount)
@@ -87,13 +94,13 @@ describe('collaboration with random changes', function () {
         const clock = collaboration.vectorClock(peerId)
         expect(Object.keys(clock).sort()).to.deep.equal(peerIds)
         for (let replica of peerIds) {
-          expect(clock[replica]).to.equal(100)
+          expect(clock[replica]).to.equal(charsPerPeer)
         }
       }
     }
 
     function randomShortTime () {
-      return Math.floor(Math.random() * 50)
+      return Math.floor(Math.random() * 10)
     }
 
     function characterFrom (characters, index) {
