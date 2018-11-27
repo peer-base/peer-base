@@ -5,24 +5,23 @@ const EventEmitter = require('events')
 const b58Decode = require('bs58').decode
 const vectorclock = require('../common/vectorclock')
 
-module.exports = (name, id, crdtType, collaboration, options) => {
+module.exports = (name, id, crdtType, collaboration, clocks, options) => {
   const shared = new EventEmitter()
   const changeEmitter = new ChangeEmitter(shared)
   const voidChangeEmitter = new VoidChangeEmitter()
-  let clock = {}
   let deltas = []
   let state = crdtType.initial()
   const memo = {}
 
   const applyAndPushDelta = (delta) => {
-    const previousClock = clock
+    const previousClock = clocks.getFor(id)
     apply(delta, true)
-    clock = vectorclock.increment(clock, id)
+    const newClock = vectorclock.increment(previousClock, id)
     const author = {}
     author[id] = 1
     const deltaRecord = [previousClock, author, [name, crdtType.typeName, delta]]
     deltas.push(deltaRecord)
-    shared.emit('clock changed', clock)
+    shared.emit('clock changed', newClock)
   }
 
   const crdtId = (() => {
@@ -53,6 +52,7 @@ module.exports = (name, id, crdtType, collaboration, options) => {
   }
 
   shared.apply = (deltaRecord, isPartial) => {
+    const clock = clocks.getFor(id)
     if (!vectorclock.isDeltaInteresting(deltaRecord, clock)) {
       return false
     }
@@ -61,9 +61,9 @@ module.exports = (name, id, crdtType, collaboration, options) => {
     if (forName === name) {
       deltas.push(deltaRecord)
       apply(delta)
-      clock = vectorclock.merge(clock, vectorclock.sumAll(previousClock, authorClock))
-      shared.emit('clock changed', clock)
-      return clock
+      const newClock = vectorclock.merge(clocks.getFor(id), vectorclock.sumAll(previousClock, authorClock))
+      shared.emit('clock changed', newClock)
+      return newClock
     } else if (typeName) {
       throw new Error('sub collaborations not yet supported!')
     }
@@ -71,9 +71,12 @@ module.exports = (name, id, crdtType, collaboration, options) => {
 
   shared.initial = () => Promise.resolve(new Map())
 
-  shared.clock = () => clock
+  shared.clock = () => clocks.getFor(id)
 
-  shared.contains = (otherClock) => (vectorclock.compare(otherClock, clock) < 0) || vectorclock.isIdentical(otherClock, clock)
+  shared.contains = (otherClock) => {
+    const clock = clocks.getFor(id)
+    return (vectorclock.compare(otherClock, clock) < 0) || vectorclock.isIdentical(otherClock, clock)
+  }
 
   shared.deltas = (since = {}) => {
     const interestingDeltas = deltas.filter((deltaRecord) => {

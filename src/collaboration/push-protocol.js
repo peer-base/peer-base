@@ -27,6 +27,7 @@ module.exports = class PushProtocol {
   forPeer (peerInfo) {
     const remotePeerId = peerInfo.id.toB58String()
     debug('%s: push protocol to %s', this._peerId(), remotePeerId)
+    console.log('%s: push protocol to %s', this._peerId(), remotePeerId)
 
     const queue = new Queue({ concurrency: 1 })
     let ended = false

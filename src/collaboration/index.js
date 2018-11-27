@@ -44,7 +44,7 @@ class Collaboration extends EventEmitter {
     this._options = Object.assign({}, defaultOptions, options)
     this._parentCollab = parentCollab
     this._gossips = new Set()
-    this._clocks = new Clocks(selfId)
+    this._clocks = this._options.clocks || new Clocks(selfId)
     this.replication = Replication(selfId, this._clocks)
 
     if (!this._options.keys) {
@@ -66,7 +66,7 @@ class Collaboration extends EventEmitter {
       throw new Error('invalid collaboration type:' + type)
     }
 
-    this.shared = Shared(name, selfId, this._type, this, this._options)
+    this.shared = Shared(name, selfId, this._type, this, this._clocks, this._options)
     this.shared.on('error', (err) => this.emit('error', err))
     this.shared.on('clock changed', (clock) => {
       this._clocks.setFor(selfId, clock)
@@ -115,7 +115,7 @@ class Collaboration extends EventEmitter {
     let collab = this._subs.get(name)
     if (!collab) {
       const options = Object.assign({}, this._options, {
-        store: this._store,
+        clocks: this._clocks,
         membership: this._membership
       })
 
