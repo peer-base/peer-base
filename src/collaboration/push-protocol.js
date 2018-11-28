@@ -9,6 +9,7 @@ const Queue = require('p-queue')
 const handlingData = require('../common/handling-data')
 const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
+const expectedNetworkError = require('../common/expected-network-error')
 
 // const RGA = require('delta-crdts').type('rga')
 // const chai = require('chai')
@@ -179,7 +180,7 @@ module.exports = class PushProtocol {
     const onEnd = (err) => {
       this._clocks.takeDown(remotePeerId)
       if (!ended) {
-        if (err && err.message !== 'underlying socket has been closed') {
+        if (err && !expectedNetworkError(err)) {
           console.error(err.message)
           debug(err)
         }

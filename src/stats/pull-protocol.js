@@ -5,6 +5,7 @@ const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const handlingData = require('../common/handling-data')
 const encode = require('delta-crdts-msgpack-codec').encode
+const expectedNetworkError = require('../common/expected-network-error')
 
 class StatsPullProtocol {
   constructor (ipfs, stats) {
@@ -52,7 +53,7 @@ class StatsPullProtocol {
 
     const onEnd = (err) => {
       if (!ended) {
-        if (err && err.message !== 'underlying socket has been closed') {
+        if (err && !expectedNetworkError(err)) {
           debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)
         }
         ended = true
