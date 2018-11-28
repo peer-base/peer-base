@@ -4,16 +4,21 @@
 const debug = require('debug')('peer-star:collaboration:push-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
-const Queue = require('p-queue')
 const debounce = require('lodash/debounce')
+const Queue = require('p-queue')
 const handlingData = require('../common/handling-data')
 const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 
+// const RGA = require('delta-crdts').type('rga')
+// const chai = require('chai')
+// chai.use(require('dirty-chai'))
+// const expect = chai.expect
+
 module.exports = class PushProtocol {
-  constructor (ipfs, store, clocks, keys, replication, options) {
+  constructor (ipfs, shared, clocks, keys, replication, options) {
     this._ipfs = ipfs
-    this._store = store
+    this._shared = shared
     this._clocks = clocks
     this._keys = keys
     this._replication = replication
@@ -23,11 +28,13 @@ module.exports = class PushProtocol {
   forPeer (peerInfo) {
     const remotePeerId = peerInfo.id.toB58String()
     debug('%s: push protocol to %s', this._peerId(), remotePeerId)
+
     const queue = new Queue({ concurrency: 1 })
     let ended = false
     let pushing = true
     let isPinner = false
     let sentClock = {}
+    let remoteClock = {}
 
     const sendClockDiff = (clock) => {
       const clockDiff = vectorclock.diff(sentClock, clock)
@@ -35,40 +42,32 @@ module.exports = class PushProtocol {
       return clockDiff
     }
 
-    const pushDeltaStream = async () => {
-      debug('%s: push deltas to %s', this._peerId(), remotePeerId)
-      const since = this._clocks.getFor(remotePeerId)
-      pull(
-        this._store.deltaStream(since),
-        pull.map((delta) => {
-          let [clock, authorClock] = delta
-          clock = vectorclock.incrementAll(clock, authorClock)
-          this._clocks.setFor(remotePeerId, clock)
-          output.push(encode([delta]))
-        }),
-        pull.onEnd((err) => {
-          if (err) {
-            onEnd(err)
-          }
-        })
-      )
-    }
+    // const pushDeltaBatch = async (peerClock) => {
+    //   const batch = this._shared.deltaBatch(peerClock)
+    //   let [clock, authorClock, [, , batchState]] = batch
+    //   const batchClock = vectorclock.sumAll(clock, authorClock)
+    //   output.push(encode([await this._signAndEncryptDelta(batch)]))
+    //   return vectorclock.merge(peerClock, batchClock)
+    // }
 
-    const pushDeltaBatch = async () => {
-      debug('%s: push deltas to %s', this._peerId(), remotePeerId)
-      const since = this._clocks.getFor(remotePeerId)
-      const batch = await this._store.deltaBatch(since)
-      debug('%s: batch to %s:', this._peerId(), remotePeerId, batch)
-      for (let collab of batch.keys()) {
-        const collabBatch = batch.get(collab)
-        let [clock, authorClock] = collabBatch
-        clock = vectorclock.incrementAll(clock, authorClock)
-        this._clocks.setFor(remotePeerId, clock)
-        output.push(encode([collabBatch]))
+    const pushDeltas = async (peerClock) => {
+      const ds = this._shared.deltas(peerClock)
+      let newRemoteClock = {}
+      for (let d of ds) {
+        const [clock, authorClock] = d
+        newRemoteClock = vectorclock.merge(newRemoteClock, vectorclock.sumAll(clock, authorClock))
+        output.push(encode([await this._signAndEncryptDelta(d)]))
       }
+
+      return vectorclock.merge(peerClock, newRemoteClock)
     }
 
-    const pushDeltas = this._options.replicateOnly ? pushDeltaStream : pushDeltaBatch
+    const pushState = async () => {
+      const state = this._shared.stateAsDelta()
+      const [clock, authorClock] = state
+      output.push(encode([await this._signAndEncryptDelta(state)]))
+      return vectorclock.sumAll(clock, authorClock)
+    }
 
     const updateRemote = async (myClock) => {
       debug('%s: updateRemote %s', this._peerId(), remotePeerId)
@@ -76,58 +75,50 @@ module.exports = class PushProtocol {
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
         if (!isPinner) {
-          await pushDeltas(myClock)
+          remoteClock = await pushDeltas(remoteClock)
+          // remoteClock = await pushDeltaBatch(remoteClock)
         }
 
-        if (isPinner || remoteNeedsUpdate(myClock)) {
+        if (isPinner || remoteNeedsUpdate(myClock, remoteClock)) {
           if (pushing) {
             debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
-            // remote still needs update
-            const clockAndStates = await this._store.getClockAndStates()
-            debug('clock and states: ', clockAndStates)
-            const [clock] = clockAndStates
-            if (Object.keys(clock).length) {
-              debug('%s: clock of %s now is %j', this._peerId(), remotePeerId, clock)
-              this._clocks.setFor(remotePeerId, clock)
-              debug('%s: sending clock and states to %s:', this._peerId(), remotePeerId, clockAndStates)
-              output.push(encode([null, clockAndStates]))
-            }
+            remoteClock = await pushState()
           } else {
             // send only clock
-            output.push(encode([null, [this._clocks.getFor(this._peerId())]]))
+            output.push(encode([null, [sendClockDiff(this._shared.clock())]]))
           }
         } else {
           debug('%s: remote %s does not need update', this._peerId(), remotePeerId)
         }
       } else {
         debug('%s: NOT pushing to %s', this._peerId(), remotePeerId)
-        output.push(encode([null, [sendClockDiff(this._clocks.getFor(this._peerId()))]]))
+        output.push(encode([null, [sendClockDiff(this._shared.clock())]]))
       }
     }
 
-    const remoteNeedsUpdate = (_myClock) => {
-      const myClock = _myClock || this._clocks.getFor(this._peerId())
-      const remoteClock = this._clocks.getFor(remotePeerId)
+    const remoteNeedsUpdate = (_myClock, _remoteClock) => {
+      const myClock = _myClock || this._shared.clock()
+      const remoteClock = _remoteClock || this._clocks.getFor(remotePeerId)
       debug('%s: comparing local clock %j to remote clock %j', this._peerId(), myClock, remoteClock)
       const needs = !vectorclock.doesSecondHaveFirst(myClock, remoteClock)
       debug('%s: remote %s needs update?', this._peerId(), remotePeerId, needs)
-      return needs
+      return needs && myClock
     }
 
     const reduceEntropy = () => {
-      debug('%s: reduceEntropy to %s', this._peerId(), remotePeerId)
-      if (remoteNeedsUpdate()) {
-        return updateRemote(this._clocks.getFor(this._peerId()))
-      } else {
-        debug('remote is up to date')
-      }
+      queue.add(() => {
+        debug('%s: reduceEntropy to %s', this._peerId(), remotePeerId)
+        if (remoteNeedsUpdate()) {
+          return updateRemote(this._shared.clock())
+        } else {
+          debug('remote is up to date')
+        }
+      })
     }
 
     const debounceReduceEntropyMS = () => isPinner ? this._options.debouncePushToPinnerMS : this._options.debouncePushMS
 
-    let debouncedReduceEntropy = debounce(() => {
-      queue.add(reduceEntropy).catch(onEnd)
-    }, debounceReduceEntropyMS())
+    let debouncedReduceEntropy = debounce(reduceEntropy, debounceReduceEntropyMS())
 
     const onClockChanged = (newClock) => {
       debug('%s: clock changed to %j', this._peerId(), newClock)
@@ -135,7 +126,7 @@ module.exports = class PushProtocol {
       debouncedReduceEntropy()
     }
 
-    this._store.on('clock changed', onClockChanged)
+    this._shared.on('clock changed', onClockChanged)
     debug('%s: registered state change handler', this._peerId())
 
     const gotPresentation = (message) => {
@@ -154,22 +145,17 @@ module.exports = class PushProtocol {
 
       if ((typeof _isPinner) === 'boolean') {
         isPinner = _isPinner
-        debouncedReduceEntropy = debounce(() => {
-          queue.add(reduceEntropy).catch(onEnd)
-        }, debounceReduceEntropyMS())
+        debouncedReduceEntropy = debounce(reduceEntropy, debounceReduceEntropyMS())
       }
 
       if (newRemoteClock) {
+        remoteClock = newRemoteClock
         const mergedClock = this._clocks.setFor(remotePeerId, newRemoteClock, true, isPinner)
         this._replication.sent(remotePeerId, mergedClock, isPinner)
       }
 
       if (newRemoteClock || startEager) {
-        queue.add(async () => {
-          const myClock = await this._store.getLatestClock()
-          this._clocks.setFor(this._peerId(), myClock)
-          await reduceEntropy()
-        }).catch(onEnd)
+        reduceEntropy()
       }
     }
 
@@ -198,7 +184,7 @@ module.exports = class PushProtocol {
           debug(err)
         }
         ended = true
-        this._store.removeListener('clock changed', onClockChanged)
+        this._shared.removeListener('clock changed', onClockChanged)
         output.end(err)
       }
     }
@@ -213,5 +199,44 @@ module.exports = class PushProtocol {
       this._cachedPeerId = this._ipfs._peerInfo.id.toB58String()
     }
     return this._cachedPeerId
+  }
+
+  async _signAndEncryptDelta (deltaRecord) {
+    const [previousClock, authorClock, [forName, typeName, decryptedState]] = deltaRecord
+    let encryptedState
+    if (this._options.replicateOnly) {
+      encryptedState = decryptedState
+    } else {
+      encryptedState = await this._signAndEncrypt(encode(decryptedState))
+    }
+    return [previousClock, authorClock, [forName, typeName, encryptedState]]
+  }
+
+  _signAndEncrypt (data) {
+    const { keys } = this._options
+    return new Promise((resolve, reject) => {
+      if (!keys.write) {
+        return resolve(data)
+      }
+      keys.write.sign(data, (err, signature) => {
+        if (err) {
+          return reject(err)
+        }
+
+        const toEncrypt = encode([data, signature])
+
+        keys.cipher()
+          .then((cipher) => {
+            cipher.encrypt(toEncrypt, (err, encrypted) => {
+              if (err) {
+                return reject(err)
+              }
+
+              resolve(encrypted)
+            })
+          })
+          .catch(reject)
+      })
+    })
   }
 }
