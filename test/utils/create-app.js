@@ -16,7 +16,7 @@ module.exports = (appName, transportOptions = {}, ipfsOptions = {}) => {
   if (!repo) {
     repo = Repo()
   } else {
-    console.log('using given repo')
+    // console.log('using given repo')
   }
 
   ipfsOptions = Object.assign({
@@ -29,9 +29,11 @@ module.exports = (appName, transportOptions = {}, ipfsOptions = {}) => {
     transport: transportOptions
   })
 
+  /*
   app.on('error', (err) => {
     console.warn(err)
   })
+  */
 
   const start = () => app.start()
 
@@ -51,6 +53,8 @@ module.exports.createName = () => {
   return PeerStar.generateRandomName()
 }
 
+/*
 process.on('uncaughtException', (err) => {
   console.error('uncaught error:', err)
 })
+*/

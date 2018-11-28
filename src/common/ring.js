@@ -1,3 +1,4 @@
+/* eslint guard-for-in: "off" */
 'use strict'
 
 const EventEmitter = require('events')

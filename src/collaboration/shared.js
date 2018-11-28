@@ -1,3 +1,4 @@
+/* eslint no-console: "off" */
 'use strict'
 
 const debug = require('debug')('peer-star:collaboration:shared')

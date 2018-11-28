@@ -1,4 +1,5 @@
 /* eslint-env mocha */
+/* eslint no-console: "off" */
 'use strict'
 
 const path = require('path')

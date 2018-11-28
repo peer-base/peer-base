@@ -13,7 +13,6 @@ const debounceEvent = require('./utils/debounce-event')
 
 describe('collaboration with random changes', function () {
   if (process.browser) {
-    console.log('skipping...')
     return
   }
 

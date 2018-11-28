@@ -1,3 +1,4 @@
+/* eslint no-console: "off" */
 'use strict'
 
 const IpfsAPI = require('ipfs-api')

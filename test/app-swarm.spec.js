@@ -19,6 +19,8 @@ describe('app swarm', function () {
   let swarm = []
   const outboundConnectionCounts = []
   const inboundConnectionCounts = []
+
+  /*
   let interval
 
   before(() => {
@@ -29,6 +31,7 @@ describe('app swarm', function () {
   })
 
   after(() => clearInterval(interval))
+  */
 
   before(() => {
     appName = App.createName()
@@ -72,12 +75,12 @@ describe('app swarm', function () {
   })
 
   it('broadcasting eventually reaches all nodes', (done) => {
-    console.log('---- 1')
+    // console.log('---- 1')
     let missing = peerCount
     swarm.forEach(({ app }, index) => app.once('gossip', (message) => {
       expect(message.from).to.equal(swarm[0].app.ipfs._peerInfo.id.toB58String())
       expect(JSON.parse(message.data.toString())).to.equal('hello world!')
-      console.log('gossip in %d: %j', index, message.data.toString())
+      // console.log('gossip in %d: %j', index, message.data.toString())
       missing--
       if (!missing) {
         done()
