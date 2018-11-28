@@ -8,6 +8,7 @@ const Queue = require('p-queue')
 const handlingData = require('../common/handling-data')
 const { encode, decode } = require('delta-crdts-msgpack-codec')
 const vectorclock = require('../common/vectorclock')
+const expectedNetworkError = require('../common/expected-network-error')
 
 module.exports = class PullProtocol {
   constructor (ipfs, shared, clocks, keys, replication, options) {
@@ -123,7 +124,7 @@ module.exports = class PullProtocol {
 
     const onEnd = (err) => {
       if (!ended) {
-        if (err && err.message !== 'underlying socket has been closed') {
+        if (err && !expectedNetworkError(err)) {
           console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.stack)
           console.error('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.message)
           debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)

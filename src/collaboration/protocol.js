@@ -8,6 +8,8 @@ const pull = require('pull-stream')
 const PushProtocol = require('./push-protocol')
 const PullProtocol = require('./pull-protocol')
 
+const expectedNetworkError = require('../common/expected-network-error')
+
 const defaultOptions = {
   receiveTimeoutMS: 3000
 }
@@ -54,7 +56,7 @@ class Protocol extends EventEmitter {
         this._pullProtocol.forPeer(peerInfo),
         this.observeOutbound(peerId),
         passthrough((err) => {
-          if (err && err.message !== 'underlying socket has been closed') {
+          if (err && !expectedNetworkError(err)) {
             console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
             debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           }
@@ -75,7 +77,7 @@ class Protocol extends EventEmitter {
       this._pushProtocol.forPeer(peerInfo),
       this.observeOutbound(peerId),
       passthrough((err) => {
-        if (err && err.message !== 'underlying socket has been closed') {
+        if (err && !expectedNetworkError(err)) {
           console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
         }
