@@ -9,7 +9,7 @@ const waitForMembers = require('./utils/wait-for-members')
 const waitForValue = require('./utils/wait-for-value')
 
 describe('replication', function () {
-  this.timeout(60000)
+  this.timeout(30000)
 
   const collaborationName = 'replication test collab'
   const peerCount = 2 // 10
@@ -64,9 +64,18 @@ describe('replication', function () {
   it('waits for replication events', async () => {
     collaborations[0].shared.add('a')
     collaborations[0].shared.add('b')
+
     await Promise.all([
-      forEvent(collaborations[0].replication, 'replicated'),
-      forEvent(collaborations[1].replication, 'received')])
+      (async () => {
+        await forEvent(collaborations[0].replication, 'replicating')
+        await forEvent(collaborations[0].replication, 'replicated')
+      })(),
+
+      (async () => {
+        await forEvent(collaborations[1].replication, 'receiving')
+        await forEvent(collaborations[1].replication, 'received')
+      })()
+    ])
 
     await Promise.all(collaborations.map((collaboration) => forEvent(collaboration.replication, 'pinned')))
   })
