@@ -2,32 +2,30 @@
 /* eslint no-console: "off" */
 'use strict'
 
-// if (!process.env.DEBUG) {
-//   process.env.DEBUG = 'peer-star:collaboration:store'
-// }
+const defaultName = 'peer-pad/2'
+const defaultSwarmAddress = '/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star'
+
+const config = {
+  name: process.env.PEER_STAR_APP_NAME || defaultName,
+  swarmAddress: process.env.PEER_STAR_SWARM_ADDRESS || defaultSwarmAddress
+}
 
 const createPinner = require('../src').createPinner
 
-const appName = process.argv[2]
-if (!appName) {
-  return console.error('need app name')
-}
-
 const options = {}
 
-const swarm = process.argv[3]
-if (swarm) {
-  console.log('using swarm address %j', swarm)
+if (config.swarmAddress) {
+  console.log('using swarm address %j', config.swarmAddress)
   options.ipfs = {
-    swarm: [swarm]
+    swarm: [config.swarmAddress]
   }
 }
 
-console.log('pinning app %s', appName)
+console.log('pinning app %s', config.name)
 
 process.on('unhandledRejection', (err) => {
   console.error(err)
 })
 
-const pinner = createPinner(appName, options)
+const pinner = createPinner(config.name, options)
 pinner.start()
