@@ -27,6 +27,12 @@ describe('local-persistence', function () {
     collaboration.shared.push('a')
     collaboration.shared.push('b')
     expect(collaboration.shared.value()).to.deep.equal(['a', 'b'])
+
+    const sub = await collaboration.sub('sub collab', 'gset')
+    sub.shared.add(1)
+    sub.shared.add(2)
+    expect(sub.shared.value()).to.deep.equal(new Set([1, 2]))
+
     await collaboration.stop()
     await app.app.stop()
   })
@@ -36,6 +42,8 @@ describe('local-persistence', function () {
     await app.start()
     const collaboration = await app.app.collaborate('local persistence test collaboration', 'rga')
     expect(collaboration.shared.value()).to.deep.equal(['a', 'b'])
+    const sub = await collaboration.sub('sub collab', 'gset')
+    expect(sub.shared.value()).to.deep.equal(new Set([1, 2]))
     await app.stop()
   })
 })
