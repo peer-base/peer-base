@@ -155,7 +155,10 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   }
 
   shared.save = () => {
-    return store.save(state, deltas)
+    return store.save(state, deltas).then((result) => {
+      shared.emit('saved')
+      return result
+    })
   }
 
   return shared

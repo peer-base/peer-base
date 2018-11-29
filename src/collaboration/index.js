@@ -77,6 +77,9 @@ class Collaboration extends EventEmitter {
     this.shared.on('state changed', (fromSelf) => {
       this.emit('state changed', fromSelf)
     })
+    this.shared.on('saved', (what) => {
+      this.emit('saved', what)
+    })
 
     this._membership = this._options.membership || new Membership(
       ipfs, globalConnectionManager, app, this, this.shared, this._clocks, this.replication, this._options)
