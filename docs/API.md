@@ -370,6 +370,16 @@ collaboration.shared.push('some element')
 
 Provides events about replication.
 
+#### `"replicating" (peerId, clock)`
+
+Emitted once our local changes are __beginning to be replicated__ to a remote replica.
+
+```js
+collaboration.replication.on('replicating', (peerId, clock) => {
+  console.log('local changes are being replicated to %s', peerId)
+})
+```
+
 #### `"replicated" (peerId, clock)`
 
 Emitted once our local changes are replicated to a remote replica.
@@ -380,6 +390,16 @@ collaboration.replication.on('replicated', (peerId, clock) => {
 })
 ```
 
+#### `"receiving" (peerId, clock)`
+
+Emitted once remote changes are being transmitted from a remote peer.
+
+```js
+collaboration.replication.on('receiving', (peerId, clock) => {
+  console.log('remote changes are being received from %s', peerId)
+})
+```
+
 #### `"received" (peerId, clock)`
 
 Emitted once remote changes are saved locally.
@@ -387,6 +407,16 @@ Emitted once remote changes are saved locally.
 ```js
 collaboration.replication.on('received', (peerId, clock) => {
   console.log('remote changes saved from %s', peerId)
+})
+```
+
+#### `"pinning" (peerId, clock)`
+
+Emitted once local changes are starting to be saved into a remote pinner.
+
+```js
+collaboration.replication.on('pinning', (peerId, clock) => {
+  console.log('local changes started being saved to pinner %s', peerId)
 })
 ```
 
