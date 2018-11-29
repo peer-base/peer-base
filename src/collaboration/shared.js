@@ -57,12 +57,15 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
 
   shared.start = async () => {
     await store.start()
-    const [loadedState, loadedDeltas] = await store.load()
+    const [loadedState, loadedDeltas, clock] = await store.load()
     if (loadedState) {
       state = loadedState
     }
     if (loadedDeltas) {
       deltas = loadedDeltas
+    }
+    if (clock) {
+      clocks.setFor(id, clock)
     }
   }
 
@@ -165,7 +168,9 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   }
 
   shared.save = () => {
-    return store.save(state, deltas).then((result) => {
+    console.log('save')
+    const clock = clocks.getFor(id)
+    return store.save(state, deltas, clock).then((result) => {
       shared.emit('saved')
       return result
     })

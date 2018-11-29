@@ -488,5 +488,13 @@ To install a pinner you can:
 
 ```sh
 $ npm install -g peer-star-app
-$ pinner "app name" ["swarm address"]
+$ PEER_STAR_APP_NAME=my-app-name pinner
+```
+
+Besides `PEER_STAR_APP_NAME`, the pinner also accepts the `PEER_STAR_SWARM_ADDRESS` environment variable containing the swarm address.
+
+Another example:
+
+```
+PEER_STAR_SWARM_ADDRESS=/dns4/127.0.0.1/tcp/9090/ws/p2p-websocket-star PEER_STAR_APP_NAME=peer-pad/2 pinner
 ```

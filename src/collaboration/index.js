@@ -110,9 +110,12 @@ class Collaboration extends EventEmitter {
 
     this._saveQueue = new Queue({ concurrency: 1 })
 
-    this._debouncedStateChangedHandler = debounce(() => {
-      this._saveQueue.add(() => this.save())
+    const debouncedStateChangedHandler = debounce(() => {
+      console.log('will save')
+      this._saveQueue.add(() => this._save())
     }, this._options.saveDebounceMS)
+
+    this.shared.on('state changed', debouncedStateChangedHandler)
   }
 
   async start () {
@@ -123,6 +126,14 @@ class Collaboration extends EventEmitter {
     this._stopped = false
     this._starting = this._start()
     await this._starting
+  }
+
+  fqn () {
+    if (this.isRoot()) {
+      return this.name
+    } else {
+      return this.parent.fqn() + '/' + this.name
+    }
   }
 
   isRoot () {
@@ -202,7 +213,7 @@ class Collaboration extends EventEmitter {
   }
 
   _save (force) {
-    if (!this._stopped || force) {
+    if ((!this._stopped) || force) {
       return this.shared.save()
     }
   }

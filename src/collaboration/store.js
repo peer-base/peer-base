@@ -19,8 +19,8 @@ module.exports = class Store {
     // ???
   }
 
-  async save (state, deltas) {
-    const toSave = await this._encode([state, deltas])
+  async save (state, deltas, clock) {
+    const toSave = await this._encode([state, deltas, clock])
     return this._saveRaw(toSave)
   }
 
@@ -97,6 +97,6 @@ function datastore (ipfs, collaboration) {
       })
     }
     // resolve(ds)
-    resolve(new NamespaceStore(ds, new Key(`peer-star-collab-${collaboration.name}`)))
+    resolve(new NamespaceStore(ds, new Key(`peer-star-collab-${collaboration.fqn()}`)))
   })
 }
