@@ -111,7 +111,6 @@ class Collaboration extends EventEmitter {
     this._saveQueue = new Queue({ concurrency: 1 })
 
     const debouncedStateChangedHandler = debounce(() => {
-      console.log('will save')
       this._saveQueue.add(() => this._save())
     }, this._options.saveDebounceMS)
 

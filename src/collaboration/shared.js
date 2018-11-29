@@ -168,7 +168,6 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   }
 
   shared.save = () => {
-    console.log('save')
     const clock = clocks.getFor(id)
     return store.save(state, deltas, clock).then((result) => {
       shared.emit('saved')
