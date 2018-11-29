@@ -56,6 +56,7 @@ module.exports = class PullProtocol {
         if (clock) {
           clock = this._clocks.setFor(remotePeerId, clock)
           if (states || delta) {
+            this._replication.receiving(remotePeerId, clock)
             if (waitingForClock &&
                 (vectorclock.isIdentical(waitingForClock, clock) ||
                  vectorclock.compare(waitingForClock, clock) < 0)) {

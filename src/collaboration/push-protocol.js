@@ -73,6 +73,7 @@ module.exports = class PushProtocol {
     const updateRemote = async (myClock) => {
       debug('%s: updateRemote %s', this._peerId(), remotePeerId)
       if (pushing) {
+        this._replication.sending(remotePeerId, myClock, isPinner)
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
         if (!isPinner) {
