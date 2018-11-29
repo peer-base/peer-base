@@ -8,6 +8,7 @@
     "test:node": "aegir test -t node",
     "test:browser": "aegir test -t browser",
     "test:webworker": "aegir test -t webworker",
+    "test:post-deploy": "node test/deployed-pinner-test.js",
     "lint": "aegir lint",
     "test:perf": "mocha test/performance/all.js",
     "pinner": "node bin/pinner",

@@ -64,6 +64,22 @@ $ npm install
 $ npm test
 ```
 
+## Testing a deployed pinner
+
+If you want to make sure your deployed pinner is working correctly, there is a
+utility-test that you can run with `npm run test:post-deploy` that will ensure
+your deployed pinner works correctly.
+
+First you need to export environment variables to ensure the assertion values
+are correct for your environment, then you can run the test. Example:
+
+```
+export PEER_STAR_APP_NAME=peer-pad/2
+export PEER_STAR_SWARM_ADDRESS=/dns4/localhost/tcp/9090/ws/p2p-websocket-star
+export PEER_STAR_PINNER_ID=Qmb9WDZUnUzEmZwkbMMGi4cV65F1sqcQa49dfZy9baRBJo
+npm run test:post-deploy
+```
+
 # Debug
 
 You can activate the debugging logs by manipulating the `DEBUG` environment variable. Example:
