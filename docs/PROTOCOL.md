@@ -103,7 +103,7 @@ When asked from the other side to upgrade to eager mode, it actively tries to ke
 
 ### Pull Protocol
 
-When the connection is created, it firts sends it's presentation, containing the local vector clock.
+When the connection is created, it first sends it's presentation, containing the local vector clock.
 
 After that, it may start receiving messages each one containing a vector clock and a delta or a state.
 
