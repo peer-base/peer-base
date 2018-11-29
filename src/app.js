@@ -162,7 +162,11 @@ class App extends EventEmitter {
     this._collaborations.clear()
     this._peerCountGuess.stop()
     if (stopIPFS) {
-      await this.ipfs.stop()
+      try {
+        await this.ipfs.stop()
+      } catch (err) {
+        console.error('error stopping IPFS:', err)
+      }
     }
   }
 }
