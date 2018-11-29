@@ -40,6 +40,7 @@ class Collaboration extends EventEmitter {
     this._globalConnectionManager = globalConnectionManager
     this.app = app
     this.name = name
+    this.parent = parentCollab
 
     this._stopped = true
     const selfId = this._ipfs._peerInfo.id.toB58String()
@@ -81,8 +82,13 @@ class Collaboration extends EventEmitter {
       this.emit('saved', what)
     })
 
-    this._membership = this._options.membership || new Membership(
-      ipfs, globalConnectionManager, app, this, this.shared, this._clocks, this.replication, this._options)
+    if (this._options.membership) {
+      this._membership = this._options.membership
+    } else {
+      this._membership = new Membership(
+        ipfs, globalConnectionManager, app, this, this.shared, this._clocks, this.replication, this._options)
+    }
+
     this._membership.on('changed', () => {
       debug('membership changed')
       this.emit('membership changed', this._membership.peers())
@@ -117,6 +123,10 @@ class Collaboration extends EventEmitter {
     this._stopped = false
     this._starting = this._start()
     await this._starting
+  }
+
+  isRoot () {
+    return this._isRoot
   }
 
   async sub (name, type) {
