@@ -18,6 +18,7 @@ describe('local-persistence', function () {
   })
 
   it('can create collaboration and populate it', async () => {
+    let saved = false
     const app = App(appName, { maxThrottleDelayMS: 1000 })
     await app.start()
     repo = app.app.ipfs._repo
@@ -33,8 +34,11 @@ describe('local-persistence', function () {
     sub.shared.add(2)
     expect(sub.shared.value()).to.deep.equal(new Set([1, 2]))
 
+    collaboration.once('saved', () => { saved = true })
+
     await collaboration.stop()
     await app.app.stop()
+    expect(saved).to.be.true()
   })
 
   it('can revive collaboration from ipfs repo', async () => {
