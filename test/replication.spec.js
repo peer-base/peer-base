@@ -5,10 +5,12 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
+const forEvent = require('p-event')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const Repo = require('./utils/repo')
 const waitForMembers = require('./utils/wait-for-members')
+const waitForValue = require('./utils/wait-for-value')
 
 describe('replication', function () {
   this.timeout(60000)
@@ -64,63 +66,18 @@ describe('replication', function () {
     await waitForMembers(collaborations.concat(pinnerPeerId))
   })
 
-  it('waits for replication events', (done) => {
-    let waitingForPeers = collaborations.length
+  it('waits for replication events', async () => {
+    collaborations[0].shared.add('a')
+    collaborations[0].shared.add('b')
+    await Promise.all([
+      forEvent(collaborations[0].replication, 'replicated'),
+      forEvent(collaborations[1].replication, 'received')])
 
-    const interval = setInterval(() => {
-      collaborations.forEach((collaboration, idx) => {
-        collaboration.shared.add(idx)
-      })
-    }, 6000)
-
-    collaborations.forEach((collaboration) => {
-      let peerDone = false
-      const events = {}
-
-      const maybeDone = () => {
-        if (!peerDone && events.received && events.replicated && events.pinned) {
-          peerDone = true
-          for (let [eventName, listener] of Object.entries(listeners)) {
-            collaboration.replication.removeListener(eventName, listener)
-          }
-          maybeAllDone()
-        }
-      }
-
-      const listenerFor = (eventName) => (peerId, clock) => {
-        if (peerDone) {
-          return
-        }
-        events[eventName] = (events[eventName] || 0) + 1
-        maybeDone()
-      }
-
-      const eventNames = ['received', 'replicated', 'pinned']
-
-      const listeners = eventNames.reduce((listeners, eventName) => {
-        const listener = listenerFor(eventName)
-        collaboration.replication.on(eventName, listener)
-        listeners[eventName] = listener
-        return listeners
-      }, {})
-    })
-
-    function maybeAllDone () {
-      if (--waitingForPeers === 0) {
-        clearInterval(interval)
-        done()
-      }
-    }
+    await Promise.all(collaborations.map((collaboration) => forEvent(collaboration.replication, 'pinned')))
   })
 
   it('converged between replicas', () => {
-    expectedValue = new Set()
-    collaborations.forEach((collaboration, idx) => {
-      expectedValue.add(idx)
-    })
-    collaborations.forEach((collaboration) => {
-      expect(collaboration.shared.value()).to.deep.equal(expectedValue)
-    })
+    waitForValue(collaborations, new Set('a', 'b'))
   })
 
   it('can stop pinner', () => {

@@ -79,6 +79,7 @@
     "ipfs-repo": "~0.25.1",
     "libp2p-websocket-star-rendezvous": "~0.2.3",
     "lodash.uniq": "^4.5.0",
+    "p-event": "^2.1.0",
     "pull-pair": "^1.1.0",
     "rimraf": "^2.6.2",
     "sinon": "^7.1.0",
