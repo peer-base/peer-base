@@ -1,10 +1,6 @@
 /* eslint-env mocha */
 'use strict'
 
-const chai = require('chai')
-chai.use(require('dirty-chai'))
-const expect = chai.expect
-
 const forEvent = require('p-event')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
@@ -24,7 +20,6 @@ describe('replication', function () {
   let pinner
   let pinnerPeerId
   let collaborations
-  let expectedValue
 
   before(() => {
     appName = App.createName()
