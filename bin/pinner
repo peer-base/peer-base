@@ -28,4 +28,42 @@ process.on('unhandledRejection', (err) => {
 })
 
 const pinner = createPinner(config.name, options)
-pinner.start()
+
+pinner.start().then(() => {
+  if (!process.browser) {
+    startHealthEndpointServer()
+  }
+})
+
+function startHealthEndpointServer () {
+  const url = require('url')
+
+  return new Promise((resolve, reject) => {
+    let started = false
+
+    const server = require('http').createServer(onRequest)
+    const port = process.env.PORT || 3000
+    server.once('error', () => {
+      if (!started) {
+        reject(err)
+      }
+    })
+    server.listen(port, () => {
+      console.log('Health endpoint listening on port', port)
+      started = true
+      resolve()
+    })
+  })
+
+  function onRequest(request, response) {
+    const { pathname } = url.parse(request.url)
+    switch (pathname) {
+      case '/health':
+        response.end('OK')
+        break
+      default:
+        response.writeHead(404)
+        response.end('Not found')
+    }
+  }
+}
