@@ -1,3 +1,5 @@
+'use strict'
+
 // This test is a standalone nodejs script that tests that a pinner functions
 // as we expect it to
 //
