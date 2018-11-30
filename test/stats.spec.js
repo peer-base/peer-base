@@ -39,7 +39,7 @@ describe('stats', function () {
 
   before(async () => {
     collaborations = await Promise.all(
-      swarm.map((peer) => peer.app.collaborate('test collaboration', 'rga')))
+      swarm.map((peer) => peer.app.collaborate('test stats collaboration', 'rga')))
     expect(collaborations.length).to.equal(peerCount)
     await waitForMembers(collaborations)
   })
