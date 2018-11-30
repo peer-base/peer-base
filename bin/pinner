@@ -63,7 +63,13 @@ function startHealthEndpointServer () {
   function onRequest (request, response) {
     switch (request.url) {
       case '/health':
-        response.end('OK')
+        pinner.ipfs.id().then((peer) => {
+          response.writeHead(200, { 'content-type': 'text/json' })
+          response.end(JSON.stringify({
+            app: config.name,
+            id: peer.id
+          }))
+        })
         break
       case '/prometheus':
         response.writeHead(200, { 'content-type': 'text/plain' })
