@@ -64,6 +64,7 @@
     "p-queue": "^3.0.0",
     "peer-id": "~0.12.0",
     "peer-info": "~0.14.1",
+    "prom-client": "^11.2.0",
     "pull-pushable": "^2.2.0",
     "pull-stream": "^3.6.8",
     "vectorclock": "0.0.0"
