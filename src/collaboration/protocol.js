@@ -41,6 +41,9 @@ class Protocol extends EventEmitter {
   handler (protocol, conn) {
     conn.getPeerInfo((err, peerInfo) => {
       if (err) {
+        if (expectedNetworkError(err)) {
+          return
+        }
         console.error('%s: error getting peer info:', this._peerId(), err.message)
         debug('%s: error getting peer info:', this._peerId(), this.err)
         return this.emit('error', err)
