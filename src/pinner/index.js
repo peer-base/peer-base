@@ -69,7 +69,11 @@ class AppPinner extends EventEmitter {
 
   setGlobalConnectionManager (globalConnectionManager) {
     this._globalConnectionManager = globalConnectionManager
-    this.emit('global connection manager')
+    this.emit('global connection manager', globalConnectionManager)
+  }
+
+  getGlobalConnectionManager () {
+    return this._globalConnectionManager
   }
 
   peerCountGuess () {
