@@ -4,10 +4,10 @@ module.exports = (pinner) => {
   const client = require('prom-client')
   const register = client.register
 
-  const collectDefaultMetrics = client.collectDefaultMetrics({ register })
+  client.collectDefaultMetrics()
   const metrics = {
     totalConnectedPeers: new client.Gauge({ name: 'peerstar_peers', help: 'total peers connected' }),
-    totalCollaborations: new client.Gauge({ name: 'peerstar_collaborations', help: 'total number of active collaborations' }),
+    totalCollaborations: new client.Gauge({ name: 'peerstar_collaborations', help: 'total number of active collaborations' })
   }
 
   pinner.on('collaboration started', () => {
