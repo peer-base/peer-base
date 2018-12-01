@@ -12,62 +12,88 @@ class Replication extends EventEmitter {
     super()
     this._selfId = selfId
     this._clocks = clocks
-    this._selfClock = {}
-    this._sentClocks = new Map()
+    this._clocksByPeer = new Map()
   }
 
   receiving (peerId, clock) {
     if (peerId === this._selfId) {
       return
     }
-    if (vectorclock.isIdentical(this._selfClock, clock)) {
+    const myClock = this._clocks.getFor(this._selfId)
+    if (vectorclock.doesSecondHaveFirst(clock, myClock)) {
       return
     }
-    const comparison = vectorclock.compare(this._selfClock, clock)
-    if (comparison < 0 || comparison === 0) {
-      this.emit('receiving', peerId, clock)
+    const peerClocks = this._ensurePeerClocks(peerId)
+    if (vectorclock.doesSecondHaveFirst(clock, peerClocks.receiving)) {
+      return
     }
+    peerClocks.receiving = vectorclock.merge(peerClocks.receiving, clock)
+    this.emit('receiving', peerId, peerClocks.receiving)
   }
 
   received (peerId, clock) {
     if (peerId === this._selfId) {
       return
     }
-    if (vectorclock.isIdentical(this._selfClock, clock)) {
+    const myClock = this._clocks.getFor(this._selfId)
+    if (vectorclock.doesSecondHaveFirst(clock, myClock)) {
       return
     }
-    const comparison = vectorclock.compare(this._selfClock, clock)
-    if (comparison < 0 || comparison === 0) {
-      this.emit('received', peerId, clock)
+    const peerClocks = this._ensurePeerClocks(peerId)
+    if (vectorclock.doesSecondHaveFirst(clock, peerClocks.received)) {
+      return
     }
-    this._selfClock = vectorclock.merge(this._selfClock, clock)
+    peerClocks.received = vectorclock.merge(peerClocks.received, clock)
+    this.emit('received', peerId, peerClocks.received)
   }
 
   sending (peerId, clock, isPinner) {
     if (peerId === this._selfId) {
       return
     }
+    const myClock = this._clocks.getFor(this._selfId)
+    if (!vectorclock.isIdentical(clock, myClock)) {
+      return
+    }
+    const peerClocks = this._ensurePeerClocks(peerId)
+    if (vectorclock.doesSecondHaveFirst(clock, peerClocks.sending)) {
+      return
+    }
+    peerClocks.sending = vectorclock.merge(peerClocks.sending, clock)
 
     let eventName = isPinner ? 'pinning' : 'replicating'
-    this.emit(eventName, peerId, clock)
+    this.emit(eventName, peerId, peerClocks.sending)
   }
 
   sent (peerId, clock, isPinner) {
     if (peerId === this._selfId) {
       return
     }
-
-    const latestClock = this._sentClocks.get(peerId) || {}
-    if (vectorclock.isIdentical(latestClock, clock)) {
+    const myClock = this._clocks.getFor(this._selfId)
+    if (!vectorclock.isIdentical(clock, myClock)) {
       return
     }
-
-    const selfClock = this._clocks.getFor(this._selfId)
-
-    if (vectorclock.isIdentical(selfClock, clock) || (vectorclock.compare(selfClock, clock) < 0)) {
-      let eventName = isPinner ? 'pinned' : 'replicated'
-      this.emit(eventName, peerId, clock)
+    const peerClocks = this._ensurePeerClocks(peerId)
+    if (vectorclock.doesSecondHaveFirst(clock, peerClocks.sent)) {
+      return
     }
-    this._sentClocks.set(peerId, clock)
+    peerClocks.sent = vectorclock.merge(peerClocks.sent, clock)
+
+    let eventName = isPinner ? 'pinned' : 'replicated'
+    this.emit(eventName, peerId, peerClocks.sent)
+  }
+
+  _ensurePeerClocks (peer) {
+    let peerClocks = this._clocksByPeer.get(peer)
+    if (!peerClocks) {
+      peerClocks = {
+        sending: {},
+        sent: {},
+        receiving: {},
+        received: {}
+      }
+      this._clocksByPeer.set(peer, peerClocks)
+    }
+    return peerClocks
   }
 }
