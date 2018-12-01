@@ -40,7 +40,7 @@ module.exports = class PullProtocol {
       debug('%s got new data from %s :', this._peerId(), remotePeerId, data)
 
       queue.add(async () => {
-        const [deltaRecord, newState] = data
+        const [deltaRecord, newStates] = data
         let clock
         let states
         let delta
@@ -48,9 +48,9 @@ module.exports = class PullProtocol {
           const [previousClock, authorClock] = deltaRecord
           delta = deltaRecord[2]
           clock = vectorclock.sumAll(previousClock, authorClock)
-        } else if (newState) {
-          clock = newState[0]
-          states = newState[1]
+        } else if (newStates) {
+          clock = newStates[0]
+          states = newStates[1]
         }
 
         if (clock) {
@@ -71,8 +71,10 @@ module.exports = class PullProtocol {
             let saved
             if (states) {
               debug('%s: saving states', this._peerId(), states)
-              throw new Error('IMPLEMENT!')
-              // saved = await this._shared.apply(clock, states)
+              let saved = false
+              for (let collabState of states.values()) {
+                saved = saved || this._shared.apply(await this._decryptAndVerifyDelta(collabState), false)
+              }
             } else if (delta) {
               debug('%s: saving delta', this._peerId(), deltaRecord)
               saved = this._shared.apply(await this._decryptAndVerifyDelta(deltaRecord), true)

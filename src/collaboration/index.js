@@ -196,6 +196,15 @@ class Collaboration extends EventEmitter {
     return this._membership.vectorClock(peerId)
   }
 
+  collaborationStatesAsDeltas () {
+    const states = new Map()
+    for (let [key, collab] of [[null, this], ...this._subs]) {
+      states.set(key, collab.shared.stateAsDelta())
+    }
+
+    return states
+  }
+
   async _start () {
     if (this._isRoot) {
       await this._membership.start()

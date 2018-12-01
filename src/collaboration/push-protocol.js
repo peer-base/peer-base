@@ -17,12 +17,13 @@ const expectedNetworkError = require('../common/expected-network-error')
 // const expect = chai.expect
 
 module.exports = class PushProtocol {
-  constructor (ipfs, shared, clocks, keys, replication, options) {
+  constructor (ipfs, shared, clocks, keys, replication, collaboration, options) {
     this._ipfs = ipfs
     this._shared = shared
     this._clocks = clocks
     this._keys = keys
     this._replication = replication
+    this._collaboration = collaboration
     this._options = options
   }
 
@@ -64,10 +65,14 @@ module.exports = class PushProtocol {
     }
 
     const pushState = async () => {
-      const state = this._shared.stateAsDelta()
-      const [clock, authorClock] = state
-      output.push(encode([await this._signAndEncryptDelta(state)]))
-      return vectorclock.sumAll(clock, authorClock)
+      const states = this._collaboration.collaborationStatesAsDeltas()
+      const encryptedStates = new Map()
+      const clock = this._clocks.getFor(this._peerId())
+      for (let [key, state] of states) {
+        encryptedStates.set(key, await this._signAndEncryptDelta(state))
+      }
+      output.push(encode([null, [clock, encryptedStates]]))
+      return clock
     }
 
     const updateRemote = async (myClock) => {
