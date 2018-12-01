@@ -322,10 +322,10 @@ collaboration.on('membership changed', (peers) => {
 
 #### `"state changed"`
 
-Emitted every time the state changes. Has one argument, a boolean, saying `true` if and only if the change came from this peer. This is emitted immediately after a change is applied on the CRDT state.
+Emitted every time the state changes. This is emitted immediately after a change is applied on the CRDT state.
 
 ```js
-collaboration.on('state changed', (fromSelf) => {
+collaboration.on('state changed', () => {
   console.log('state changed. New collaboration value is: %j', collaboration.shared.value())
 })
 ```
