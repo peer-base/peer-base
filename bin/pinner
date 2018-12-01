@@ -28,4 +28,54 @@ process.on('unhandledRejection', (err) => {
 })
 
 const pinner = createPinner(config.name, options)
-pinner.start()
+
+pinner.start().then(() => {
+  startHealthEndpointServer().catch((err) => {
+    console.error('error starting health endpoint:', err)
+    process.exit(1)
+  })
+})
+
+function startHealthEndpointServer () {
+  const metricsRegistry = require('../src/pinner/pinner-metrics')(pinner)
+
+  return new Promise((resolve, reject) => {
+    let started = false
+
+    const server = require('http').createServer(onRequest)
+    const port = process.env.PORT || 3001
+    const host = process.env.HOST || '0.0.0.0'
+
+    server.once('error', (err) => {
+      if (!started) {
+        reject(err)
+      }
+    })
+    server.listen({ port, host }, () => {
+      console.log('Health endpoint listening on port', port)
+      started = true
+      resolve()
+    })
+  })
+
+  function onRequest (request, response) {
+    switch (request.url) {
+      case '/health':
+        pinner.ipfs.id().then((peer) => {
+          response.writeHead(200, { 'content-type': 'text/json' })
+          response.end(JSON.stringify({
+            app: config.name,
+            id: peer.id
+          }))
+        })
+        break
+      case '/prometheus':
+        response.writeHead(200, { 'content-type': 'text/plain' })
+        response.end(metricsRegistry.metrics())
+        break
+      default:
+        response.writeHead(404)
+        response.end('Not found')
+    }
+  }
+}

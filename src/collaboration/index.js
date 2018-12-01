@@ -40,6 +40,7 @@ class Collaboration extends EventEmitter {
     this._globalConnectionManager = globalConnectionManager
     this.app = app
     this.name = name
+    this.parent = parentCollab
 
     this._stopped = true
     const selfId = this._ipfs._peerInfo.id.toB58String()
@@ -81,8 +82,13 @@ class Collaboration extends EventEmitter {
       this.emit('saved', what)
     })
 
-    this._membership = this._options.membership || new Membership(
-      ipfs, globalConnectionManager, app, this, this.shared, this._clocks, this.replication, this._options)
+    if (this._options.membership) {
+      this._membership = this._options.membership
+    } else {
+      this._membership = new Membership(
+        ipfs, globalConnectionManager, app, this, this.shared, this._clocks, this.replication, this._options)
+    }
+
     this._membership.on('changed', () => {
       debug('membership changed')
       this.emit('membership changed', this._membership.peers())
@@ -104,9 +110,11 @@ class Collaboration extends EventEmitter {
 
     this._saveQueue = new Queue({ concurrency: 1 })
 
-    this._debouncedStateChangedHandler = debounce(() => {
-      this._saveQueue.add(() => this.save())
+    const debouncedStateChangedHandler = debounce(() => {
+      this._saveQueue.add(() => this._save())
     }, this._options.saveDebounceMS)
+
+    this.shared.on('state changed', debouncedStateChangedHandler)
   }
 
   async start () {
@@ -117,6 +125,18 @@ class Collaboration extends EventEmitter {
     this._stopped = false
     this._starting = this._start()
     await this._starting
+  }
+
+  fqn () {
+    if (this.isRoot()) {
+      return this.name
+    } else {
+      return this.parent.fqn() + '/' + this.name
+    }
+  }
+
+  isRoot () {
+    return this._isRoot
   }
 
   async sub (name, type) {
@@ -192,7 +212,7 @@ class Collaboration extends EventEmitter {
   }
 
   _save (force) {
-    if (!this._stopped || force) {
+    if ((!this._stopped) || force) {
       return this.shared.save()
     }
   }
