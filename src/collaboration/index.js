@@ -75,12 +75,14 @@ class Collaboration extends EventEmitter {
     this.shared.on('clock changed', (clock) => {
       this._clocks.setFor(selfId, clock)
     })
-    this.shared.on('state changed', (fromSelf) => {
-      this.emit('state changed', fromSelf)
-    })
-    this.shared.on('saved', (what) => {
+
+    this.shared.on('state changed', debounce(() => {
+      this.emit('state changed')
+    }, 0))
+
+    this.shared.on('saved', debounce((what) => {
       this.emit('saved', what)
-    })
+    }, 0))
 
     if (this._options.membership) {
       this._membership = this._options.membership
