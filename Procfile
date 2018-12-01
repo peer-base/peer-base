@@ -1,1 +1,1 @@
-worker: npm run pinner
+web: npm run pinner
