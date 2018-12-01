@@ -7,8 +7,9 @@ const EventEmitter = require('events')
 const PeerSet = require('../common/peer-set')
 const expectedNetworkError = require('../common/expected-network-error')
 
-module.exports = class GlobalConnectionManager {
+module.exports = class GlobalConnectionManager extends EventEmitter {
   constructor (ipfs, appTransport) {
+    super()
     this._ipfs = ipfs
     this._appTransport = appTransport
 
@@ -52,11 +53,14 @@ module.exports = class GlobalConnectionManager {
           return reject(new Error('could not connect'))
         }
 
+        this.emit('connected', peerInfo)
+
         const retConn = Object.assign(new EventEmitter(), {
           sink: conn.sink,
           source: pull(
             conn.source,
             pull.through(null, (err) => {
+              this.emit('disconnected', peerInfo)
               if (err && !expectedNetworkError(err)) {
                 console.error('connection to %s ended with error', peerId, err.message)
                 debug('connection to %s ended with error', peerId, err)
