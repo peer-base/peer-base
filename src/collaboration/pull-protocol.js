@@ -1,4 +1,4 @@
-/* eslint no-console: "off", no-warning-comments: "off" */
+/* eslint no-console: "off", no-warning-comments: "off", max-depth: "off" */
 'use strict'
 
 const debug = require('debug')('peer-star:collaboration:pull-protocol')

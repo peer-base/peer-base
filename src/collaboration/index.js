@@ -94,7 +94,6 @@ class Collaboration extends EventEmitter {
       this.emit('saved', what)
     }, 0))
 
-
     // membership
 
     if (this._options.membership) {
