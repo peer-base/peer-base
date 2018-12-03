@@ -76,13 +76,25 @@ class Collaboration extends EventEmitter {
       this._clocks.setFor(selfId, clock)
     })
 
-    this.shared.on('state changed', debounce(() => {
-      this.emit('state changed')
+    // state changed
+
+    let changeFromSelf = false
+
+    this.shared.on('state changed', (fromSelf) => {
+      changeFromSelf = changeFromSelf || fromSelf
+    })
+
+    this.shared.on('state changed', debounce((fromSelf) => {
+      fromSelf = fromSelf || changeFromSelf
+      changeFromSelf = false
+      this.emit('state changed', fromSelf)
     }, 0))
 
     this.shared.on('saved', debounce((what) => {
       this.emit('saved', what)
     }, 0))
+
+    // membership
 
     if (this._options.membership) {
       this._membership = this._options.membership
@@ -98,6 +110,7 @@ class Collaboration extends EventEmitter {
 
     this._subs = new Map()
 
+    // stats
     this.stats = new Stats(
       ipfs,
       this,
@@ -110,6 +123,7 @@ class Collaboration extends EventEmitter {
       console.error('error in stats:', err)
     })
 
+    // Save
     this._saveQueue = new Queue({ concurrency: 1 })
 
     const debouncedStateChangedHandler = debounce(() => {
@@ -167,6 +181,10 @@ class Collaboration extends EventEmitter {
       await this._starting
       await collab.start()
     }
+
+    collab.on('state changed', (fromSelf) => {
+      this.emit('state changed', fromSelf)
+    })
 
     return collab
   }

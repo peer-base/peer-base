@@ -37,7 +37,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       shared.emit('clock changed', newClock)
     } else {
       collaboration.parent.shared.pushDeltaForSub(name, crdtType.typeName, delta)
-      apply(delta)
+      apply(delta, true)
     }
   }
 
@@ -100,12 +100,12 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     shared.emit('clock changed', newClock)
   }
 
-  shared.apply = (deltaRecord, isPartial) => {
+  shared.apply = (deltaRecord, isPartial, force) => {
     const clock = clocks.getFor(id)
-    if (!vectorclock.isDeltaInteresting(deltaRecord, clock)) {
+    const [previousClock, authorClock, [forName, typeName, delta]] = deltaRecord
+    if ((forName === name) && !force && !vectorclock.isDeltaInteresting(deltaRecord, clock)) {
       return false
     }
-    const [previousClock, authorClock, [forName, typeName, delta]] = deltaRecord
     if (collaboration.isRoot()) {
       pushDelta(deltaRecord)
     }
@@ -117,7 +117,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     } else if (typeName) {
       return collaboration.sub(forName, typeName)
         .then((subCollaboration) => {
-          return subCollaboration.shared.apply(deltaRecord, isPartial)
+          return subCollaboration.shared.apply(deltaRecord, isPartial, force)
         })
     }
   }
