@@ -34,20 +34,6 @@ exports.increment = (clock, author) => {
   return Object.assign({}, clock)
 }
 
-exports.delta = (c1, c2) => {
-  const deltas = {}
-
-  const keys = new Set([...Object.keys(c1), ...Object.keys[c2]])
-
-  for (let k of keys) {
-    if (c1[k] !== c2[k]) {
-      deltas[k] = c2[k]
-    }
-  }
-
-  return deltas
-}
-
 exports.isDeltaInteresting = (delta, currentClock) => {
   const [previousClock, authorClock] = delta
 
@@ -72,27 +58,6 @@ exports.isDeltaInteresting = (delta, currentClock) => {
   return false
 }
 
-exports.isFirstDirectChildOfSecond = (first, second) => {
-  let diff = 0
-  for (let key of Object.keys(first)) {
-    diff += first[key] - (second[key] || 0)
-    if (diff > 1) {
-      return false
-    }
-  }
-
-  return diff === 1
-}
-
-exports.isInFirstEqualToSecond = (first, second) => {
-  for (let key of Object.keys(first)) {
-    if (first[key] !== second[key]) {
-      return false
-    }
-  }
-  return true
-}
-
 exports.doesSecondHaveFirst = (first, second) => {
   const keys = new Set([...Object.keys(first), ...Object.keys(second)])
   for (let key of keys) {
@@ -101,22 +66,6 @@ exports.doesSecondHaveFirst = (first, second) => {
     }
   }
   return true
-}
-
-exports.isFirstImmediateToSecond = (first, second) => {
-  let diff = 0
-  for (let key of Object.keys(first)) {
-    const firstValue = first[key]
-    const secondValue = second[key] || 0
-    if (secondValue < firstValue) {
-      diff += firstValue - secondValue
-      if (diff > 1) {
-        return false
-      }
-    }
-  }
-
-  return diff === 1
 }
 
 exports.sumAll = (clock, authorClock) => {
