@@ -79,7 +79,7 @@ class Network extends EventEmitter {
       peerInfo,
       b58: peerInfo.id.toB58String(),
       diasSet: DiasSet(this.options.peerIdByteCount, peerInfo, this.options.preambleByteCount),
-      membership: new Membership(ipfsMock, null, appMock, collaborationMock, null, null, Object.assign({}, this.options, {
+      membership: new Membership(ipfsMock, null, appMock, collaborationMock, null, null, null, Object.assign({}, this.options, {
         connectionManager: connectionManagerMock
       })),
       getMemberPeers() {
