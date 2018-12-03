@@ -7,7 +7,7 @@ const DiasSet = require('../common/dias-peer-set')
 const PeerSet = require('../common/peer-set')
 const ConnectionManager = require('./connection-manager')
 const Gossip = require('./gossip')
-const Discovery = require('./discovery')
+const Discovery = require('../discovery/discovery')
 const GlobalConnectionManager = require('./global-connection-manager')
 
 const defaultOptions = {
@@ -36,12 +36,11 @@ class AppTransport extends EventEmitter {
     this._onPeerConnect = this._onPeerConnect.bind(this)
 
     this.discovery = new Discovery(
+      app,
       this._appTopic(),
       this._ipfs,
       this._transport.discovery,
       this._ring,
-      this._inboundConnections,
-      this._outboundConnections,
       this._options)
 
     this.discovery.on('start', () => this._maybeStart())
