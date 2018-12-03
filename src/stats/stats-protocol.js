@@ -25,7 +25,7 @@ class StatsProtocol extends EventEmitter {
       if (err) {
         console.error('%s: error getting peer info:', this._peerId(), err.message)
         debug('%s: error getting peer info:', this._peerId(), this.err)
-        return this.emit('error', err)
+        return
       }
 
       this.emit('puller count changed', ++this._pullerCount)
