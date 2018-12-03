@@ -80,6 +80,11 @@ export PEER_STAR_PINNER_ID=Qmb9WDZUnUzEmZwkbMMGi4cV65F1sqcQa49dfZy9baRBJo
 npm run test:post-deploy
 ```
 
+# Infrastructure
+
+The infrastructure for peer-star and related applications is managed via
+https://github.com/ipfs-shipyard/peer-star-infra/
+
 # Debug
 
 You can activate the debugging logs by manipulating the `DEBUG` environment variable. Example:
