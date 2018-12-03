@@ -128,8 +128,8 @@ module.exports = class PullProtocol {
     const onEnd = (err) => {
       if (!ended) {
         if (err && expectedNetworkError(err)) {
-          err = null
           console.warn('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.message)
+          err = null
         }
         ended = true
         this._shared.removeListener('clock changed', onNewLocalClock)
