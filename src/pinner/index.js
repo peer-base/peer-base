@@ -144,7 +144,7 @@ class AppPinner extends EventEmitter {
       if (activityTimeout) {
         clearTimeout(activityTimeout)
       }
-      setTimeout(onInnactivityTimeout, this._options.collaborationInnactivityTimeoutMS)
+      activityTimeout = setTimeout(onInnactivityTimeout, this._options.collaborationInnactivityTimeoutMS)
     }
 
     const onStateChanged = () => {
