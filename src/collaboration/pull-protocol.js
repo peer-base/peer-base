@@ -71,13 +71,22 @@ module.exports = class PullProtocol {
             let saved
             if (states) {
               debug('%s: saving states', this._peerId(), states)
-              let saved = false
-              for (let collabState of states.values()) {
-                saved = saved || this._shared.apply(await this._decryptAndVerifyDelta(collabState), false)
+              const rootState = states.get(null)
+              if (!rootState) {
+                throw new Error('expected root state')
+              }
+              const saved = await this._shared.apply(await this._decryptAndVerifyDelta(rootState), false)
+              if (saved) {
+                for (let [collabName, collabState] of states) {
+                  if (collabName === null) {
+                    continue // already processed root state
+                  }
+                  await this._shared.apply(await this._decryptAndVerifyDelta(collabState), false, true)
+                }
               }
             } else if (delta) {
               debug('%s: saving delta', this._peerId(), deltaRecord)
-              saved = this._shared.apply(await this._decryptAndVerifyDelta(deltaRecord), true)
+              saved = await this._shared.apply(await this._decryptAndVerifyDelta(deltaRecord), true)
             }
             if (!saved) {
               debug('%s: did not save', this._peerId())

@@ -81,7 +81,7 @@ module.exports = class PushProtocol {
         this._replication.sending(remotePeerId, myClock, isPinner)
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
-        if (!isPinner) {
+        if (!isPinner && !this._options.replicateOnly) {
           remoteClock = await pushDeltas(remoteClock)
           // remoteClock = await pushDeltaBatch(remoteClock)
         }
