@@ -26,16 +26,17 @@ describe('app-transport', function () {
     app = {
       name: 'peer-star test app name',
       setGossip: fake(),
-      setGlobalConnectionManager: fake()
+      setGlobalConnectionManager: fake(),
+      peerCountGuess: () => 1
     }
 
     ipfs = {
       _libp2pNode: {
         dial: fake(),
         hangUp: (p, callback) => { setImmediate(() => callback()) },
-        pubsub: {
-        },
-        on: fake()
+        on: fake(),
+        isStarted: () => true,
+        _floodSub: new EventEmitter()
       },
       pubsub: {
         peers: (topic, cb) => setImmediate(() => cb(null, [])),
@@ -95,15 +96,17 @@ describe('app-transport', function () {
         expect(dialCalled).to.be.true()
         appTransport.discovery.removeListener('peer', onPeerDiscovered)
         done()
-      }, 1000)
+      }, 100)
     })
 
     it('uninteresting peer is filtered', function (done) {
-      this.timeout(6000)
       let dialCalled = false
       const dial = (peerInfo, callback) => {
         dialCalled = true
-        setImmediate(callback)
+        setTimeout(() => {
+          const topics = new Set(['some topic', 'other topic'])
+          ipfs._libp2pNode._floodSub.emit('floodsub:subscription-change', peerInfo, topics)
+        }, 100)
       }
       ipfs._libp2pNode.dial = dial
 
@@ -114,20 +117,16 @@ describe('app-transport', function () {
         expect(dialCalled).to.be.true()
         appTransport.discovery.removeListener('peer', onPeerDiscovered)
         done()
-      }, 5000)
+      }, 100)
     })
 
     it('interesting peer is discovered', function (done) {
-      this.timeout(6000)
       const dial = (peerInfo, callback) => {
-        const peers = []
-        ipfs.pubsub.peers = (topic, callback) => {
-          callback(null, peers)
-        }
         setImmediate(() => {
           setTimeout(() => {
-            peers.push('8SxqM')
-          }, 2000)
+            const topics = new Set(['some topic', app.name])
+            ipfs._libp2pNode._floodSub.emit('floodsub:subscription-change', peerInfo, topics)
+          }, 100)
           callback()
         })
       }
