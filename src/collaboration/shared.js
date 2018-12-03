@@ -37,7 +37,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       shared.emit('clock changed', newClock)
     } else {
       collaboration.parent.shared.pushDeltaForSub(name, crdtType.typeName, delta)
-      apply(delta)
+      apply(delta, true)
     }
   }
 
