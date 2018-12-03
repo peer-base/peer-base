@@ -22,7 +22,13 @@ addons:
       - g++-4.8
 
 deploy:
-  provider: heroku
-  app: peer-pad-pinner
-  api_key:
-    secure: iWcuNFe6WMs3cTHbeOxhCX4Te+sL+R/vPrhWcAnhwVvbq2OTwmq2pxQ+CL8Py8N494F7HNyl/muWePUJvfFsvIlNkMx13Jl24FMyf2zn/sQ6m8H7qjaz9McGSTq7znf80vX9YAZPexnAV9SdtIpzJc37I3WzJwkkNY2EQKt4QwCTALIagcec5pcA6kYvSJsbxSPaH0oPM69gVDDRJwTRE9+aryj+stLqCVPZ8nN6ze9dvSbGmVNcbAf7sTrrlWOgbazrzpjAZxfTLmkCNb5Dlqx+pkl4uQ4h4EpP0XtI2XKQwJuovhf5P0fok/WKV1Um0rYfbsLisgPI1UmUPq8UUvSUVz07VtsNkKcBkamQC7VtX+jrPct3n0tkXV//YcF3EkCQ/lHAlDhR7lkQWqm8bMX/07EQyAfMhUDOG2coEvKKW++W2ZzlMQv7nFHg4LWoO0Uw25Gsco4CxuXLdqtFAuuQM67eKhIMmBWKwdGEe19tWi689ugmcUkt+gGriMuTiZdeK6tYheWk5m4o49vxscc8RrbdMUJNCWWvFTYJMktfEAJ8mpvyVI80p1pN+GIuEqqaTAi5vJjcPkocv49Y0gKECSZgzQPXk5bgBwEk0wvFjONORzrNnyH6EfVzqCHlQc7l5ctxOy0X3l9AdcBcCj2qsG1rIYXVuPd/DGvaowg=
+  - provider: heroku
+    app: peer-pad-pinner
+    after_deploy: PEER_STAR_SWARM_ADDRESS=/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star PEER_STAR_APP_NAME=peer-pad/2 npm run post-deploy
+    api_key:
+      secure: iWcuNFe6WMs3cTHbeOxhCX4Te+sL+R/vPrhWcAnhwVvbq2OTwmq2pxQ+CL8Py8N494F7HNyl/muWePUJvfFsvIlNkMx13Jl24FMyf2zn/sQ6m8H7qjaz9McGSTq7znf80vX9YAZPexnAV9SdtIpzJc37I3WzJwkkNY2EQKt4QwCTALIagcec5pcA6kYvSJsbxSPaH0oPM69gVDDRJwTRE9+aryj+stLqCVPZ8nN6ze9dvSbGmVNcbAf7sTrrlWOgbazrzpjAZxfTLmkCNb5Dlqx+pkl4uQ4h4EpP0XtI2XKQwJuovhf5P0fok/WKV1Um0rYfbsLisgPI1UmUPq8UUvSUVz07VtsNkKcBkamQC7VtX+jrPct3n0tkXV//YcF3EkCQ/lHAlDhR7lkQWqm8bMX/07EQyAfMhUDOG2coEvKKW++W2ZzlMQv7nFHg4LWoO0Uw25Gsco4CxuXLdqtFAuuQM67eKhIMmBWKwdGEe19tWi689ugmcUkt+gGriMuTiZdeK6tYheWk5m4o49vxscc8RrbdMUJNCWWvFTYJMktfEAJ8mpvyVI80p1pN+GIuEqqaTAi5vJjcPkocv49Y0gKECSZgzQPXk5bgBwEk0wvFjONORzrNnyH6EfVzqCHlQc7l5ctxOy0X3l9AdcBcCj2qsG1rIYXVuPd/DGvaowg=
+      #  - provider: heroku
+      #    app: discussify-pinner
+      #    after_deploy: npm run post-deploy
+      #    api_key:
+      #      secure: iWcuNFe6WMs3cTHbeOxhCX4Te+sL+R/vPrhWcAnhwVvbq2OTwmq2pxQ+CL8Py8N494F7HNyl/muWePUJvfFsvIlNkMx13Jl24FMyf2zn/sQ6m8H7qjaz9McGSTq7znf80vX9YAZPexnAV9SdtIpzJc37I3WzJwkkNY2EQKt4QwCTALIagcec5pcA6kYvSJsbxSPaH0oPM69gVDDRJwTRE9+aryj+stLqCVPZ8nN6ze9dvSbGmVNcbAf7sTrrlWOgbazrzpjAZxfTLmkCNb5Dlqx+pkl4uQ4h4EpP0XtI2XKQwJuovhf5P0fok/WKV1Um0rYfbsLisgPI1UmUPq8UUvSUVz07VtsNkKcBkamQC7VtX+jrPct3n0tkXV//YcF3EkCQ/lHAlDhR7lkQWqm8bMX/07EQyAfMhUDOG2coEvKKW++W2ZzlMQv7nFHg4LWoO0Uw25Gsco4CxuXLdqtFAuuQM67eKhIMmBWKwdGEe19tWi689ugmcUkt+gGriMuTiZdeK6tYheWk5m4o49vxscc8RrbdMUJNCWWvFTYJMktfEAJ8mpvyVI80p1pN+GIuEqqaTAi5vJjcPkocv49Y0gKECSZgzQPXk5bgBwEk0wvFjONORzrNnyH6EfVzqCHlQc7l5ctxOy0X3l9AdcBcCj2qsG1rIYXVuPd/DGvaowg=
