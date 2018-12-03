@@ -28,10 +28,10 @@ describe('dial throttle', () => {
     const throttle = new DialThrottle(app, opts)
 
     // Test for peer counts up to the ramp maximum
-    for (peerCount = 0; peerCount <= opts.maxRampPeers; peerCount++) {
+    for (peerCount = 0; peerCount <= opts.maxThrottleRampPeers; peerCount++) {
       // Test 10 times (the value returned is random but should always be below max)
-      const fraction = peerCount / opts.maxRampPeers
-      const max = opts.maxDelayMS * fraction * fraction
+      const fraction = peerCount / opts.maxThrottleRampPeers
+      const max = opts.maxThrottleDelayMS * fraction * fraction
       // console.log('max', max)
       for (let i = 0; i < 10; i++) {
         const delay = throttle.getDialDelay()
@@ -42,14 +42,14 @@ describe('dial throttle', () => {
     }
 
     // Test for peer counts above the ramp maximum. Note that the returned
-    // value should never be above maxDelayMS
-    for (peerCount = opts.maxRampPeers; peerCount <= opts.maxRampPeers * 2; peerCount++) {
+    // value should never be above maxThrottleDelayMS
+    for (peerCount = opts.maxThrottleRampPeers; peerCount <= opts.maxThrottleRampPeers * 2; peerCount++) {
       // Test 10 times (the value returned is random but should always be below max)
-      // console.log('max', opts.maxDelayMS)
+      // console.log('max', opts.maxThrottleDelayMS)
       for (let i = 0; i < 10; i++) {
         const delay = throttle.getDialDelay()
         // console.log(delay)
-        expect(delay).to.be.lte(opts.maxDelayMS)
+        expect(delay).to.be.lte(opts.maxThrottleDelayMS)
       }
       // console.log('\n')
     }
