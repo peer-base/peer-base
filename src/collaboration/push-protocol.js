@@ -186,9 +186,9 @@ module.exports = class PushProtocol {
     const onEnd = (err) => {
       this._clocks.takeDown(remotePeerId)
       if (!ended) {
-        if (err && !expectedNetworkError(err)) {
-          console.error(err.message)
-          debug(err)
+        if (err && expectedNetworkError(err)) {
+          console.warn('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.message)
+          err = null
         }
         ended = true
         this._shared.removeListener('clock changed', onClockChanged)

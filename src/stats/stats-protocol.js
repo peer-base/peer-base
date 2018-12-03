@@ -6,7 +6,6 @@ const pull = require('pull-stream')
 const EventEmitter = require('events')
 const PushProtocol = require('./push-protocol')
 const PullProtocol = require('./pull-protocol')
-const expectedNetworkError = require('../common/expected-network-error')
 
 class StatsProtocol extends EventEmitter {
   constructor (ipfs, collaboration, stats) {
@@ -33,11 +32,7 @@ class StatsProtocol extends EventEmitter {
       pull(
         conn,
         this._pushProtocol.forPeer(peerInfo),
-        passthrough((err) => {
-          if (err && !expectedNetworkError(err)) {
-            console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
-            debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
-          }
+        passthrough(() => {
           this.emit('puller count changed', --this._pullerCount)
         }),
         conn
@@ -49,12 +44,6 @@ class StatsProtocol extends EventEmitter {
     pull(
       conn,
       this._pullProtocol.forPeer(peerInfo),
-      passthrough((err) => {
-        if (err && !expectedNetworkError(err)) {
-          console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
-          debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
-        }
-      }),
       conn
     )
   }

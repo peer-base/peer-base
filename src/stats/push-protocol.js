@@ -59,8 +59,9 @@ class StatsPushProtocol {
 
     const onEnd = (err) => {
       if (!ended) {
-        if (err && !expectedNetworkError(err)) {
+        if (err && expectedNetworkError(err)) {
           debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)
+          err = null
         }
         this._stats.removeListener(this._peerId(), onSelfStats)
         this._stats.removeListener('peer updated', onPeerStats)

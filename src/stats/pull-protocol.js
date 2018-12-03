@@ -53,8 +53,9 @@ class StatsPullProtocol {
 
     const onEnd = (err) => {
       if (!ended) {
-        if (err && !expectedNetworkError(err)) {
+        if (err && expectedNetworkError(err)) {
           debug('%s: conn to %s ended with error', this._peerId(), remotePeerId, err)
+          err = null
         }
         ended = true
         output.end(err)
