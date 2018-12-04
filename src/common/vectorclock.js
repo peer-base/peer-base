@@ -29,9 +29,9 @@ exports.merge = (a, b) => {
 
 exports.increment = (clock, author) => {
   if (author) {
-    return vectorclock.increment(Object.assign({}, clock), author)
+    return vectorclock.increment(clock || {}, author)
   }
-  return Object.assign({}, clock)
+  return clock || {}
 }
 
 exports.isDeltaInteresting = (delta, currentClock) => {

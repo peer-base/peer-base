@@ -60,6 +60,8 @@ const start = async () => {
       if (!clock.hasOwnProperty(id)) {
         return
       }
+      // TODO: the clock now uses a shorter id (not the peer id) so this
+      // code would need to be fixed if it's needed
       const selfClock = clock[id]
       if (selfClock !== pushed) {
         // console.error('%s: self clock should be %d and is ', id, pushed, selfClock)

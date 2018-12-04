@@ -67,6 +67,7 @@
     "prom-client": "^11.2.0",
     "pull-pushable": "^2.2.0",
     "pull-stream": "^3.6.8",
+    "radix-64": "^1.0.4",
     "vectorclock": "0.0.0"
   },
   "devDependencies": {

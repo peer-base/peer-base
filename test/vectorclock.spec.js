@@ -57,6 +57,10 @@ describe('vectorclock', () => {
       expect(increment({ a: 1 })).to.eql({ a: 1 })
     })
 
+    it('empty with author', () => {
+      expect(increment({}, 'a')).to.eql({ a: 1 })
+    })
+
     it('with author not in clock', () => {
       expect(increment({ b: 3 }, 'a')).to.eql({ a: 1, b: 3 })
     })

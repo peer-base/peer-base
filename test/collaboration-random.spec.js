@@ -10,6 +10,8 @@ const PeerStar = require('../')
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
 const debounceEvent = require('./utils/debounce-event')
+const b58Decode = require('bs58').decode
+const radix64 = require('radix-64')()
 
 describe('collaboration with random changes', function () {
   if (process.browser) {
@@ -86,12 +88,16 @@ describe('collaboration with random changes', function () {
     expect(collaborations[0].shared.value().length).to.equal(expectedCharacterCount)
 
     // validate all vector clocks are correct
-    const peerIds = (await Promise.all(collaborations.map(async (collaboration) => (await collaboration.app.ipfs.id()).id))).sort()
+    const peerIds = (await Promise.all(collaborations.map(async (collaboration) => (await collaboration.app.ipfs.id()).id)))
+    const peerClockKeys = peerIds.map((peerId) => {
+      const buff = b58Decode(peerId)
+      return radix64.encodeBuffer(buff.slice(buff.length - 8))
+    }).sort()
     for (let collaboration of collaborations) {
       for (let peerId of peerIds) {
         const clock = collaboration.vectorClock(peerId)
-        expect(Object.keys(clock).sort()).to.deep.equal(peerIds)
-        for (let replica of peerIds) {
+        expect(Object.keys(clock).sort()).to.deep.equal(peerClockKeys)
+        for (let replica of peerClockKeys) {
           expect(clock[replica]).to.equal(charsPerPeer)
         }
       }
