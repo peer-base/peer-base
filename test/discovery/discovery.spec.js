@@ -78,7 +78,10 @@ describe('discovery', () => {
       _libp2pNode: libp2p
     }
 
-    discovery = new Discovery(app, appTopic, ipfs, peerDiscovery, ring)
+    const opts = {
+      dialerBackoffMin: 10
+    }
+    discovery = new Discovery(app, appTopic, ipfs, peerDiscovery, ring, opts)
   })
 
   it('dials peers even if discovered before startup', async () => {
@@ -140,17 +143,19 @@ describe('discovery', () => {
     expect(ring.has(peerInfos.d)).to.equal(false)
   })
 
-  it('allows repeated dials to peer after connection error', async () => {
+  it('repeatedly dials peer after connection error', async () => {
     dials = []
 
     peerDiscovery.emit('peer', peerInfos.e)
     await waitFor(50)
-    peerDiscovery.emit('peer', peerInfos.e)
-    await waitFor(50)
-    peerDiscovery.emit('peer', peerInfos.e)
-    await waitFor(50)
 
-    // New peer should have been dialed each time
-    expect(dials.length).to.equal(3)
+    // Peer should have been dialed repeatedly
+    expect(dials.length).to.be.gte(2)
+
+    // Expect dials to stop after discovery is stopped
+    discovery.stop()
+    dials = []
+    await waitFor(50)
+    expect(dials.length).to.be.lte(1)
   })
 })
