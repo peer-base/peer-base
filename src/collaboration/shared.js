@@ -4,6 +4,7 @@
 const debug = require('debug')('peer-star:collaboration:shared')
 const EventEmitter = require('events')
 const b58Decode = require('bs58').decode
+const radix64 = require('radix-64')()
 const vectorclock = require('../common/vectorclock')
 const Store = require('./store')
 
@@ -25,14 +26,20 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     }
   }
 
+  // Decoding the id results in a 34 byte buffer, so cut it down to the last
+  // 8 bytes, then radix64 encode to fit it efficiently into a string
+  const clockId = (() => {
+    const buff = b58Decode(id)
+    return radix64.encodeBuffer(buff.slice(buff.length - 8))
+  })()
+
   const applyAndPushDelta = (delta) => {
     if (collaboration.isRoot()) {
       const previousClock = clocks.getFor(id)
       apply(delta, true)
-      const newClock = vectorclock.increment(previousClock, id)
-      const author = {}
-      author[id] = 1
-      const deltaRecord = [previousClock, author, [name, crdtType.typeName, delta]]
+      const newClock = vectorclock.increment(previousClock, clockId)
+      const authorClock = vectorclock.increment({}, clockId)
+      const deltaRecord = [previousClock, authorClock, [name, crdtType.typeName, delta]]
       pushDelta(deltaRecord)
       shared.emit('clock changed', newClock)
     } else {
@@ -92,10 +99,9 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
 
   shared.pushDeltaForSub = (name, type, delta) => {
     const previousClock = clocks.getFor(id)
-    const newClock = vectorclock.increment(previousClock, id)
-    const author = {}
-    author[id] = 1
-    const deltaRecord = [previousClock, author, [name, type, delta]]
+    const newClock = vectorclock.increment(previousClock, clockId)
+    const authorClock = vectorclock.increment({}, clockId)
+    const deltaRecord = [previousClock, authorClock, [name, type, delta]]
     pushDelta(deltaRecord)
     shared.emit('clock changed', newClock)
   }
