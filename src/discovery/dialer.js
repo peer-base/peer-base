@@ -17,13 +17,13 @@ module.exports = class Dialer {
   dial (peerInfo, attempt = 0) {
     const id = peerInfo.id.toB58String()
 
-    // Check if we've stopped
+    // Check if dialer was stopped
     if (!this._dialing) {
       debug('ignoring dial attempt to %s - dialer has stopped', id)
       return
     }
 
-    // Check if we're already dialing this peer
+    // Check if dialer is already dialing this peer
     if (attempt === 0) {
       if (this._dialing.has(id)) {
         debug('ignoring dial attempt to %s - already retrying', id)
@@ -33,6 +33,9 @@ module.exports = class Dialer {
     }
 
     this._libp2p.dial(peerInfo, err => {
+      // Check if dialer was stopped
+      if (!this._dialing) return
+
       // If there was a dial error, retry with exponential backoff
       if (err) {
         attempt++
