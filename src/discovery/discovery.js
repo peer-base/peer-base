@@ -5,6 +5,7 @@ const EventEmitter = require('events')
 const PeerInterestDiscovery = require('./peer-interest-discovery')
 const DialCache = require('./dial-cache')
 const DialThrottle = require('./dial-throttle')
+const Dialer = require('./dialer')
 
 // The peerDiscovery emitter emits 'peer' events when a new peer is discovered.
 // This class listens for those events and dials the peer.
@@ -20,6 +21,7 @@ module.exports = class Discovery extends EventEmitter {
     this._ipfs = ipfs
     this._discovery = peerDiscovery
     this._ring = ring
+    this._options = options
     this._running = false
 
     this._peerInterestDiscovery = new PeerInterestDiscovery(ipfs, appTopic)
@@ -74,14 +76,21 @@ module.exports = class Discovery extends EventEmitter {
         // Make sure libp2p has started
         await this._awaitLibp2pStart()
 
-        this._ipfs._libp2pNode.dial(peerInfo, err => {
-          // If there was a dial error, allow further attempts
-          if (err) {
-            this._dialCache.remove(peerInfo)
-          }
-        })
+        // Dial
+        this._getDialer().dial(peerInfo)
       }
     }, delay)
+  }
+
+  _getDialer () {
+    if (!this._dialer) {
+      this._dialer = new Dialer(this._ipfs._libp2pNode, this._options)
+      this.once('stop', () => {
+        this._dialer.stop()
+        this._dialer = null
+      })
+    }
+    return this._dialer
   }
 
   _awaitStart () {
