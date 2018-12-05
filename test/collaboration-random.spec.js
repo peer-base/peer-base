@@ -14,16 +14,12 @@ const b58Decode = require('bs58').decode
 const radix64 = require('radix-64')()
 
 describe('collaboration with random changes', function () {
-  if (process.browser) {
-    return
-  }
-
   this.timeout(70000)
 
   const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
 
   const peerCount = 4
-  const charsPerPeer = 100
+  const charsPerPeer = process.browser ? 50 : 100
   const collaborationOptions = {}
 
   let appName
@@ -71,7 +67,7 @@ describe('collaboration with random changes', function () {
         await delay(randomShortTime())
       }
 
-      await debounceEvent(collaboration, 'state changed', 10000)
+      await debounceEvent(collaboration, 'state changed', 20000)
 
       const value = collaboration.shared.value()
       expect(value.length).to.equal(expectedCharacterCount)
