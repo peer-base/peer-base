@@ -18,6 +18,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   let deltas = []
   let state = crdtType.initial()
   const memo = {}
+  let valueCache
 
   const pushDelta = (delta) => {
     deltas.push(delta)
@@ -90,6 +91,9 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
 
   // shared value
   shared.value = () => {
+    if (valueCache !== undefined) {
+      return valueCache.value
+    }
     if ((!memo.state) || (memo.state !== state)) {
       memo.state = state
       memo.value = crdtType.value(state)
@@ -188,7 +192,11 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     if (options.replicateOnly) {
       state = s
     } else {
-      state = crdtType.join.call(changeEmitter, state, s)
+      const newState = crdtType.join.call(changeEmitter, state, s)
+      if (crdtType.incrementalValue) {
+        valueCache = crdtType.incrementalValue(state, newState, s, valueCache)
+      }
+      state = newState
       shared.emit('delta', s, fromSelf)
 
       debug('%s: new state after join is', id, state)

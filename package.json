@@ -42,7 +42,7 @@
     "datastore-level": "~0.10.0",
     "debug": "^4.1.0",
     "delay": "^4.1.0",
-    "delta-crdts": "~0.6.0",
+    "delta-crdts": "~0.7.0",
     "delta-crdts-msgpack-codec": "~0.2.0",
     "frequency-counter": "^1.0.1",
     "interface-datastore": "~0.6.0",
