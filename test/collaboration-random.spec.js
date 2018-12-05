@@ -19,7 +19,7 @@ describe('collaboration with random changes', function () {
   const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
 
   const peerCount = 4
-  const charsPerPeer = process.browser ? 50 : 100
+  const charsPerPeer = process.browser ? 20 : 100
   const collaborationOptions = {}
 
   let appName
@@ -67,7 +67,7 @@ describe('collaboration with random changes', function () {
         await delay(randomShortTime())
       }
 
-      await debounceEvent(collaboration, 'state changed', 20000)
+      await debounceEvent(collaboration, 'state changed', process.browser ? 30000 : 10000)
 
       const value = collaboration.shared.value()
       expect(value.length).to.equal(expectedCharacterCount)
@@ -89,6 +89,7 @@ describe('collaboration with random changes', function () {
       const buff = b58Decode(peerId)
       return radix64.encodeBuffer(buff.slice(buff.length - 8))
     }).sort()
+
     for (let collaboration of collaborations) {
       for (let peerId of peerIds) {
         const clock = collaboration.vectorClock(peerId)
