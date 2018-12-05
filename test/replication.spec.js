@@ -1,6 +1,10 @@
 /* eslint-env mocha */
 'use strict'
 
+const chai = require('chai')
+chai.use(require('dirty-chai'))
+const expect = chai.expect
+
 const forEvent = require('p-event')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
@@ -48,6 +52,10 @@ describe('replication', function () {
     await waitForMembers(collaborations)
   })
 
+  it('has no pinner peers', () => {
+    collaborations.forEach((collaboration) => expect(collaboration.replication.pinnerPeers().size).to.equal(0))
+  })
+
   it('can add a pinner to a collaboration', async () => {
     pinner = PeerStar.createPinner(appName, {
       ipfs: {
@@ -57,6 +65,8 @@ describe('replication', function () {
     })
     await pinner.start()
     pinnerPeerId = await pinner.peerId()
+
+    await Promise.all(collaborations.map((collaboration) => forEvent(collaboration.replication, 'pinner joined')))
 
     await waitForMembers(collaborations.concat(pinnerPeerId))
   })
@@ -80,11 +90,24 @@ describe('replication', function () {
     await Promise.all(collaborations.map((collaboration) => forEvent(collaboration.replication, 'pinned')))
   })
 
+  it('current state is persisted on pinner', () => {
+    collaborations.forEach((collaboration) => expect(collaboration.replication.isCurrentStatePersistedOnPinner()).to.equal(1))
+  })
+
+  it('has pinner peers', () => {
+    collaborations.forEach((collaboration) => expect(collaboration.replication.pinnerPeers().size).to.equal(1))
+  })
+
   it('converged between replicas', () => {
     waitForValue(collaborations, new Set('a', 'b'))
   })
 
-  it('can stop pinner', () => {
-    return pinner.stop()
+  it('can stop pinner', async () => {
+    pinner.stop()
+    await Promise.all(collaborations.map((collaboration) => forEvent(collaboration.replication, 'pinner left')))
+  })
+
+  it('peers dont list pinner any longer after pinner stopped', () => {
+    collaborations.forEach((collaboration) => expect(collaboration.replication.pinnerPeers().size).to.equal(0))
   })
 })

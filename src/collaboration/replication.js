@@ -13,6 +13,37 @@ class Replication extends EventEmitter {
     this._selfId = selfId
     this._clocks = clocks
     this._clocksByPeer = new Map()
+    this._pinners = new Set()
+  }
+
+  addPinner (peerId) {
+    if (!this._pinners.has(peerId)) {
+      this._pinners.add(peerId)
+      this.emit('pinner joined', peerId)
+    }
+  }
+
+  removePinner (peerId) {
+    if (this._pinners.has(peerId)) {
+      this._pinners.delete(peerId)
+      this.emit('pinner left', peerId)
+    }
+  }
+
+  pinnerPeers () {
+    return new Set(this._pinners)
+  }
+
+  isCurrentStatePersistedOnPinner () {
+    if (!this._pinners.size) {
+      return false
+    }
+
+    const myClock = this._clocks.getFor(this._selfId)
+    return ([...this._pinners].filter((pinnerPeerId) => {
+      const pinnerClock = this._ensurePeerClocks(pinnerPeerId).sent
+      return vectorclock.doesSecondHaveFirst(myClock, pinnerClock)
+    })).length
   }
 
   receiving (peerId, clock) {
