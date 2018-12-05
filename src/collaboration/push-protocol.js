@@ -151,8 +151,16 @@ module.exports = class PushProtocol {
       }
 
       if ((typeof _isPinner) === 'boolean') {
+        const wasPinner = isPinner
         isPinner = _isPinner
+
         debouncedReduceEntropy = debounce(reduceEntropy, debounceReduceEntropyMS())
+
+        if (!wasPinner && isPinner) {
+          this._replication.addPinner(remotePeerId)
+        } else if (wasPinner && !isPinner) {
+          this._replication.removePinner(remotePeerId)
+        }
       }
 
       if (newRemoteClock) {
@@ -193,6 +201,10 @@ module.exports = class PushProtocol {
         ended = true
         this._shared.removeListener('clock changed', onClockChanged)
         output.end(err)
+
+        if (isPinner) {
+          this._replication.removePinner(remotePeerId)
+        }
       }
     }
     const input = pull.drain(handlingData(onMessage), onEnd)

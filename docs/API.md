@@ -366,9 +366,35 @@ Example:
 collaboration.shared.push('some element')
 ```
 
-### Collaboration replication events: `collaboration.replication`
+### Collaboration replication: `collaboration.replication`
 
-Provides events about replication.
+Provides queries and events about replication.
+
+#### `collaboration.replication.pinnerPeers()`
+
+Returns a Set containing the peer ids (string) of each pinner node participating in the collaboration.
+
+#### `collaboration.replication.isCurrentStatePersistedOnPinner()`
+
+Returns the number of peers the current state is known to be persisted to.
+
+Example:
+
+```js
+const pinned = collaboration.replication.isCurrentStatePersistedOnPinner()`
+if (!pinned) {
+  console.log('not pinned on any pinner!')
+}
+```
+
+or:
+
+```js
+const pinnedCount = collaboration.replication.isCurrentStatePersistedOnPinner()
+console.log('pinned on %d pinners', pinnedCount)
+```
+
+#### Replication events:
 
 #### `"replicating" (peerId, clock)`
 
@@ -429,6 +455,29 @@ collaboration.replication.on('pinned', (peerId, clock) => {
   console.log('local changes saved to pinner %s', peerId)
 })
 ```
+
+#### `"pinner joined" (peerId)`
+
+Emitted once a pinner has joined the collaboration.
+
+```js
+collaboration.replication.on('pinner joined', (peerId) => {
+  console.log('pinner has joined %s', peerId)
+  console.log('now the pinners in the collaboration are: %j', [...collaboration.replication.pinnerPeers()])
+})
+```
+
+#### `"pinner left" (peerId)`
+
+Emitted once a pinner has left the collaboration.
+
+```js
+collaboration.replication.on('pinner left', (peerId) => {
+  console.log('pinner has left %s', peerId)
+  console.log('now the pinners in the collaboration are: %j', [...collaboration.replication.pinnerPeers()])
+})
+```
+
 
 ### Stop collaboration
 
