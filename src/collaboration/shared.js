@@ -113,15 +113,27 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   shared.apply = (deltaRecord, isPartial, force) => {
     const clock = clocks.getFor(id)
     const [previousClock, authorClock, [forName, typeName, delta]] = deltaRecord
-    if ((forName === name) && !force && !vectorclock.isDeltaInteresting(deltaRecord, clock)) {
-      return false
+    const deltaClock = vectorclock.sumAll(previousClock, authorClock)
+    const newClock = options.replicateOnly ? deltaClock : vectorclock.merge(clock, deltaClock)
+    if (forName === name) {
+      let isInteresting = vectorclock.isDeltaInteresting(deltaRecord, clock)
+      if (!isInteresting && force) {
+        isInteresting = vectorclock.isIdentical(clock, newClock)
+      }
+      if (!isInteresting) {
+        return false
+      }
+
+      if (options.replicateOnly && Object.keys(previousClock).length) {
+        // if this is a pinner, do not accept partial deltas, only full states
+        return false
+      }
     }
     if (collaboration.isRoot()) {
       pushDelta(deltaRecord)
     }
     if (forName === name) {
       apply(delta)
-      const newClock = vectorclock.merge(clock, vectorclock.sumAll(previousClock, authorClock))
       shared.emit('clock changed', newClock)
       return newClock
     } else if (typeName) {
