@@ -48,7 +48,7 @@ class Collaboration extends EventEmitter {
     this._options = Object.assign({}, defaultOptions, options)
     this._parentCollab = parentCollab
     this._gossips = new Set()
-    this._clocks = this._options.clocks || new Clocks(selfId)
+    this._clocks = this._options.clocks || new Clocks(selfId, options)
     this.replication = Replication(selfId, this._clocks)
 
     if (!this._options.keys) {
@@ -304,10 +304,6 @@ class Collaboration extends EventEmitter {
 
   deliverRemoteMembership (membership) {
     return this._membership.deliverRemoteMembership(membership)
-  }
-
-  _storeName () {
-    return this._isRoot ? null : this.name
   }
 }
 
