@@ -20,7 +20,6 @@ module.exports = class Clocks extends EventEmitter {
     }
     // console.log(`${this._id}: %j => %j`, previousClock, newClock)
     debug('%s: setting clock for %s: %j', this._id, peerId, clock)
-    console.log(`${this._id}: setting clock for ${peerId}: ${JSON.stringify(clock)}`)
     this._clocks.set(peerId, clock)
     this.emit('update', peerId, clock, authoritative, isPinner)
     return clock
