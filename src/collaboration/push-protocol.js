@@ -201,7 +201,7 @@ module.exports = class PushProtocol {
     const input = pull.drain(handlingData(onMessage), onEnd)
     const output = pushable()
 
-    output.push(encode([null, null, { isPinner: this._options.replicateOnly}]))
+    output.push(encode([null, null, { isPinner: this._options.replicateOnly }]))
 
     return { sink: input, source: output }
   }
