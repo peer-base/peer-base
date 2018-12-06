@@ -44,14 +44,6 @@ module.exports = class PushProtocol {
       return clockDiff
     }
 
-    // const pushDeltaBatch = async (peerClock) => {
-    //   const batch = this._shared.deltaBatch(peerClock)
-    //   let [clock, authorClock, [, , batchState]] = batch
-    //   const batchClock = vectorclock.sumAll(clock, authorClock)
-    //   output.push(encode([await this._signAndEncryptDelta(batch)]))
-    //   return vectorclock.merge(peerClock, batchClock)
-    // }
-
     const pushDeltas = async (peerClock) => {
       const ds = this._shared.deltas(peerClock)
       let newRemoteClock = {}
@@ -83,7 +75,6 @@ module.exports = class PushProtocol {
         // Let's try to see if we have deltas to deliver
         if (!isPinner && !this._options.replicateOnly) {
           remoteClock = await pushDeltas(remoteClock)
-          // remoteClock = await pushDeltaBatch(remoteClock)
         }
 
         if (isPinner || remoteNeedsUpdate(myClock, remoteClock)) {
@@ -209,6 +200,8 @@ module.exports = class PushProtocol {
     }
     const input = pull.drain(handlingData(onMessage), onEnd)
     const output = pushable()
+
+    output.push(encode([null, null, { isPinner: this._options.replicateOnly }]))
 
     return { sink: input, source: output }
   }

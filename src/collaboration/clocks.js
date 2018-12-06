@@ -5,20 +5,24 @@ const EventEmitter = require('events')
 const vectorclock = require('../common/vectorclock')
 
 module.exports = class Clocks extends EventEmitter {
-  constructor (id) {
+  constructor (id, options) {
     super()
     this._id = id
     this._clocks = new Map()
+    this._replicateOnly = options && options.replicateOnly
   }
 
-  setFor (peerId, clock, authoritative, isPinner) {
-    const previousClock = this.getFor(peerId)
-    const newClock = vectorclock.merge(previousClock, clock)
+  setFor (peerId, _clock, authoritative, isPinner) {
+    let clock = _clock
+    if (!this._replicateOnly) {
+      const previousClock = this.getFor(peerId)
+      clock = vectorclock.merge(previousClock, clock)
+    }
     // console.log(`${this._id}: %j => %j`, previousClock, newClock)
-    debug('%s: setting clock for %s: %j', this._id, peerId, newClock)
-    this._clocks.set(peerId, newClock)
-    this.emit('update', peerId, newClock, authoritative, isPinner)
-    return newClock
+    debug('%s: setting clock for %s: %j', this._id, peerId, clock)
+    this._clocks.set(peerId, clock)
+    this.emit('update', peerId, clock, authoritative, isPinner)
+    return clock
   }
 
   getFor (peerId) {

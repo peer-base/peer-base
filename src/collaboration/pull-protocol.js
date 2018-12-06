@@ -27,6 +27,7 @@ module.exports = class PullProtocol {
     let ended = false
     let waitingForClock = null
     let timeout
+    let isPinner
 
     const onNewLocalClock = (clock) => {
       debug('%s got new clock from state:', this._peerId(), clock)
@@ -40,7 +41,14 @@ module.exports = class PullProtocol {
       debug('%s got new data from %s :', this._peerId(), remotePeerId, data)
 
       queue.add(async () => {
-        const [deltaRecord, newStates] = data
+        const [deltaRecord, newStates, peerInfo] = data
+
+        if (peerInfo && peerInfo.isPinner && !isPinner) {
+          isPinner = true
+          output.push(encode([null, true]))
+          return
+        }
+
         let clock
         let states
         let delta
@@ -75,7 +83,8 @@ module.exports = class PullProtocol {
               if (!rootState) {
                 throw new Error('expected root state')
               }
-              const saved = await this._shared.apply(await this._decryptAndVerifyDelta(rootState), false)
+              const decryptedRootState = await this._decryptAndVerifyDelta(rootState)
+              const saved = await this._shared.apply(decryptedRootState, false)
               if (saved) {
                 for (let [collabName, collabState] of states) {
                   if (collabName === null) {
@@ -83,6 +92,8 @@ module.exports = class PullProtocol {
                   }
                   await this._shared.apply(await this._decryptAndVerifyDelta(collabState), false, true)
                 }
+              } else {
+                output.push(encode([null, true]))
               }
             } else if (delta) {
               debug('%s: saving delta', this._peerId(), deltaRecord)
