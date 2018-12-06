@@ -45,7 +45,6 @@ module.exports = class PullProtocol {
 
         if (peerInfo && peerInfo.isPinner && !isPinner) {
           isPinner = true
-          console.log('remote is pinner. please dont send data..')
           output.push(encode([null, true]))
           return
         }
