@@ -9,7 +9,7 @@ module.exports = class Clocks extends EventEmitter {
     super()
     this._id = id
     this._clocks = new Map()
-    this._replicateOnly = options.replicateOnly
+    this._replicateOnly = options && options.replicateOnly
   }
 
   setFor (peerId, _clock, authoritative, isPinner) {
