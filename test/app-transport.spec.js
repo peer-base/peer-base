@@ -31,13 +31,13 @@ describe('app-transport', function () {
     }
 
     ipfs = {
-      _libp2pNode: {
+      _libp2pNode: Object.assign(new EventEmitter(), {
         dial: fake(),
         hangUp: (p, callback) => { setImmediate(() => callback()) },
         on: fake(),
         isStarted: () => true,
         _floodSub: new EventEmitter()
-      },
+      }),
       pubsub: {
         peers: (topic, cb) => setImmediate(() => cb(null, [])),
         subscribe: (topic, handler, callback) => {

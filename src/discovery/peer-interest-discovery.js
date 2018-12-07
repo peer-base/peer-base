@@ -24,7 +24,7 @@ module.exports = class PeerInterestDiscovery extends EventEmitter {
   }
 
   _onSubscriptionChange (peerInfo, topics, subs) {
-    debug('floodsub change:', peerInfo, topics, subs)
+    debug('floodsub change:', peerInfo.id.toB58String(), topics, subs)
     const isInterested = topics.has(this._appTopic)
     this.emit('peer', peerInfo, isInterested)
   }
