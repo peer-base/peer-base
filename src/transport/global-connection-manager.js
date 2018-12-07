@@ -109,7 +109,7 @@ module.exports = class GlobalConnectionManager extends EventEmitter {
   }
 
   _onPeerConnect (peerInfo) {
-    if (!this._outbound.has(peerInfo) && !this._appTransport.isOutbound(peerInfo)) {
+    if (!this._outbound.has(peerInfo) && !this._appTransport.discovery.hasConnection(peerInfo)) {
       this._inbound.add(peerInfo)
     }
   }
@@ -122,7 +122,7 @@ module.exports = class GlobalConnectionManager extends EventEmitter {
   }
 
   maybeHangUp (peerInfo) {
-    if (this._inbound.has(peerInfo) || this._appTransport.isOutbound(peerInfo)) {
+    if (this._inbound.has(peerInfo) || this._appTransport.needsConnection(peerInfo)) {
       // either there's an inbound connection
       // or we are using at the app layer.
       // Either way let's not close it

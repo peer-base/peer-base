@@ -18,21 +18,17 @@ describe('app swarm', function () {
   // let rendezvous
   let swarm = []
   const outboundConnectionCounts = []
-  const inboundConnectionCounts = []
-
   /*
   let interval
 
   before(() => {
     interval = setInterval(() => {
       console.log('outbound connection counts:', outboundConnectionCounts)
-      console.log('inbound connection counts:', inboundConnectionCounts)
     }, 1000)
   })
 
   after(() => clearInterval(interval))
   */
-
   before(() => {
     appName = App.createName()
   })
@@ -50,16 +46,8 @@ describe('app swarm', function () {
         outboundConnectionCounts[peerIndex] = (outboundConnectionCounts[peerIndex] || 0) + 1
       })
 
-      app.app.on('inbound peer connected', (peerInfo) => {
-        inboundConnectionCounts[peerIndex] = (inboundConnectionCounts[peerIndex] || 0) + 1
-      })
-
       app.app.on('outbound peer disconnected', (peerInfo) => {
         outboundConnectionCounts[peerIndex] = (outboundConnectionCounts[peerIndex] || 0) - 1
-      })
-
-      app.app.on('inbound peer disconnected', (peerInfo) => {
-        inboundConnectionCounts[peerIndex] = (inboundConnectionCounts[peerIndex] || 0) - 1
       })
 
       swarm.push(app)
@@ -92,9 +80,6 @@ describe('app swarm', function () {
 
   it('each node connections are bounded', () => {
     outboundConnectionCounts.forEach((connCount) => {
-      expect(connCount).to.be.most(10)
-    })
-    inboundConnectionCounts.forEach((connCount) => {
       expect(connCount).to.be.most(10)
     })
   })
