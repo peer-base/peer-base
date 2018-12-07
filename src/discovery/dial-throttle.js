@@ -15,7 +15,7 @@ module.exports = class DialThrottle {
     // Low delay for few peers, increasing as we get closer to
     // maxThrottleRampPeers. This is to prevent a new peer getting overloaded
     // with requests if there are a lot of other peers
-    const fraction = this._app.peerCountGuess() / this._options.maxThrottleRampPeers
+    const fraction = (this._app.peerCountGuess() || 0) / this._options.maxThrottleRampPeers
     const peerCountWeight = Math.min(Math.pow(fraction, 2), 1)
     return Math.floor(Math.random() * this._options.maxThrottleDelayMS * peerCountWeight)
   }
