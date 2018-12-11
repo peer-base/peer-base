@@ -14,9 +14,9 @@
 //
 // You can override the configuration values here by specifying the following
 // environment variables:
-// - PEER_STAR_APP_NAME - What PeerStarApp application name to use
-// - PEER_STAR_SWARM_ADDRESS - Which rendezvous server to use
-// - PEER_STAR_PINNER_ID - What PeerID the pinner we test against have
+// - PEER_BASE_APP_NAME - What PeerStarApp application name to use
+// - PEER_BASE_SWARM_ADDRESS - Which rendezvous server to use
+// - PEER_BASE_PINNER_ID - What PeerID the pinner we test against have
 
 if (!process.env.DEBUG) {
   process.env.DEBUG = 'peer-base:pinner-test'
@@ -32,7 +32,7 @@ const peerStarApp = require('../src')
 
 // Environment variable OR default value
 const envVarOrDefVal = (envVar, defVal) => {
-  return process.env['PEER_STAR_' + envVar] || defVal
+  return process.env['PEER_BASE_' + envVar] || defVal
 }
 
 const defaultAppName = 'peer-pad/2'

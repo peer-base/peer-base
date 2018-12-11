@@ -74,9 +74,9 @@ First you need to export environment variables to ensure the assertion values
 are correct for your environment, then you can run the test. Example:
 
 ```
-export PEER_STAR_APP_NAME=peer-pad/2
-export PEER_STAR_SWARM_ADDRESS=/dns4/localhost/tcp/9090/ws/p2p-websocket-star
-export PEER_STAR_PINNER_ID=Qmb9WDZUnUzEmZwkbMMGi4cV65F1sqcQa49dfZy9baRBJo
+export PEER_BASE_APP_NAME=peer-pad/2
+export PEER_BASE_SWARM_ADDRESS=/dns4/localhost/tcp/9090/ws/p2p-websocket-star
+export PEER_BASE_PINNER_ID=Qmb9WDZUnUzEmZwkbMMGi4cV65F1sqcQa49dfZy9baRBJo
 npm run test:post-deploy
 ```
 

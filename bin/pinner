@@ -6,8 +6,8 @@ const defaultName = 'peer-pad/2'
 const defaultSwarmAddress = '/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star'
 
 const config = {
-  name: process.env.PEER_STAR_APP_NAME || defaultName,
-  swarmAddress: process.env.PEER_STAR_SWARM_ADDRESS || defaultSwarmAddress
+  name: process.env.PEER_BASE_APP_NAME || process.env.PEER_STAR_APP_NAME || defaultName,
+  swarmAddress: process.env.PEER_BASE_SWARM_ADDRESS || process.env.PEER_STAR_SWARM_ADDRESS || defaultSwarmAddress
 }
 
 const createPinner = require('../src').createPinner
