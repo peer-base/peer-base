@@ -182,6 +182,12 @@ module.exports = class PushProtocol {
       }
     }
 
+    const onCollaborationStopped = () => {
+      onEnd()
+    }
+
+    this._collaboration.on('stopped', onCollaborationStopped)
+
     const onEnd = (err) => {
       this._clocks.takeDown(remotePeerId)
       if (!ended) {
@@ -191,6 +197,7 @@ module.exports = class PushProtocol {
         }
         ended = true
         this._shared.removeListener('clock changed', onClockChanged)
+        this._collaboration.removeListener('stopped', onCollaborationStopped)
         output.end(err)
 
         if (isPinner) {
