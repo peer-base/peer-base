@@ -56,8 +56,13 @@ module.exports = class Discovery extends EventEmitter {
       clearTimeout(timeout)
     }
     this._timeouts.clear()
+    this._dialer && this._dialer.stop()
     this._ipfs._libp2pNode.removeListener('peer:disconnect', this._onPeerDisconnect)
     this._discovery.removeListener('peer', this._dialPeer)
+
+    // Note: When 'stop' is fired, AppTransport will stop the connection
+    // manager, which will call Discovery.resetConnections() with an empty dias
+    // set, cleaning up the remaining connections
     this.emit('stop')
     return this._discovery.stop(callback)
   }

@@ -104,4 +104,17 @@ describe('connection manager', () => {
     const diasSet = resetConnectionsCalls[0]
     expect(diasSet.has(peerInfos.b)).to.equal(false)
   })
+
+  it('cleans up all connections on stop', async () => {
+    resetConnectionsCalls = []
+
+    connectionManager.stop()
+    expect(resetConnectionsCalls.length).to.equal(1)
+    const diasSet = resetConnectionsCalls[0]
+    expect(diasSet.has(peerInfos.a)).to.equal(false)
+    expect(diasSet.has(peerInfos.b)).to.equal(false)
+    expect(diasSet.has(peerInfos.c)).to.equal(false)
+    expect(diasSet.has(peerInfos.d)).to.equal(false)
+    expect(diasSet.has(peerInfos.e)).to.equal(false)
+  })
 })

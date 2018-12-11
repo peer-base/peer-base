@@ -42,6 +42,9 @@ describe('app-transport', function () {
         peers: (topic, cb) => setImmediate(() => cb(null, [])),
         subscribe: (topic, handler, callback) => {
           setImmediate(() => callback())
+        },
+        unsubscribe: (topic, handler, callback) => {
+          setImmediate(() => callback())
         }
       },
       _peerInfo: {
