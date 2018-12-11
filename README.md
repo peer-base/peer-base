@@ -2,7 +2,7 @@
 
 Build real-time collaborative DApps on top of IPFS
 
-[![Build Status](https://travis-ci.org/ipfs-shipyard/peer-base.svg?branch=master)](https://travis-ci.org/ipfs-shipyard/peer-base) [![Greenkeeper badge](https://badges.greenkeeper.io/ipfs-shipyard/peer-base.svg)](https://greenkeeper.io/) [![made by Protocol Labs](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](https://protocol.ai)
+[![Build Status](https://travis-ci.org/peer-base/peer-base.svg?branch=master)](https://travis-ci.org/peer-base/peer-base) [![Greenkeeper badge](https://badges.greenkeeper.io/peer-base/peer-base.svg)](https://greenkeeper.io/) [![made by Protocol Labs](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](https://protocol.ai)
 
 
 * [Example app](examples/react-app)
