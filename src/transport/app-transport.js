@@ -47,6 +47,7 @@ class AppTransport extends EventEmitter {
     // Discovery gets started by libp2p, so once it has started we can start
     // the rest of the transport stack
     this.discovery.on('start', () => this._maybeStart())
+    this.discovery.on('stop', () => this.stop())
   }
 
   dial (ma, options, callback) {
@@ -59,19 +60,6 @@ class AppTransport extends EventEmitter {
 
   filter (multiaddrs) {
     return this._transport.filter(multiaddrs)
-  }
-
-  close (callback) {
-    this.discovery.removeListener('peer', this._onPeer)
-    this.discovery.removeListener('disconnect', this._onDisconnect)
-    this._connectionManager.stop()
-    this._globalConnectionManager.stop()
-    this._gossip.stop((err) => {
-      if (err) {
-        debug('error stopping gossip: ', err)
-      }
-      this._transport.close(callback)
-    })
   }
 
   needsConnection (peerInfo) {
@@ -100,6 +88,18 @@ class AppTransport extends EventEmitter {
         return resolve()
       }
       this._ipfs.once('ready', resolve)
+    })
+  }
+
+  stop () {
+    this.discovery.removeListener('peer', this._onPeer)
+    this.discovery.removeListener('disconnect', this._onDisconnect)
+    this._connectionManager.stop()
+    this._globalConnectionManager.stop()
+    this._gossip.stop((err) => {
+      if (err) {
+        debug('error stopping gossip: ', err)
+      }
     })
   }
 
