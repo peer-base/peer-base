@@ -1,7 +1,7 @@
 /* eslint no-console: "off", no-warning-comments: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:global-connection-manager')
+const debug = require('debug')('peer-base:global-connection-manager')
 const pull = require('pull-stream')
 const EventEmitter = require('events')
 const PeerSet = require('../common/peer-set')

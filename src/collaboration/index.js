@@ -1,7 +1,7 @@
 /* eslint no-console: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration')
+const debug = require('debug')('peer-base:collaboration')
 const EventEmitter = require('events')
 const Queue = require('p-queue')
 const Membership = require('./membership')

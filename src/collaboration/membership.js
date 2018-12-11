@@ -1,7 +1,7 @@
 /* eslint no-console: "off", no-warning-comments: "off", no-continue: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:membership')
+const debug = require('debug')('peer-base:collaboration:membership')
 const EventEmitter = require('events')
 const multihashing = require('multihashing')
 const PeerId = require('peer-id')

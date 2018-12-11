@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:stats')
+const debug = require('debug')('peer-base:collaboration:stats')
 const EventEmitter = require('events')
 const ConnectionManager = require('./connection-manager')
 const Observer = require('./observer')

@@ -1,7 +1,7 @@
 /* eslint no-console: "off", no-warning-comments: "off", max-depth: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:pull-protocol')
+const debug = require('debug')('peer-base:collaboration:pull-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const Queue = require('p-queue')

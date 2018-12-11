@@ -1,7 +1,7 @@
 /* eslint no-console: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:pinner')
+const debug = require('debug')('peer-base:pinner')
 const EventEmitter = require('events')
 const Collaboration = require('../collaboration')
 const IPFS = require('../transport/ipfs')

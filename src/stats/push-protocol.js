@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:stats:pull-protocol')
+const debug = require('debug')('peer-base:collaboration:stats:pull-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const handlingData = require('../common/handling-data')

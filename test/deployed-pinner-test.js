@@ -19,14 +19,14 @@
 // - PEER_STAR_PINNER_ID - What PeerID the pinner we test against have
 
 if (!process.env.DEBUG) {
-  process.env.DEBUG = 'peer-star-app:pinner-test'
+  process.env.DEBUG = 'peer-base:pinner-test'
 }
 
 const path = require('path')
 const os = require('os')
 const assert = require('assert')
 
-const log = require('debug')('peer-star-app:pinner-test')
+const log = require('debug')('peer-base:pinner-test')
 
 const peerStarApp = require('../src')
 

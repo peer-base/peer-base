@@ -105,7 +105,7 @@ const start = async () => {
         if (workerData.enableDebug && ((Date.now() - stopStarted) > 5000) && !debugEnabled) {
           console.log('%s: ENABLING DEBUGGING', workerData.workerId)
           debugEnabled = true
-          PeerStar.debug.enable('peer-star:collaboration:*')
+          PeerStar.debug.enable('peer-base:collaboration:*')
         }
         const l = collaboration.shared.value().length
         if (workerData.enableDebug) {

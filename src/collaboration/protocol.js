@@ -1,7 +1,7 @@
 /* eslint no-console: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:protocol')
+const debug = require('debug')('peer-base:collaboration:protocol')
 const EventEmitter = require('events')
 const pull = require('pull-stream')
 

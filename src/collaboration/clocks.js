@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:clocks')
+const debug = require('debug')('peer-base:collaboration:clocks')
 const EventEmitter = require('events')
 const vectorclock = require('../common/vectorclock')
 

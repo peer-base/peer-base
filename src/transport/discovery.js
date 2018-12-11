@@ -1,7 +1,7 @@
 /* eslint no-console: "off", no-warning-comments: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:discovery')
+const debug = require('debug')('peer-base:discovery')
 const EventEmitter = require('events')
 const Queue = require('p-queue')
 const delay = require('delay')

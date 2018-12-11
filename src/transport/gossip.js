@@ -1,7 +1,7 @@
 'use strict'
 
 const EventEmitter = require('events')
-const debug = require('debug')('peer-star:gossip')
+const debug = require('debug')('peer-base:gossip')
 
 module.exports = (...args) => new Gossip(...args)
 
