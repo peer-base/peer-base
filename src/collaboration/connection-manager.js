@@ -167,7 +167,7 @@ module.exports = class ConnectionManager extends EventEmitter {
       for (let peerInfo of this._outboundConnections.values()) {
         if (!diasSet.has(peerInfo)) {
           try {
-            this._globalConnectionManager.disconnect(peerInfo, this._protocol.name())
+            await this._globalConnectionManager.disconnect(peerInfo, this._protocol.name())
           } catch (err) {
             debug('error hanging up:', err)
           }

@@ -43,12 +43,12 @@ module.exports = class ConnectionManager extends EventEmitter {
     this._debouncedResetConnectionsAndEmitNewPeers()
   }
 
-  _resetConnectionsAndEmitNewPeers () {
+  async _resetConnectionsAndEmitNewPeers () {
     if (this._stopped) {
       return
     }
 
-    const diasSet = this._resetConnections()
+    const diasSet = await this._resetConnections()
     const peers = this._newPeers
     this._newPeers = []
     peers.forEach((peerInfo) => {
@@ -58,7 +58,7 @@ module.exports = class ConnectionManager extends EventEmitter {
     })
   }
 
-  _resetConnections () {
+  async _resetConnections () {
     const diasSet = this._diasSet(this._ring)
 
     // make sure we're connected to every peer of the Dias Peer Set
@@ -75,7 +75,7 @@ module.exports = class ConnectionManager extends EventEmitter {
     // make sure we disconnect from peers not in the Dias Peer Set
     for (let peerInfo of this._outboundConnections.values()) {
       if (!diasSet.has(peerInfo)) {
-        this._globalConnectionManager.maybeHangUp(peerInfo)
+        await this._globalConnectionManager.maybeHangUp(peerInfo)
       }
     }
 

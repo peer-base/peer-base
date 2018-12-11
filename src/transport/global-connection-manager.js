@@ -87,7 +87,7 @@ module.exports = class GlobalConnectionManager extends EventEmitter {
     }
 
     // TODO: maybe GC peer conn
-    this.maybeHangUp(peerInfo)
+    return this.maybeHangUp(peerInfo)
   }
 
   handle (protocol, handler) {
@@ -122,31 +122,37 @@ module.exports = class GlobalConnectionManager extends EventEmitter {
   }
 
   maybeHangUp (peerInfo) {
-    if (this._inbound.has(peerInfo) || this._appTransport.isOutbound(peerInfo)) {
-      // either there's an inbound connection
-      // or we are using at the app layer.
-      // Either way let's not close it
-      return
-    }
-
-    const peerId = peerInfo.id.toB58String()
-    const dialedProtocols = this._peerCollaborations.get(peerId)
-    const canClose = !dialedProtocols || !dialedProtocols.size
-    if (canClose) {
-      debug('hanging up %s', peerInfo.id.toB58String())
-      try {
-        this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
-          if (err) {
-            console.error('error hanging up:', err.message)
-            debug('error hanging up:', err)
-          }
-        })
-      } catch (err) {
-        if (err.message !== 'The libp2p node is not started yet') {
-          console.error('error hanging up:', err.message)
-        }
-        debug('error hanging up:', err)
+    return new Promise((resolve) => {
+      if (this._inbound.has(peerInfo) || this._appTransport.isOutbound(peerInfo)) {
+        // either there's an inbound connection
+        // or we are using at the app layer.
+        // Either way let's not close it
+        return resolve()
       }
-    }
+
+      const peerId = peerInfo.id.toB58String()
+      const dialedProtocols = this._peerCollaborations.get(peerId)
+      const canClose = !dialedProtocols || !dialedProtocols.size
+      if (canClose) {
+        debug('hanging up %s', peerInfo.id.toB58String())
+        try {
+          this._ipfs._libp2pNode.hangUp(peerInfo, (err) => {
+            if (err) {
+              console.error('error hanging up:', err.message)
+              debug('error hanging up:', err)
+            }
+            resolve()
+          })
+        } catch (err) {
+          if (err.message !== 'The libp2p node is not started yet') {
+            console.error('error hanging up:', err.message)
+          }
+          debug('error hanging up:', err)
+          resolve()
+        }
+      } else {
+        resolve()
+      }
+    })
   }
 }
