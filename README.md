@@ -24,7 +24,7 @@ $ npm install peer-base
 ## Import
 
 ```js
-const PeerStar = require('peer-base')
+const PeerBase = require('peer-base')
 ```
 
 # API
