@@ -1,7 +1,7 @@
 /* eslint no-console: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:push-protocol')
+const debug = require('debug')('peer-base:collaboration:push-protocol')
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const debounce = require('lodash/debounce')

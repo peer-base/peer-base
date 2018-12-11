@@ -1,8 +1,8 @@
-# peer-star-app
+# peer-base
 
 Build real-time collaborative DApps on top of IPFS
 
-[![Build Status](https://travis-ci.org/ipfs-shipyard/peer-star-app.svg?branch=master)](https://travis-ci.org/ipfs-shipyard/peer-star-app) [![Greenkeeper badge](https://badges.greenkeeper.io/ipfs-shipyard/peer-star-app.svg)](https://greenkeeper.io/) [![made by Protocol Labs](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](https://protocol.ai)
+[![Build Status](https://travis-ci.org/ipfs-shipyard/peer-base.svg?branch=master)](https://travis-ci.org/ipfs-shipyard/peer-base) [![Greenkeeper badge](https://badges.greenkeeper.io/ipfs-shipyard/peer-base.svg)](https://greenkeeper.io/) [![made by Protocol Labs](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](https://protocol.ai)
 
 
 * [Example app](examples/react-app)
@@ -10,21 +10,21 @@ Build real-time collaborative DApps on top of IPFS
 
 # Documentation
 
-* [Code structure](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/CODE-STRUCTURE.md)
-* [Protocol](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/PROTOCOL.md)
-* [Performance tests](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/PERFORMANCE-TESTS.md)
-* [Membership Simulator](https://github.com/ipfs-shipyard/peer-star-app/blob/master/docs/MEMBERSHIP-SIM.md)
+* [Code structure](https://github.com/peer-base/peer-base/blob/master/docs/CODE-STRUCTURE.md)
+* [Protocol](https://github.com/peer-base/peer-base/blob/master/docs/PROTOCOL.md)
+* [Performance tests](https://github.com/peer-base/peer-base/blob/master/docs/PERFORMANCE-TESTS.md)
+* [Membership Simulator](https://github.com/peer-base/peer-base/blob/master/docs/MEMBERSHIP-SIM.md)
 
 ## Install
 
 ```bash
-$ npm install peer-star-app
+$ npm install peer-base
 ```
 
 ## Import
 
 ```js
-const PeerStar = require('peer-star-app')
+const PeerStar = require('peer-base')
 ```
 
 # API
@@ -36,7 +36,7 @@ const PeerStar = require('peer-star-app')
 Clone this repo.
 
 ```bash
-$ cd peer-star-app
+$ cd peer-base
 $ cd examples/react-app
 $ npm install
 ```
@@ -82,8 +82,8 @@ npm run test:post-deploy
 
 # Infrastructure
 
-The infrastructure for peer-star and related applications is managed via
-https://github.com/ipfs-shipyard/peer-star-infra/
+The infrastructure for peer-base and related applications is managed via
+https://github.com/peer-base/peer-base/
 
 # Debug
 
@@ -97,13 +97,13 @@ For file-specific `DEBUG` values, see the source code and look for usages of the
 
 # Contribute
 
-Peer-star app and the IPFS implementation in JavaScript is a work in progress. As such, there's a few things you can do right now to help out:
+Peer-base and the IPFS implementation in JavaScript is a work in progress. As such, there's a few things you can do right now to help out:
 
-  * Check out [existing issues](https://github.com/ipfs-shipyard/peer-star-app/issues). This would be especially useful for modules in active development. Some knowledge of IPFS may be required, as well as the infrastructure behind it - for instance, you may need to read up on p2p and more complex operations like muxing to be able to help technically.
+  * Check out [existing issues](https://github.com/peer-base/peer-base/issues). This would be especially useful for modules in active development. Some knowledge of IPFS may be required, as well as the infrastructure behind it - for instance, you may need to read up on p2p and more complex operations like muxing to be able to help technically.
   * **Perform code reviews**. More eyes will help (a) speed the project along, (b) ensure quality, and (c) reduce possible future bugs.
   * **Add tests**. There can never be enough tests.
 
-## Want to hack on peer-star-app?
+## Want to hack on peer-base?
 
 [![](https://cdn.rawgit.com/jbenet/contribute-ipfs-gif/master/img/contribute.gif)](https://github.com/ipfs/community/blob/master/CONTRIBUTING.md)
 

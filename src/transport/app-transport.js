@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('peer-star:app-transport')
+const debug = require('debug')('peer-base:app-transport')
 const EventEmitter = require('events')
 const Ring = require('../common/ring')
 const DiasSet = require('../common/dias-peer-set')

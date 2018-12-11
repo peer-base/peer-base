@@ -97,6 +97,6 @@ function datastore (ipfs, collaboration) {
       })
     }
     // resolve(ds)
-    resolve(new NamespaceStore(ds, new Key(`peer-star-collab-${collaboration.fqn()}`)))
+    resolve(new NamespaceStore(ds, new Key(`peer-base-collab-${collaboration.fqn()}`)))
   })
 }

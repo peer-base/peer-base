@@ -1,7 +1,7 @@
 /* eslint no-console: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:shared')
+const debug = require('debug')('peer-base:collaboration:shared')
 const EventEmitter = require('events')
 const b58Decode = require('bs58').decode
 const radix64 = require('radix-64')()

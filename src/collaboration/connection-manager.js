@@ -1,7 +1,7 @@
 /* eslint no-console: "off" */
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:connection-manager')
+const debug = require('debug')('peer-base:collaboration:connection-manager')
 const debounce = require('lodash/debounce')
 const EventEmitter = require('events')
 const PeerSet = require('../common/peer-set')

@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('peer-star:collaboration:stats:observer')
+const debug = require('debug')('peer-base:collaboration:stats:observer')
 const EventEmitter = require('events')
 const FrequencyCounter = require('frequency-counter')
 
