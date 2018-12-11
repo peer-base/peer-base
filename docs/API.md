@@ -2,6 +2,8 @@
 
 ## Index
 
+* [Install](#install)
+* [Import](#import)
 * [Create app](#create-app)
 * [Start app](#start-app)
 * [js-IPFS node](#js-ipfs-node)
@@ -14,10 +16,22 @@
 * [IPFS Circuit Relay support](#ipfs-circui-relay-support)
 * [Pinner](#pinner)
 
+## Install
+
+```bash
+$ npm install peer-base
+```
+
+## Import
+
+```js
+const PeerBase = require('peer-base')
+```
+
 ## Create app
 
 ```js
-const app = PeerStar('app name', options)
+const app = PeerBase('app name', options)
 
 app.on('error', (err) => {
   console.error('error in app:', err)
@@ -108,7 +122,7 @@ const decodedKeys = await Keys.uriDecode(string)
 
 ### Read-only keys
 
-You can distribute a read-only key by using `PeerStar.keys.uriEncodeReadOnly(keys)`:
+You can distribute a read-only key by using `PeerBase.keys.uriEncodeReadOnly(keys)`:
 
 ```js
 const Keys = require('peer-star-app').keys
@@ -169,7 +183,7 @@ const Zero = (id) => ({
   value: (state) => state
 })
 
-PeerStar.collaborationTypes.define('zero', Zero)
+PeerBase.collaborationTypes.define('zero', Zero)
 ```
 
 ### Peer count estimate
@@ -511,7 +525,7 @@ You can pin collaborations for peer-* apps without delegating keys. You can do t
 You can spawn the pinner through the JS API:
 
 ```js
-const pinner = PeerStar.createPinner('app name' [, options])
+const pinner = PeerBase.createPinner('app name' [, options])
 ```
 
 Options:
