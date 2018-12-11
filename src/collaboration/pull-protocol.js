@@ -11,12 +11,13 @@ const vectorclock = require('../common/vectorclock')
 const expectedNetworkError = require('../common/expected-network-error')
 
 module.exports = class PullProtocol {
-  constructor (ipfs, shared, clocks, keys, replication, options) {
+  constructor (ipfs, shared, clocks, keys, replication, collaboration, options) {
     this._ipfs = ipfs
     this._shared = shared
     this._clocks = clocks
     this._keys = keys
     this._replication = replication
+    this._collaboration = collaboration
     this._options = options
   }
 
@@ -145,6 +146,12 @@ module.exports = class PullProtocol {
       onNewData(data)
     }
 
+    const onCollaborationStopped = () => {
+      onEnd()
+    }
+
+    this._collaboration.on('stopped', onCollaborationStopped)
+
     const onEnd = (err) => {
       if (!ended) {
         if (err && expectedNetworkError(err)) {
@@ -153,6 +160,7 @@ module.exports = class PullProtocol {
         }
         ended = true
         this._shared.removeListener('clock changed', onNewLocalClock)
+        this._collaboration.removeListener('stopped', onCollaborationStopped)
         output.end(err)
       }
     }

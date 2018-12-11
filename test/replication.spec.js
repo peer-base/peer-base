@@ -103,8 +103,9 @@ describe('replication', function () {
   })
 
   it('can stop pinner', async () => {
-    pinner.stop()
-    await Promise.all(collaborations.map((collaboration) => forEvent(collaboration.replication, 'pinner left')))
+    return Promise.all([
+      pinner.stop(),
+      Promise.all(collaborations.map((collaboration) => forEvent(collaboration.replication, 'pinner left')))])
   })
 
   it('peers dont list pinner any longer after pinner stopped', () => {

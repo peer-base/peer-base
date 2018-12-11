@@ -66,7 +66,7 @@ module.exports = class ConnectionManager extends EventEmitter {
     await this._globalConnectionManager.handle(this._protocol.name(), this._protocol.handler)
   }
 
-  stop () {
+  async stop () {
     // clearInterval(this._resetInterval)
     this._stopped = true
     if (this._resetInterval) {
@@ -75,6 +75,9 @@ module.exports = class ConnectionManager extends EventEmitter {
     }
 
     this._globalConnectionManager.unhandle(this._protocol.name())
+
+    // disconnects all
+    await this._resetConnections()
   }
 
   observe (observer) {
@@ -137,9 +140,9 @@ module.exports = class ConnectionManager extends EventEmitter {
     this._debouncedResetConnections()
   }
 
-  _resetConnections () {
-    return new Promise(async (resolve, reject) => {
-      const diasSet = this._diasSet(this._ring)
+  async _resetConnections () {
+    try {
+      const diasSet = this._stopped ? new PeerSet() : this._diasSet(this._ring)
 
       // make sure we're connected to every peer of the Dias Peer Set
       for (let peerInfo of diasSet.values()) {
@@ -174,10 +177,10 @@ module.exports = class ConnectionManager extends EventEmitter {
           this._unreachables.delete(peerInfo.id.toB58String())
         }
       }
-    }).catch((err) => {
+    } catch (err) {
       console.error('error resetting connections:', err.message)
       debug('error resetting connections:', err)
-    })
+    }
   }
 
   _peerUnreachable (peerInfo) {

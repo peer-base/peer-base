@@ -87,10 +87,10 @@ module.exports = class Membership extends EventEmitter {
     }
   }
 
-  stop () {
+  async stop () {
     this._membershipGossipFrequencyHeuristic.stop()
     this._membershipGossipFrequencyHeuristic.removeListener('gossip now', this._gossipNow)
-    this.connectionManager.stop()
+    await this.connectionManager.stop()
     this.running = false
   }
 
