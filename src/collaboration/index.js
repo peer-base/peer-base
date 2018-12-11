@@ -30,11 +30,14 @@ const defaultOptions = {
   saveDebounceMS: 3000
 }
 
+const MAX_LISTENERS = 100
+
 module.exports = (...args) => new Collaboration(...args)
 
 class Collaboration extends EventEmitter {
   constructor (isRoot, ipfs, globalConnectionManager, app, name, type, options, parentCollab) {
     super()
+    this.setMaxListeners(MAX_LISTENERS)
     this._isRoot = isRoot
     this._ipfs = ipfs
     this._globalConnectionManager = globalConnectionManager
