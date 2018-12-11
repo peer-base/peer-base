@@ -1,5 +1,5 @@
 {
-  "name": "peer-star-app",
+  "name": "peer-base",
   "version": "0.10.6",
   "description": "Peer-Star App support for real-time collaborative DApps built on top of IPFS",
   "main": "src/index.js",
@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ipfs-shipyard/peer-star-app.git"
+    "url": "git+https://github.com/peer-base/peer-base.git"
   },
   "keywords": [
     "ipfs",
@@ -31,9 +31,9 @@
   "author": "IPFS Shipyard",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ipfs-shipyard/peer-star-app/issues"
+    "url": "https://github.com/peer-base/peer-base/issues"
   },
-  "homepage": "https://github.com/ipfs-shipyard/peer-star-app#readme",
+  "homepage": "https://github.com/peer-base/peer-base#readme",
   "dependencies": {
     "asino": "~0.3.3",
     "big-integer": "^1.6.36",
