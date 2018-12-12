@@ -93,16 +93,39 @@ describe('connection manager', () => {
     expect(diasSet.has(peerInfos.c)).to.equal(true)
   })
 
-  it('removes disconnected peer from ring', async () => {
+  it('removes unexpectedly disconnected peer from ring', async () => {
     resetConnectionsCalls = []
 
-    discovery.emit('disconnect', peerInfos.b)
+    discovery.emit('outbound:disconnect', peerInfos.b)
 
     await waitFor(50)
 
     expect(resetConnectionsCalls.length).to.equal(1)
     const diasSet = resetConnectionsCalls[0]
     expect(diasSet.has(peerInfos.b)).to.equal(false)
+  })
+
+  it('removes peer from ring if it cant be dialed', async () => {
+    resetConnectionsCalls = []
+
+    // Emit floodsub event indicating that a peer is newly interested in our
+    // topic
+    const topicsD = new Set([appTopic, 'some other topic'])
+    floodSub.emit('floodsub:subscription-change', peerInfos.d, topicsD)
+    await waitFor(50)
+
+    expect(resetConnectionsCalls.length).to.equal(1)
+    let diasSet = resetConnectionsCalls[0]
+    expect(diasSet.has(peerInfos.d)).to.equal(true)
+
+    // Emit discovery event indicating that peer could not be dialed
+    resetConnectionsCalls = []
+    discovery.emit('dialed', peerInfos.d, new Error('err'))
+    await waitFor(50)
+
+    expect(resetConnectionsCalls.length).to.equal(1)
+    diasSet = resetConnectionsCalls[0]
+    expect(diasSet.has(peerInfos.d)).to.equal(false)
   })
 
   it('cleans up all connections on stop', async () => {

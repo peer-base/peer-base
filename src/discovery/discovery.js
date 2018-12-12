@@ -71,6 +71,10 @@ module.exports = class Discovery extends EventEmitter {
     return this._connections.has(peerInfo)
   }
 
+  get connections () {
+    return new PeerSet(this._connections)
+  }
+
   resetConnections (diasSet) {
     // Make sure we're connected to every peer of the Dias Peer Set and
     // disconnect from any other peer
@@ -92,12 +96,23 @@ module.exports = class Discovery extends EventEmitter {
     // to actually process them
     await this._awaitStart()
 
+    // Check if discovery was stopped
+    const id = peerInfo.id.toB58String()
+    if (!this._running) {
+      debug('not dialing peer %s because discovery has stopped', id)
+      return
+    }
+
+    // Don't redial peers we're currently dialing
+    if (this._timeouts.has(id) || this._getDialer().dialing(peerInfo)) {
+      debug("not redialing peer %s because we're already dialing it", id)
+    }
+
     // Don't dial peers we've dialed recently
     const fresh = this._dialCache.add(peerInfo)
     if (!fresh) return
 
     // Don't dial peers we're already connected to
-    const id = peerInfo.id.toB58String()
     if (this._connections.has(peerInfo)) {
       debug('not dialing peer %s because already have a connection to it', id)
       return
@@ -131,15 +146,29 @@ module.exports = class Discovery extends EventEmitter {
 
       // Dial
       debug('dialing peer %s', id)
-      this._getDialer().dial(peerInfo, (ignore, completed) => {
+      this._getDialer().dial(peerInfo, (err, completed) => {
         if (completed && this._running) {
           debug('connected to peer %s', id)
           this._connections.add(peerInfo)
           this.emit('peer', peerInfo)
         }
+
+        this.emit('dialed', peerInfo, err, completed)
       })
     }, delay)
     this._timeouts.set(id, timeout)
+  }
+
+  _onPeerDisconnect (peerInfo) {
+    // Make sure we can immediately redial the peer on disconnect
+    this._dialCache.remove(peerInfo)
+
+    // Note that if the peer was disconnected on purpose by the local node it
+    // will already have have been removed from the outbound connections set,
+    // so here we're only emiting when there is an unexpected disconnect
+    if (this._connections.has(peerInfo)) {
+      this.emit('outbound:disconnect', peerInfo)
+    }
   }
 
   _disconnectPeer (peerInfo) {
@@ -149,15 +178,9 @@ module.exports = class Discovery extends EventEmitter {
     this._globalConnectionManager.maybeHangUp(peerInfo)
   }
 
-  _onPeerDisconnect (peerInfo) {
-    // Note that if the peer was disconnected on purpose by the local node it
-    // will already have have been removed from the outbound connections set
-    if (this._connections.has(peerInfo)) {
-      this.emit('disconnect', peerInfo)
-    }
-  }
-
   _cancelDial (peerInfo) {
+    if (!this._running) return
+
     this._getDialer().cancelDial(peerInfo)
     const id = peerInfo.id.toB58String()
     clearTimeout(this._timeouts.get(id))
