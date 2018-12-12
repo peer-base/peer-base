@@ -162,7 +162,7 @@ describe('dialer', () => {
       expect(completed).to.equal(false)
     })
     expect(dialer.dialing(a)).to.equal(true)
-    await waitFor(50)
+    await waitFor(100)
     expect(cbCount).to.equal(1)
     expect(sim.dials.length).to.equal(3)
     expect(dialer.dialing(a)).to.equal(false)
