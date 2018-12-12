@@ -89,6 +89,7 @@ describe('dialer', () => {
       expect(err).not.to.exist()
       expect(completed).to.equal(true)
     })
+    expect(dialer.dialing(a)).to.equal(true)
     await waitFirst // should resolve immediately
     expect(sim.dials.length).to.equal(1)
 
@@ -125,8 +126,11 @@ describe('dialer', () => {
     // Previous dial did not return an error so should no longer continue
     // to redial
     await sim.waitForDialComplete()
+    expect(dialer.dialing(a)).to.equal(false)
+
     await waitFor(200)
     expect(sim.dials.length).to.equal(3)
+    expect(dialer.dialing(a)).to.equal(false)
 
     // Subsequent dial attempts to same peer should now succeed without
     // redialing (because we're not throwing an error any more)
@@ -135,9 +139,11 @@ describe('dialer', () => {
       expect(err).not.to.exist()
       expect(completed).to.equal(true)
     })
+    expect(dialer.dialing(a)).to.equal(true)
     await waitSucceed // should resolve immediately
     await waitFor(50) // no more redials in this time period
     expect(sim.dials.length).to.equal(4)
+    expect(dialer.dialing(a)).to.equal(false)
   })
 
   it('dials that do not complete within dialerMaxAttempts should return from callback with completed false and an error', async () => {
@@ -146,45 +152,53 @@ describe('dialer', () => {
       dialerBackoffMinMS: 1,
       dialerMaxAttempts: 3
     })
+    const a = new FakePeerInfo('a')
 
     let cbCount = 0
     sim.startReturningErrors()
-    dialer.dial(new FakePeerInfo('a'), (err, completed) => {
+    dialer.dial(a, (err, completed) => {
       cbCount++
       expect(err).to.exist()
       expect(completed).to.equal(false)
     })
+    expect(dialer.dialing(a)).to.equal(true)
     await waitFor(50)
     expect(cbCount).to.equal(1)
     expect(sim.dials.length).to.equal(3)
+    expect(dialer.dialing(a)).to.equal(false)
   })
 
   it('dials interrupted by stop should return from callback with completed false', async () => {
     const sim = createLibp2pDialSimulator(50)
     const dialer = new Dialer(sim.libp2p)
+    const a = new FakePeerInfo('a')
 
     let cbCount = 0
-    dialer.dial(new FakePeerInfo('a'), (err, completed) => {
+    dialer.dial(a, (err, completed) => {
       cbCount++
       expect(err).not.to.exist()
       expect(completed).to.equal(false)
     })
+    expect(dialer.dialing(a)).to.equal(true)
     dialer.stop()
     await waitFor(100)
     expect(sim.dials.length).to.equal(1)
     expect(cbCount).to.equal(1)
+    expect(dialer.dialing(a)).to.equal(false)
   })
 
   it('dials after stop should be ignored', async () => {
     const sim = createLibp2pDialSimulator(10)
     const dialer = new Dialer(sim.libp2p)
+    const a = new FakePeerInfo('a')
 
     // Dials after stop should be ignored
     dialer.stop()
-    dialer.dial(new FakePeerInfo('a'), (err, completed) => {
+    dialer.dial(a, (err, completed) => {
       expect(err).not.to.exist()
       expect(completed).to.equal(false)
     })
+    expect(dialer.dialing(a)).to.equal(false)
     await waitFor(50)
     expect(sim.dials.length).to.equal(0)
   })
@@ -200,11 +214,13 @@ describe('dialer', () => {
       expect(err).not.to.exist()
       expect(completed).to.equal(false)
     })
+    expect(dialer.dialing(a)).to.equal(true)
     await waitFor(10)
     dialer.cancelDial(a)
     await waitFor(50)
     expect(sim.dials.length).to.equal(1)
     expect(cbCount).to.equal(1)
+    expect(dialer.dialing(a)).to.equal(false)
   })
 
   it('cancelled retry dials should return from callback with completed false', async () => {
@@ -218,6 +234,7 @@ describe('dialer', () => {
       expect(err).not.to.exist()
       expect(completed).to.equal(false)
     })
+    expect(dialer.dialing(a)).to.equal(true)
 
     sim.waitForDialComplete()
     // On the next tick it should set a timer to dial again
@@ -228,5 +245,6 @@ describe('dialer', () => {
     await waitFor(50)
     expect(sim.dials.length).to.equal(1)
     expect(cbCount).to.equal(1)
+    expect(dialer.dialing(a)).to.equal(false)
   })
 })

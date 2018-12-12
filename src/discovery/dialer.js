@@ -5,7 +5,7 @@ const debug = require('debug')('peer-star:discovery:dialer')
 const defaultOptions = {
   dialerBackoffMinMS: 1000,
   dialerBackoffMaxMS: 60 * 1000,
-  dialerMaxAttempts: 10
+  dialerMaxAttempts: 3
 }
 
 module.exports = class Dialer {
@@ -53,6 +53,7 @@ module.exports = class Dialer {
         attempt++
         if (attempt >= this._options.dialerMaxAttempts) {
           debug('already dialled to peer %s %d times - giving up', id, this._options.dialerMaxAttempts)
+          this._dialing.delete(id)
           return cb(err, false)
         }
 
@@ -77,6 +78,11 @@ module.exports = class Dialer {
     }
     const backoff = Math.pow(2, attempt - 1) * this._options.dialerBackoffMinMS
     return Math.min(backoff, this._options.dialerBackoffMaxMS)
+  }
+
+  dialing (peerInfo) {
+    const id = peerInfo.id.toB58String()
+    return Boolean(this._dialing && this._dialing.has(id))
   }
 
   cancelDial (peerInfo) {
