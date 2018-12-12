@@ -41,7 +41,6 @@ class AppTransport extends EventEmitter {
 
     this._app.setGlobalConnectionManager(this._globalConnectionManager)
 
-    this._onDisconnect = this._onDisconnect.bind(this)
     this._onPeer = this._onPeer.bind(this)
 
     // Discovery gets started by libp2p, so once it has started we can start
@@ -75,7 +74,6 @@ class AppTransport extends EventEmitter {
 
   async _start () {
     this.discovery.on('peer', this._onPeer)
-    this.discovery.on('disconnect', this._onDisconnect)
     await this._awaitIpfsStart()
     this._gossip.start()
     this._connectionManager.start()
@@ -93,7 +91,6 @@ class AppTransport extends EventEmitter {
 
   stop () {
     this.discovery.removeListener('peer', this._onPeer)
-    this.discovery.removeListener('disconnect', this._onDisconnect)
     this._connectionManager.stop()
     this._globalConnectionManager.stop()
     this._gossip.stop((err) => {
@@ -105,11 +102,6 @@ class AppTransport extends EventEmitter {
 
   _onPeer (peerInfo) {
     this.emit('outbound peer connected', peerInfo)
-  }
-
-  _onDisconnect (peerInfo) {
-    // this.emit('peer disconnected', peerInfo)
-    this.emit('outbound peer disconnected', peerInfo)
   }
 
   _appTopic (app) {

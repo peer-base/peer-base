@@ -17,18 +17,25 @@ describe('app swarm', function () {
 
   // let rendezvous
   let swarm = []
-  const outboundConnectionCounts = []
-  /*
+
+  function getOutboundConnectionCount (peer) {
+    const libp2pNode = peer.app.ipfs._libp2pNode
+    if (!libp2pNode) return 0
+    const discovery = (libp2pNode._discovery || [])[0]
+    if (!discovery) return 0
+    return [...discovery.connections.values()].length
+  }
+
   let interval
 
-  before(() => {
-    interval = setInterval(() => {
-      console.log('outbound connection counts:', outboundConnectionCounts)
-    }, 1000)
-  })
+  // before(() => {
+  //   interval = setInterval(() => {
+  //     console.log('outbound connection counts:', swarm.map(a => getOutboundConnectionCount(a)))
+  //   }, 1000)
+  // })
 
   after(() => clearInterval(interval))
-  */
+
   before(() => {
     appName = App.createName()
   })
@@ -41,15 +48,6 @@ describe('app swarm', function () {
   peerIndexes.forEach((peerIndex) => {
     before(() => {
       const app = App(appName, { maxThrottleDelayMS: 1000 })
-
-      app.app.on('outbound peer connected', (peerInfo) => {
-        outboundConnectionCounts[peerIndex] = (outboundConnectionCounts[peerIndex] || 0) + 1
-      })
-
-      app.app.on('outbound peer disconnected', (peerInfo) => {
-        outboundConnectionCounts[peerIndex] = (outboundConnectionCounts[peerIndex] || 0) - 1
-      })
-
       swarm.push(app)
       return app.start()
     })
@@ -79,8 +77,8 @@ describe('app swarm', function () {
   })
 
   it('each node connections are bounded', () => {
-    outboundConnectionCounts.forEach((connCount) => {
-      expect(connCount).to.be.most(10)
+    swarm.forEach((peer) => {
+      expect(getOutboundConnectionCount(peer)).to.be.most(10)
     })
   })
 })

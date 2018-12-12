@@ -57,8 +57,6 @@ module.exports = (app, options) => {
   }) {
     const appTransport = AppTransport(app, ipfs, new WebSocketStar({ id: peerInfo.id }), options && options.transport)
     appTransport.on('error', (err) => app.emit('error', err))
-    appTransport.on('outbound peer connected', (peerInfo) => app.emit('outbound peer connected', peerInfo))
-    appTransport.on('outbound peer disconnected', (peerInfo) => app.emit('outbound peer disconnected', peerInfo))
 
     if (options && options.relay) {
       Relay(ipfs, appTransport, options.relay)
