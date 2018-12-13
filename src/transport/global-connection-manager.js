@@ -108,8 +108,12 @@ module.exports = class GlobalConnectionManager extends EventEmitter {
     return this._ipfs._libp2pNode.unhandle(protocol)
   }
 
+  dial (peerInfo, cb) {
+    this._ipfs._libp2pNode.dial(peerInfo, cb)
+  }
+
   _onPeerConnect (peerInfo) {
-    if (!this._outbound.has(peerInfo) && !this._appTransport.discovery.hasConnection(peerInfo)) {
+    if (!this._outbound.has(peerInfo) && !this._appTransport.hasConnection(peerInfo)) {
       this._inbound.add(peerInfo)
     }
   }
