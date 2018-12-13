@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('peer-star:discovery:peer-interest')
+const debug = require('debug')('peer-base:discovery:peer-interest')
 const EventEmitter = require('events')
 
 // Listen to floodsub to find out if a peer is interested in our app topic
