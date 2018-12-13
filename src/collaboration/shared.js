@@ -92,7 +92,11 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   // shared value
   shared.value = () => {
     if (valueCache !== undefined) {
-      return valueCache.value
+      let retValue = valueCache.value
+      if (retValue.toJS) {
+        retValue = retValue.toJS()
+      }
+      return retValue
     }
     if ((!memo.state) || (memo.state !== state)) {
       memo.state = state
