@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('peer-star:discovery')
+const debug = require('debug')('peer-base:discovery')
 const EventEmitter = require('events')
 const DialCache = require('./dial-cache')
 const DialThrottle = require('./dial-throttle')
@@ -172,9 +172,11 @@ module.exports = class Discovery extends EventEmitter {
   }
 
   _disconnectPeer (peerInfo) {
-    debug('disconnecting peer %s', peerInfo.id.toB58String())
+    if (this._connections.has(peerInfo)) {
+      debug('disconnecting peer %s', peerInfo.id.toB58String())
+      this._connections.delete(peerInfo)
+    }
     this._cancelDial(peerInfo)
-    this._connections.delete(peerInfo)
     this._globalConnectionManager.maybeHangUp(peerInfo)
   }
 

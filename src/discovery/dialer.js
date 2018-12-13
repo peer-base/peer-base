@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('peer-star:discovery:dialer')
+const debug = require('debug')('peer-base:discovery:dialer')
 
 const defaultOptions = {
   dialerBackoffMinMS: 1000,
@@ -91,17 +91,19 @@ module.exports = class Dialer {
   }
 
   _cancelDial (id) {
-    debug('canceling dial to %s', id)
-    // Cancel the dial
-    this._dialing && this._dialing.delete(id)
+    if (this._dialing && this._dialing.has(id)) {
+      debug('canceling dial to %s', id)
+      // Cancel the dial
+      this._dialing && this._dialing.delete(id)
+    }
 
     // If there is a timer for a dial retry, cancel that too
-    if (!this._timeouts.get(id)) return
-
-    debug('canceling dial to %s now', id)
-    const { timeout, cb } = this._timeouts.get(id)
-    clearTimeout(timeout)
-    cb && cb(null, false)
+    if (this._timeouts.has(id)) {
+      debug('canceling dial to %s now', id)
+      const { timeout, cb } = this._timeouts.get(id)
+      clearTimeout(timeout)
+      cb && cb(null, false)
+    }
   }
 
   stop () {
