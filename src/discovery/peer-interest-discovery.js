@@ -69,7 +69,9 @@ module.exports = class PeerInterestDiscovery extends EventEmitter {
   add (peerInfo) {
     const id = peerInfo.id.toB58String()
     if (!this._peers.has(id)) {
+      debug('waiting for topic interest from %s for %dms', id, this._options.peerInterestTimeoutMS)
       const timeout = setTimeout(() => {
+        debug('did not receive topic interest from %s after %dms, closing connection', id, this._options.peerInterestTimeoutMS)
         // If the timeout expires before finding out if the peer is interested
         // in our topic, disconnect from the peer
         this._clearTimer(id)
@@ -81,6 +83,9 @@ module.exports = class PeerInterestDiscovery extends EventEmitter {
 
   _onPeerDisconnect (peerInfo) {
     const id = peerInfo.id.toB58String()
+    if (this._peers.has(id)) {
+      debug('peer %s disconnected, aborting wait for topic interest', id)
+    }
     this._clearTimer(id)
   }
 
