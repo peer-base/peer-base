@@ -25,7 +25,7 @@ describe('dial cache', () => {
       // After the expiry time it should be fresh again
       expect(cache.add(new FakePeerInfo('a'))).to.equal(true)
       done()
-    }, 51)
+    }, 100)
   })
 
   it('does not exceed capacity', () => {
