@@ -63,11 +63,11 @@ describe('discovery', () => {
       }
     }, opts)
 
-    const connMgr = {
+    const connMgr = Object.assign(new EventEmitter(), {
       hasConnection (peerInfo) {
         return false
       }
-    }
+    })
 
     const discovery = new Discovery(app, ipfs, dialer, peerDiscovery, globalConnectionManager, opts)
     discovery.setConnectionManager(connMgr)
@@ -208,7 +208,7 @@ describe('discovery', () => {
   })
 
   it('allows redial immediately after unexpected disconnect', async () => {
-    const { discovery, peerDiscovery, libp2p, dials } = await createDiscovery()
+    const { discovery, peerDiscovery, libp2p, connMgr, dials } = await createDiscovery()
 
     // Emit peer
     const i = new FakePeerInfo('i')
@@ -222,7 +222,7 @@ describe('discovery', () => {
 
     // Simulate unexpected disconnect
     libp2p.emit('peer:disconnect', i)
-    discovery.onUnexpectedDisconnect(i)
+    connMgr.emit('disconnect:unexpected', i)
 
     // Should allow immediate redial
     await waitFor(0)
