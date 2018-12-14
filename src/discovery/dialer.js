@@ -77,7 +77,7 @@ module.exports = class Dialer extends EventEmitter {
       if (err) {
         attempt++
         if (attempt >= this._options.dialerMaxAttempts || !redial) {
-          debug('already dialled to peer %s %d times - giving up', id, this._options.dialerMaxAttempts)
+          debug('already dialed to peer %s %d times - giving up', id, attempt)
           this._dialing.delete(id)
           cb(err, false)
           this.emit('dialed', peerInfo, err, false)

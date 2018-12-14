@@ -75,7 +75,7 @@ module.exports = class PeerInterestDiscovery extends EventEmitter {
         this._clearTimer(id)
         this._globalConnectionManager.maybeHangUp(peerInfo)
       }, this._options.peerInterestTimeoutMS)
-      this._peers.set(id, timeout)
+      this._peers.set(id, { timeout, peerInfo })
     }
   }
 
@@ -85,9 +85,9 @@ module.exports = class PeerInterestDiscovery extends EventEmitter {
   }
 
   _clearTimer (id) {
-    const timeout = this._peers.get(id)
-    if (timeout) {
-      clearTimeout(timeout)
+    const peer = this._peers.get(id)
+    if (peer && peer.timeout) {
+      clearTimeout(peer.timeout)
     }
     this._peers.delete(id)
   }
