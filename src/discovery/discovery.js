@@ -66,9 +66,8 @@ module.exports = class Discovery extends EventEmitter {
     this._peerInterestDiscovery.removeListener('peer', this._peerIsInterested)
     this._discovery.removeListener('peer', this._dialPeer)
 
-    // Note: When 'stop' is fired, AppTransport will stop the connection
-    // manager, which will call Discovery.resetConnections() with an empty dias
-    // set, cleaning up the remaining connections
+    // Note: When 'stop' is fired, ConnectionManager will clean up the
+    // connections
     this.emit('stop')
     return this._discovery.stop(callback)
   }
