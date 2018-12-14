@@ -30,6 +30,7 @@ module.exports = class Discovery extends EventEmitter {
 
     this._dialPeer = this._dialPeer.bind(this)
     this._peerIsInterested = this._peerIsInterested.bind(this)
+    this._onUnexpectedDisconnect = this._onUnexpectedDisconnect.bind(this)
 
     // Start peer discovery immediately so that we don't miss any events that
     // come in before we've started.
@@ -48,6 +49,7 @@ module.exports = class Discovery extends EventEmitter {
     debug('start')
     this._peerInterestDiscovery.on('peer', this._peerIsInterested)
     this._peerInterestDiscovery.start()
+    this._connectionManager.on('disconnect:unexpected', this._onUnexpectedDisconnect)
     this._dialer.start()
     this._running = true
     this.emit('start')
@@ -65,6 +67,7 @@ module.exports = class Discovery extends EventEmitter {
     this._peerInterestDiscovery.stop()
     this._peerInterestDiscovery.removeListener('peer', this._peerIsInterested)
     this._discovery.removeListener('peer', this._dialPeer)
+    this._peerInterestDiscovery.removeListener('disconnect:unexpected', this._onUnexpectedDisconnect)
 
     // Note: When 'stop' is fired, ConnectionManager will clean up the
     // connections
@@ -127,8 +130,8 @@ module.exports = class Discovery extends EventEmitter {
     this._timeouts.set(id, timeout)
   }
 
-  // Called by ConnectionManager
-  onUnexpectedDisconnect (peerInfo) {
+  // Fired by ConnectionManager
+  _onUnexpectedDisconnect (peerInfo) {
     // Make sure we can immediately redial the peer if it unexpectedly
     // disconnects
     this._dialCache.remove(peerInfo)

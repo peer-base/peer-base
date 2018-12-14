@@ -35,12 +35,8 @@ describe('connection manager', () => {
       f: new FakePeerInfo([1, 1, 1, 6])
     }
 
-    unexpectedDisconnects = []
     discovery = Object.assign(new EventEmitter(), {
-      setConnectionManager (cm) {},
-      onUnexpectedDisconnect (peerInfo) {
-        unexpectedDisconnects.push(peerInfo)
-      }
+      setConnectionManager (cm) {}
     })
 
     libp2p = new EventEmitter()
@@ -78,6 +74,12 @@ describe('connection manager', () => {
     }
 
     connectionManager = new ConnectionManager(ipfs, dialer, discovery, globalConnectionManager, opts)
+
+    unexpectedDisconnects = []
+    connectionManager.on('disconnect:unexpected', (peerInfo) => {
+      unexpectedDisconnects.push(peerInfo)
+    })
+
     connectionManager.start(peerInfos.a)
     await waitFor(10)
   })
@@ -133,6 +135,7 @@ describe('connection manager', () => {
   it('removes unexpectedly disconnected peer from ring', async () => {
     dials = []
     disconnects = []
+    unexpectedDisconnects = []
 
     // Emit floodsub events indicating that a peer is newly interested
     // in our topic
@@ -153,13 +156,14 @@ describe('connection manager', () => {
     // a peer:disconnect event means peer was already disconnected so
     // we don't need to hang up
     expect(disconnects.length).to.equal(0)
-    // we should inform discovery that an unexpected disconnect has occurred
+    // we should fire an event indicating that an unexpected disconnect has occurred
     expect(unexpectedDisconnects.length).to.equal(1)
   })
 
   it('removes peer from ring if we receive a dial failure event', async () => {
     dials = []
     disconnects = []
+    unexpectedDisconnects = []
 
     // Emit floodsub events indicating that a peer is newly interested
     // in our topic
@@ -179,6 +183,8 @@ describe('connection manager', () => {
     expect(connectionManager.hasConnection(peerInfos.e)).to.equal(false)
     expect(dials.length).to.equal(0)
     expect(disconnects.length).to.equal(1)
+    // we should fire an event indicating that an unexpected disconnect has occurred
+    expect(unexpectedDisconnects.length).to.equal(1)
   })
 
   it('removes peer from ring if we dial and theres a failure', async () => {
