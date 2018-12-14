@@ -29,7 +29,6 @@ module.exports = class Discovery extends EventEmitter {
     this._peerInterestDiscovery = new PeerInterestDiscovery(ipfs, globalConnectionManager, app.name, options)
 
     this._dialPeer = this._dialPeer.bind(this)
-    this._onPeerDisconnect = this._onPeerDisconnect.bind(this)
     this._peerIsInterested = this._peerIsInterested.bind(this)
 
     // Start peer discovery immediately so that we don't miss any events that
@@ -47,7 +46,6 @@ module.exports = class Discovery extends EventEmitter {
   // Called by libp2p when it starts
   start (callback) {
     debug('start')
-    this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
     this._peerInterestDiscovery.on('peer', this._peerIsInterested)
     this._peerInterestDiscovery.start()
     this._dialer.start()
@@ -66,7 +64,6 @@ module.exports = class Discovery extends EventEmitter {
     this._timeouts.clear()
     this._peerInterestDiscovery.stop()
     this._peerInterestDiscovery.removeListener('peer', this._peerIsInterested)
-    this._ipfs._libp2pNode.removeListener('peer:disconnect', this._onPeerDisconnect)
     this._discovery.removeListener('peer', this._dialPeer)
 
     // Note: When 'stop' is fired, AppTransport will stop the connection
@@ -131,13 +128,15 @@ module.exports = class Discovery extends EventEmitter {
     this._timeouts.set(id, timeout)
   }
 
-  _peerIsInterested (peerInfo, isInterested) {
-    this.emit('peer:interest', peerInfo, isInterested)
+  // Called by ConnectionManager
+  onUnexpectedDisconnect (peerInfo) {
+    // Make sure we can immediately redial the peer if it unexpectedly
+    // disconnects
+    this._dialCache.remove(peerInfo)
   }
 
-  _onPeerDisconnect (peerInfo) {
-    // Make sure we can immediately redial the peer on disconnect
-    this._dialCache.remove(peerInfo)
+  _peerIsInterested (peerInfo, isInterested) {
+    this.emit('peer:interest', peerInfo, isInterested)
   }
 
   _awaitStart () {
