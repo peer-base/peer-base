@@ -4,8 +4,7 @@ const debug = require('debug')('peer-base:discovery')
 const EventEmitter = require('events')
 const DialCache = require('./dial-cache')
 const DialThrottle = require('./dial-throttle')
-const Dialer = require('./dialer')
-const PeerSet = require('../common/peer-set')
+const PeerInterestDiscovery = require('../discovery/peer-interest-discovery')
 
 // The peerDiscovery emitter emits 'peer' events when a new peer is discovered.
 // This class listens for those events and dials the peer.
@@ -15,23 +14,23 @@ const PeerSet = require('../common/peer-set')
 // event and emits a 'peer' event indicating if the remote peer is interested
 // in the local peer's app topic.
 module.exports = class Discovery extends EventEmitter {
-  constructor (app, ipfs, peerDiscovery, globalConnectionManager, options = {}) {
+  constructor (app, ipfs, dialer, peerDiscovery, globalConnectionManager, options = {}) {
     super()
 
     this._ipfs = ipfs
+    this._dialer = dialer
     this._discovery = peerDiscovery
-    this._globalConnectionManager = globalConnectionManager
-    this._options = options
 
-    this._connections = new PeerSet()
     this._timeouts = new Map()
     this._running = false
 
     this._dialCache = new DialCache(options)
     this._dialThrottle = new DialThrottle(app, options)
+    this._peerInterestDiscovery = new PeerInterestDiscovery(ipfs, globalConnectionManager, app.name, options)
 
     this._dialPeer = this._dialPeer.bind(this)
     this._onPeerDisconnect = this._onPeerDisconnect.bind(this)
+    this._peerIsInterested = this._peerIsInterested.bind(this)
 
     // Start peer discovery immediately so that we don't miss any events that
     // come in before we've started.
@@ -40,23 +39,33 @@ module.exports = class Discovery extends EventEmitter {
     this._discovery.on('peer', this._dialPeer)
   }
 
+  // Both Discovery and ConnectionManager need references to each other
+  setConnectionManager (mgr) {
+    this._connectionManager = mgr
+  }
+
+  // Called by libp2p when it starts
   start (callback) {
     debug('start')
     this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
+    this._peerInterestDiscovery.on('peer', this._peerIsInterested)
+    this._peerInterestDiscovery.start()
+    this._dialer.start()
     this._running = true
     this.emit('start')
     return this._discovery.start(callback)
   }
 
+  // Called by libp2p when it stops
   stop (callback) {
     debug('stop')
     this._running = false
-    this._connections.clear()
     for (const timeout of this._timeouts.values()) {
       clearTimeout(timeout)
     }
     this._timeouts.clear()
-    this._dialer && this._dialer.stop()
+    this._peerInterestDiscovery.stop()
+    this._peerInterestDiscovery.removeListener('peer', this._peerIsInterested)
     this._ipfs._libp2pNode.removeListener('peer:disconnect', this._onPeerDisconnect)
     this._discovery.removeListener('peer', this._dialPeer)
 
@@ -67,28 +76,8 @@ module.exports = class Discovery extends EventEmitter {
     return this._discovery.stop(callback)
   }
 
-  hasConnection (peerInfo) {
-    return this._connections.has(peerInfo)
-  }
-
-  get connections () {
-    return new PeerSet(this._connections)
-  }
-
-  resetConnections (diasSet) {
-    // Make sure we're connected to every peer of the Dias Peer Set and
-    // disconnect from any other peer
-    for (let peerInfo of diasSet.values()) {
-      if (!this._connections.has(peerInfo)) {
-        this._dialPeer(peerInfo)
-      }
-    }
-
-    for (let peerInfo of this._connections.values()) {
-      if (!diasSet.has(peerInfo)) {
-        this._disconnectPeer(peerInfo)
-      }
-    }
+  needsConnection (peerInfo) {
+    return this._peerInterestDiscovery.needsConnection(peerInfo)
   }
 
   async _dialPeer (peerInfo) {
@@ -103,20 +92,20 @@ module.exports = class Discovery extends EventEmitter {
       return
     }
 
+    // Don't dial peers we're already connected to
+    if (this._connectionManager.hasConnection(peerInfo) || this._peerInterestDiscovery.needsConnection(peerInfo)) {
+      debug('not dialing peer %s because already have a connection to it', id)
+      return
+    }
+
     // Don't redial peers we're currently dialing
-    if (this._timeouts.has(id) || this._getDialer().dialing(peerInfo)) {
+    if (this._timeouts.has(id) || this._dialer.dialing(peerInfo)) {
       debug("not redialing peer %s because we're already dialing it", id)
     }
 
     // Don't dial peers we've dialed recently
     const fresh = this._dialCache.add(peerInfo)
     if (!fresh) return
-
-    // Don't dial peers we're already connected to
-    if (this._connections.has(peerInfo)) {
-      debug('not dialing peer %s because already have a connection to it', id)
-      return
-    }
 
     const delay = this._dialThrottle.getDialDelay()
     debug('discovered peer %s - dialing in %dms', id, delay)
@@ -129,79 +118,33 @@ module.exports = class Discovery extends EventEmitter {
         return
       }
 
-      // Make sure libp2p has started
-      await this._awaitLibp2pStart()
-
-      // Check (again) if discovery was stopped
-      if (!this._running) {
-        debug('not dialing peer %s because discovery has stopped', id)
-        return
-      }
-
-      // Don't dial peers we're already connected to
-      if (this._connections.has(peerInfo)) {
-        debug('not dialing peer %s because already have a connection to it', id)
-        return
-      }
-
       // Dial
       debug('dialing peer %s', id)
-      this._getDialer().dial(peerInfo, (err, completed) => {
+      this._dialer.dial(peerInfo, (ignore, completed) => {
         if (completed && this._running) {
           debug('connected to peer %s', id)
-          this._connections.add(peerInfo)
           this.emit('peer', peerInfo)
+          this._peerInterestDiscovery.add(peerInfo)
         }
-
-        this.emit('dialed', peerInfo, err, completed)
       })
     }, delay)
     this._timeouts.set(id, timeout)
   }
 
+  _peerIsInterested (peerInfo, isInterested) {
+    this.emit('peer:interest', peerInfo, isInterested)
+  }
+
   _onPeerDisconnect (peerInfo) {
     // Make sure we can immediately redial the peer on disconnect
     this._dialCache.remove(peerInfo)
-
-    // Note that if the peer was disconnected on purpose by the local node it
-    // will already have have been removed from the outbound connections set,
-    // so here we're only emiting when there is an unexpected disconnect
-    if (this._connections.has(peerInfo)) {
-      this.emit('outbound:disconnect', peerInfo)
-    }
-  }
-
-  _disconnectPeer (peerInfo) {
-    if (this._connections.has(peerInfo)) {
-      debug('disconnecting peer %s', peerInfo.id.toB58String())
-      this._connections.delete(peerInfo)
-    }
-    this._cancelDial(peerInfo)
-    this._globalConnectionManager.maybeHangUp(peerInfo)
-  }
-
-  _cancelDial (peerInfo) {
-    if (!this._running) return
-
-    this._getDialer().cancelDial(peerInfo)
-    const id = peerInfo.id.toB58String()
-    clearTimeout(this._timeouts.get(id))
-    this._timeouts.delete(id)
-  }
-
-  _getDialer () {
-    if (!this._dialer) {
-      this._dialer = new Dialer(this._ipfs._libp2pNode, this._options)
-      this.once('stop', () => {
-        this._dialer.stop()
-        this._dialer = null
-      })
-    }
-    return this._dialer
   }
 
   _awaitStart () {
-    return new Promise(resolve => {
+    return new Promise(async resolve => {
+      // Make sure libp2p has started
+      await this._awaitLibp2pStart()
+
       if (this._running) {
         return resolve()
       }

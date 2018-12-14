@@ -22,8 +22,8 @@ describe('app swarm', function () {
     const libp2pNode = peer.app.ipfs._libp2pNode
     if (!libp2pNode) return 0
     const discovery = (libp2pNode._discovery || [])[0]
-    if (!discovery) return 0
-    return [...discovery.connections.values()].length
+    if (!discovery || !discovery._connectionManager) return 0
+    return [...discovery._connectionManager.connections.values()].length
   }
 
   let interval
