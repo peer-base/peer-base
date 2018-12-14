@@ -207,7 +207,7 @@ describe('discovery', () => {
     expect(dials.length).to.be.lte(1)
   })
 
-  it('allows redial immediately after disconnect', async () => {
+  it('allows redial immediately after unexpected disconnect', async () => {
     const { discovery, peerDiscovery, libp2p, dials } = await createDiscovery()
 
     // Emit peer
@@ -220,8 +220,9 @@ describe('discovery', () => {
     expect(dials.length).to.equal(1)
     expect(discovery.needsConnection(i)).to.equal(true)
 
-    // Disconnect peer
+    // Simulate unexpected disconnect
     libp2p.emit('peer:disconnect', i)
+    discovery.onUnexpectedDisconnect(i)
 
     // Should allow immediate redial
     await waitFor(0)
