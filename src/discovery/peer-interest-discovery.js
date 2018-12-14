@@ -50,8 +50,10 @@ module.exports = class PeerInterestDiscovery extends EventEmitter {
     const isInterested = topics.has(this._appTopic)
     this.emit('peer', peerInfo, isInterested)
 
-    // Clean up timer
-    this._clearTimer(id, false)
+    // We got a response, so clean up the timer
+    this._clearTimer(id)
+
+    // If the peer is not interested in our topic, we can hang up
     if (!isInterested) {
       this._globalConnectionManager.maybeHangUp(peerInfo)
     }
@@ -61,30 +63,19 @@ module.exports = class PeerInterestDiscovery extends EventEmitter {
     if (!this._running) return false
 
     const id = peerInfo.id.toB58String()
-    const peer = this._peers.get(id)
-    if (!peer) return false
-
-    return Date.now() - peer.at < this._options.peerInterestTimeoutMS
+    return this._peers.has(id)
   }
 
   add (peerInfo) {
     const id = peerInfo.id.toB58String()
     if (!this._peers.has(id)) {
-      const timeout = setTimeout(this._checkTimers.bind(this), this._options.peerInterestTimeoutMS)
-      this._peers.set(id, { peerInfo, at: Date.now(), timeout })
-    }
-  }
-
-  // Disconnect from expired topic discovery timers
-  _checkTimers () {
-    if (!this._running) return
-
-    const now = Date.now()
-    for (const [id, peer] of this._peers) {
-      if (now - peer.at > this._options.peerInterestTimeoutMS) {
+      const timeout = setTimeout(() => {
+        // If the timeout expires before finding out if the peer is interested
+        // in our topic, disconnect from the peer
         this._clearTimer(id)
-        this._globalConnectionManager.maybeHangUp(peer.peerInfo)
-      }
+        this._globalConnectionManager.maybeHangUp(peerInfo)
+      }, this._options.peerInterestTimeoutMS)
+      this._peers.set(id, timeout)
     }
   }
 
@@ -94,10 +85,10 @@ module.exports = class PeerInterestDiscovery extends EventEmitter {
   }
 
   _clearTimer (id) {
-    const peer = this._peers.get(id)
-    if (peer) {
-      clearTimeout(peer.timeout)
-      this._peers.delete(id)
+    const timeout = this._peers.get(id)
+    if (timeout) {
+      clearTimeout(timeout)
     }
+    this._peers.delete(id)
   }
 }

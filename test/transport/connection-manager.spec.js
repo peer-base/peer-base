@@ -23,6 +23,7 @@ describe('connection manager', () => {
   let dials
   let connectionManager
   let disconnects
+  let unexpectedDisconnects
 
   before(async () => {
     peerInfos = {
@@ -34,8 +35,12 @@ describe('connection manager', () => {
       f: new FakePeerInfo([1, 1, 1, 6])
     }
 
+    unexpectedDisconnects = []
     discovery = Object.assign(new EventEmitter(), {
-      setConnectionManager (cm) {}
+      setConnectionManager (cm) {},
+      onUnexpectedDisconnect (peerInfo) {
+        unexpectedDisconnects.push(peerInfo)
+      }
     })
 
     libp2p = new EventEmitter()
@@ -148,6 +153,8 @@ describe('connection manager', () => {
     // a peer:disconnect event means peer was already disconnected so
     // we don't need to hang up
     expect(disconnects.length).to.equal(0)
+    // we should inform discovery that an unexpected disconnect has occurred
+    expect(unexpectedDisconnects.length).to.equal(1)
   })
 
   it('removes peer from ring if we receive a dial failure event', async () => {
