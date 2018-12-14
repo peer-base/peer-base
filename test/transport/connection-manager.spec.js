@@ -8,136 +8,215 @@ const expect = chai.expect
 const EventEmitter = require('events')
 const ConnectionManager = require('../../src/transport/connection-manager')
 const FakePeerInfo = require('../utils/fake-peer-info')
+const Dialer = require('../../src/discovery/dialer')
 
 function waitFor (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 describe('connection manager', () => {
-  let appTopic
   let peerInfos
   let discovery
-  let floodSub
   let libp2p
+  let dialer
+  let failNextDial
+  let dials
   let connectionManager
-  let resetConnectionsCalls
+  let disconnects
 
   before(async () => {
-    appTopic = 'my topic'
-
     peerInfos = {
       a: new FakePeerInfo([1, 1, 1, 1]),
       b: new FakePeerInfo([1, 1, 1, 2]),
       c: new FakePeerInfo([1, 1, 1, 3]),
       d: new FakePeerInfo([1, 1, 1, 4]),
-      e: new FakePeerInfo([1, 1, 1, 5])
+      e: new FakePeerInfo([1, 1, 1, 5]),
+      f: new FakePeerInfo([1, 1, 1, 6])
     }
 
-    resetConnectionsCalls = []
     discovery = Object.assign(new EventEmitter(), {
-      resetConnections (diasSet) {
-        resetConnectionsCalls.push(diasSet)
-      }
+      setConnectionManager (cm) {}
     })
 
-    floodSub = new EventEmitter()
-    libp2p = Object.assign(new EventEmitter(), {
-      _floodSub: floodSub
-    })
+    libp2p = new EventEmitter()
     const ipfs = {
       _peerInfo: new FakePeerInfo('local node'),
       _libp2pNode: libp2p
     }
 
     const opts = {
+      dialerBackoffMinMS: 10,
       debounceResetConnectionsMS: 10
     }
-    connectionManager = new ConnectionManager(ipfs, discovery, appTopic, opts)
+
+    let dialErr = false
+    failNextDial = () => {
+      dialErr = true
+    }
+    dials = []
+    dialer = new Dialer({
+      dial: (peerInfo, cb) => {
+        dials.push(peerInfo)
+        if (dialErr) {
+          dialErr = false
+          return cb(new Error('dial error'), false)
+        }
+        setTimeout(() => cb(null, true), 10)
+      }
+    }, opts)
+
+    disconnects = []
+    const globalConnectionManager = {
+      maybeHangUp (peerInfo) {
+        disconnects.push(peerInfo)
+      }
+    }
+
+    connectionManager = new ConnectionManager(ipfs, dialer, discovery, globalConnectionManager, opts)
     connectionManager.start(peerInfos.a)
     await waitFor(10)
   })
 
   it('connects to newly interested peers', async () => {
-    resetConnectionsCalls = []
+    dials = []
+    disconnects = []
 
     // Emit floodsub events indicating that two peers are newly interested
     // in our topic
-    const topicsA = new Set([appTopic, 'some other topic'])
-    const topicsB = new Set(['some topic', appTopic])
-    floodSub.emit('floodsub:subscription-change', peerInfos.a, topicsA)
-    floodSub.emit('floodsub:subscription-change', peerInfos.b, topicsB)
+    discovery.emit('peer:interest', peerInfos.a, true)
+    discovery.emit('peer:interest', peerInfos.b, true)
 
     await waitFor(50)
 
-    expect(resetConnectionsCalls.length).to.equal(1)
-    const diasSet = resetConnectionsCalls[0]
-    expect(diasSet.has(peerInfos.a)).to.equal(true)
-    expect(diasSet.has(peerInfos.b)).to.equal(true)
+    expect(connectionManager.hasConnection(peerInfos.a)).to.equal(true)
+    expect(connectionManager.hasConnection(peerInfos.b)).to.equal(true)
+    expect(dials.length).to.equal(0)
+    expect(disconnects.length).to.equal(0)
   })
 
-  it('connects to newly interested peers and disconnects from peers that are not interested', async () => {
-    resetConnectionsCalls = []
+  it('disconnects from no longer interested peers', async () => {
+    dials = []
+    disconnects = []
 
-    // Emit floodsub events indicating that one peer is newly interested
-    // in our topic and another peer is no longer interested
-    const topicsA = new Set(['some other topic'])
-    const topicsC = new Set([appTopic, 'some other topic'])
-    floodSub.emit('floodsub:subscription-change', peerInfos.a, topicsA)
-    floodSub.emit('floodsub:subscription-change', peerInfos.c, topicsC)
+    // Emit floodsub events indicating that one peer is no longer interested
+    discovery.emit('peer:interest', peerInfos.b, false)
 
     await waitFor(50)
 
-    expect(resetConnectionsCalls.length).to.equal(1)
-    const diasSet = resetConnectionsCalls[0]
-    expect(diasSet.has(peerInfos.a)).to.equal(false)
-    expect(diasSet.has(peerInfos.c)).to.equal(true)
+    expect(connectionManager.hasConnection(peerInfos.b)).to.equal(false)
+    expect(dials.length).to.equal(0)
+    expect(disconnects.length).to.equal(1)
+  })
+
+  it('ignores interested peers that are already in ring and not interested peers that were not in ring', async () => {
+    dials = []
+    disconnects = []
+
+    // Emit floodsub events indicating that one peer we already knew about is
+    // interested in our topic and another peer is new but not interested
+    discovery.emit('peer:interest', peerInfos.a, true)
+    discovery.emit('peer:interest', peerInfos.c, false)
+
+    await waitFor(50)
+
+    expect(connectionManager.hasConnection(peerInfos.a)).to.equal(true)
+    expect(connectionManager.hasConnection(peerInfos.c)).to.equal(false)
+    expect(dials.length).to.equal(0)
+    expect(disconnects.length).to.equal(0)
   })
 
   it('removes unexpectedly disconnected peer from ring', async () => {
-    resetConnectionsCalls = []
+    dials = []
+    disconnects = []
 
-    discovery.emit('outbound:disconnect', peerInfos.b)
+    // Emit floodsub events indicating that a peer is newly interested
+    // in our topic
+    discovery.emit('peer:interest', peerInfos.d, true)
 
     await waitFor(50)
 
-    expect(resetConnectionsCalls.length).to.equal(1)
-    const diasSet = resetConnectionsCalls[0]
-    expect(diasSet.has(peerInfos.b)).to.equal(false)
+    expect(connectionManager.hasConnection(peerInfos.d)).to.equal(true)
+    expect(dials.length).to.equal(0)
+    expect(disconnects.length).to.equal(0)
+
+    libp2p.emit('peer:disconnect', peerInfos.d)
+
+    await waitFor(50)
+
+    expect(connectionManager.hasConnection(peerInfos.d)).to.equal(false)
+    expect(dials.length).to.equal(0)
+    // a peer:disconnect event means peer was already disconnected so
+    // we don't need to hang up
+    expect(disconnects.length).to.equal(0)
   })
 
-  it('removes peer from ring if it cant be dialed', async () => {
-    resetConnectionsCalls = []
+  it('removes peer from ring if we receive a dial failure event', async () => {
+    dials = []
+    disconnects = []
 
-    // Emit floodsub event indicating that a peer is newly interested in our
-    // topic
-    const topicsD = new Set([appTopic, 'some other topic'])
-    floodSub.emit('floodsub:subscription-change', peerInfos.d, topicsD)
+    // Emit floodsub events indicating that a peer is newly interested
+    // in our topic
+    discovery.emit('peer:interest', peerInfos.e, true)
+
     await waitFor(50)
 
-    expect(resetConnectionsCalls.length).to.equal(1)
-    let diasSet = resetConnectionsCalls[0]
-    expect(diasSet.has(peerInfos.d)).to.equal(true)
+    expect(connectionManager.hasConnection(peerInfos.e)).to.equal(true)
+    expect(dials.length).to.equal(0)
+    expect(disconnects.length).to.equal(0)
 
-    // Emit discovery event indicating that peer could not be dialed
-    resetConnectionsCalls = []
-    discovery.emit('dialed', peerInfos.d, new Error('err'))
+    // Emit dialer event indicating that peer could not be dialed
+    dialer.emit('dialed', peerInfos.e, new Error('err'))
+
     await waitFor(50)
 
-    expect(resetConnectionsCalls.length).to.equal(1)
-    diasSet = resetConnectionsCalls[0]
-    expect(diasSet.has(peerInfos.d)).to.equal(false)
+    expect(connectionManager.hasConnection(peerInfos.e)).to.equal(false)
+    expect(dials.length).to.equal(0)
+    expect(disconnects.length).to.equal(1)
+  })
+
+  it('removes peer from ring if we dial and theres a failure', async () => {
+    dials = []
+    disconnects = []
+
+    // Emit floodsub events indicating that a peer is newly interested
+    // in our topic
+    discovery.emit('peer:interest', peerInfos.f, true)
+
+    await waitFor(50)
+
+    expect(connectionManager.hasConnection(peerInfos.f)).to.equal(true)
+    expect(dials.length).to.equal(0)
+    expect(disconnects.length).to.equal(0)
+
+    // Disconnect peer
+    connectionManager._disconnectPeer(peerInfos.f)
+    await waitFor(50)
+
+    expect(connectionManager.hasConnection(peerInfos.f)).to.equal(false)
+    expect(dials.length).to.equal(0)
+    expect(disconnects.length).to.equal(1)
+
+    // Emit peer interest which will also trigger peer f to be dialed
+    failNextDial() // make dial fail
+    discovery.emit('peer:interest', new FakePeerInfo([9, 9, 9, 9]), false)
+
+    await waitFor(50)
+
+    expect(connectionManager.hasConnection(peerInfos.f)).to.equal(false)
+    expect(dials.length).to.equal(1)
+    expect(disconnects.length).to.equal(2)
   })
 
   it('cleans up all connections on stop', async () => {
-    resetConnectionsCalls = []
-
     connectionManager.stop()
-    expect(resetConnectionsCalls.length).to.equal(1)
-    const diasSet = resetConnectionsCalls[0]
-    expect(diasSet.has(peerInfos.a)).to.equal(false)
-    expect(diasSet.has(peerInfos.b)).to.equal(false)
-    expect(diasSet.has(peerInfos.c)).to.equal(false)
-    expect(diasSet.has(peerInfos.d)).to.equal(false)
-    expect(diasSet.has(peerInfos.e)).to.equal(false)
+
+    await waitFor(50)
+
+    expect(connectionManager.hasConnection(peerInfos.a)).to.equal(false)
+    expect(connectionManager.hasConnection(peerInfos.b)).to.equal(false)
+    expect(connectionManager.hasConnection(peerInfos.c)).to.equal(false)
+    expect(connectionManager.hasConnection(peerInfos.d)).to.equal(false)
+    expect(connectionManager.hasConnection(peerInfos.e)).to.equal(false)
+    expect(connectionManager.hasConnection(peerInfos.f)).to.equal(false)
   })
 })

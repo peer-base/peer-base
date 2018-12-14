@@ -7,6 +7,7 @@ const expect = chai.expect
 
 const EventEmitter = require('events')
 const Discovery = require('../../src/discovery/discovery')
+const Dialer = require('../../src/discovery/dialer')
 const FakePeerInfo = require('../utils/fake-peer-info')
 
 function waitFor (ms) {
@@ -18,6 +19,7 @@ describe('discovery', () => {
 
   function createDiscovery (started = true) {
     const app = {
+      name: 'my app',
       peerCountGuess: () => 0
     }
 
@@ -32,7 +34,7 @@ describe('discovery', () => {
       }
     }
 
-    const dials = []
+    const floodSub = new EventEmitter()
     const libp2p = Object.assign(new EventEmitter(), {
       isStarted () {
         return Boolean(this._started)
@@ -41,13 +43,7 @@ describe('discovery', () => {
         this._started = true
         this.emit('start')
       },
-      dial: (peerInfo, cb) => {
-        dials.push(peerInfo)
-        if (peerInfo === errPeerInfo) {
-          return cb(new Error('dial error'))
-        }
-        setTimeout(() => cb(null, true), 10)
-      }
+      _floodSub: floodSub
     })
     const ipfs = {
       _libp2pNode: libp2p
@@ -56,12 +52,32 @@ describe('discovery', () => {
     const opts = {
       dialerBackoffMinMS: 10
     }
-    const discovery = new Discovery(app, ipfs, peerDiscovery, globalConnectionManager, opts)
+    const dials = []
+    const dialer = new Dialer({
+      dial: (peerInfo, cb) => {
+        dials.push(peerInfo)
+        if (peerInfo === errPeerInfo) {
+          return cb(new Error('dial error'), false)
+        }
+        setTimeout(() => cb(null, true), 10)
+      }
+    }, opts)
+
+    const connMgr = {
+      hasConnection (peerInfo) {
+        return false
+      }
+    }
+
+    const discovery = new Discovery(app, ipfs, dialer, peerDiscovery, globalConnectionManager, opts)
+    discovery.setConnectionManager(connMgr)
 
     const sim = {
       discovery,
+      connMgr,
       peerDiscovery,
       libp2p,
+      floodSub,
       dials,
       disconnects
     }
@@ -104,9 +120,9 @@ describe('discovery', () => {
     await waitFor(50)
 
     expect(dials.length).to.equal(3)
-    expect(discovery.hasConnection(a)).to.equal(true)
-    expect(discovery.hasConnection(b)).to.equal(true)
-    expect(discovery.hasConnection(c)).to.equal(true)
+    expect(discovery.needsConnection(a)).to.equal(true)
+    expect(discovery.needsConnection(b)).to.equal(true)
+    expect(discovery.needsConnection(c)).to.equal(true)
   })
 
   it('dials peers discovered after startup', async () => {
@@ -120,7 +136,7 @@ describe('discovery', () => {
 
     // New peer should have been dialed
     expect(dials.length).to.equal(1)
-    expect(discovery.hasConnection(d)).to.equal(true)
+    expect(discovery.needsConnection(d)).to.equal(true)
   })
 
   it('does not redial peer when dial is in progress', async () => {
@@ -136,7 +152,7 @@ describe('discovery', () => {
 
     // New peer should have been dialed once only
     expect(dials.length).to.equal(1)
-    expect(discovery.hasConnection(e)).to.equal(true)
+    expect(discovery.needsConnection(e)).to.equal(true)
   })
 
   it('does not redial peer that is already connected', async () => {
@@ -157,7 +173,7 @@ describe('discovery', () => {
 
     // New peer should not have been dialed a second time
     expect(dials.length).to.equal(1)
-    expect(discovery.hasConnection(f)).to.equal(true)
+    expect(discovery.needsConnection(f)).to.equal(true)
   })
 
   it('does not dial peer if discovery is interrupted by stop', async () => {
@@ -171,7 +187,7 @@ describe('discovery', () => {
 
     // New peer should not have been dialed
     expect(dials.length).to.equal(0)
-    expect(discovery.hasConnection(g)).to.equal(false)
+    expect(discovery.needsConnection(g)).to.equal(false)
   })
 
   it('repeatedly dials peer after connection error', async () => {
@@ -182,7 +198,7 @@ describe('discovery', () => {
 
     // Peer should have been dialed repeatedly
     expect(dials.length).to.be.gte(2)
-    expect(discovery.hasConnection(errPeerInfo)).to.equal(false)
+    expect(discovery.needsConnection(errPeerInfo)).to.equal(false)
 
     // Expect dials to stop after discovery is stopped
     discovery.stop()
@@ -191,37 +207,53 @@ describe('discovery', () => {
     expect(dials.length).to.be.lte(1)
   })
 
-  it('resetConnection connects to newly interested peers and disconnects from peers that are not interested', async () => {
-    let { discovery, peerDiscovery, dials, disconnects } = await createDiscovery()
+  it('allows redial immediately after disconnect', async () => {
+    const { discovery, peerDiscovery, libp2p, dials } = await createDiscovery()
 
-    const interested = new FakePeerInfo('interested')
-    const interested2 = new FakePeerInfo('interested2')
-    const notInterested = new FakePeerInfo('not interested')
-    peerDiscovery.emit('peer', interested)
-    peerDiscovery.emit('peer', interested2)
-    peerDiscovery.emit('peer', notInterested)
-
-    await waitFor(50)
-    expect(dials.length).to.equal(3)
-
-    const interested3 = new FakePeerInfo('interested3')
-    const diasSet = new Set([ interested, interested2, interested3 ])
-    discovery.resetConnections(diasSet)
+    // Emit peer
+    const i = new FakePeerInfo('i')
+    peerDiscovery.emit('peer', i)
 
     await waitFor(50)
 
-    // Should have connected to newly interesting peer
-    expect(dials.length).to.equal(4)
+    // Peer should have been dialed
+    expect(dials.length).to.equal(1)
+    expect(discovery.needsConnection(i)).to.equal(true)
 
-    // Should be connected to interested peers
-    expect(discovery.hasConnection(interested)).to.equal(true)
-    expect(discovery.hasConnection(interested2)).to.equal(true)
-    expect(discovery.hasConnection(interested3)).to.equal(true)
+    // Disconnect peer
+    libp2p.emit('peer:disconnect', i)
 
-    // Should have disconnected from not interested peers
-    expect(discovery.hasConnection(notInterested)).to.equal(false)
+    // Should allow immediate redial
+    await waitFor(0)
+    expect(discovery.needsConnection(i)).to.equal(false)
 
-    // Should have disconnected from notInterested
-    expect(disconnects.length).to.equal(1)
+    peerDiscovery.emit('peer', i)
+
+    await waitFor(50)
+    expect(discovery.needsConnection(i)).to.equal(true)
+  })
+
+  it('emits events for interested / not interested peers', async () => {
+    let { discovery, floodSub } = await createDiscovery()
+
+    const events = []
+    discovery.on('peer:interest', (...args) => events.push(args))
+
+    // Emit floodsub events indicating that one peer is newly interested
+    // in our topic and another peer is not interested
+    const a = new FakePeerInfo('a')
+    const b = new FakePeerInfo('b')
+    const topicsA = new Set(['some other topic'])
+    const topicsB = new Set(['my app', 'some other topic'])
+    floodSub.emit('floodsub:subscription-change', a, topicsA)
+    floodSub.emit('floodsub:subscription-change', b, topicsB)
+
+    await waitFor(10)
+
+    expect(events.length).to.equal(2)
+    expect(events[0][0]).to.equal(a)
+    expect(events[0][1]).to.equal(false)
+    expect(events[1][0]).to.equal(b)
+    expect(events[1][1]).to.equal(true)
   })
 })

@@ -5,6 +5,7 @@ const EventEmitter = require('events')
 const ConnectionManager = require('./connection-manager')
 const Gossip = require('./gossip')
 const Discovery = require('../discovery/discovery')
+const Dialer = require('../discovery/dialer')
 const GlobalConnectionManager = require('./global-connection-manager')
 
 module.exports = (...args) => new AppTransport(...args)
@@ -17,22 +18,25 @@ class AppTransport extends EventEmitter {
     this._ipfs = ipfs
     this._transport = transport
 
-    this._globalConnectionManager = new GlobalConnectionManager(ipfs, this)
-
     // This is used by libp2p TransportManager to store listeners
     this.listeners = []
+
+    this._globalConnectionManager = new GlobalConnectionManager(ipfs, this)
+    this._dialer = new Dialer(this._globalConnectionManager, options)
 
     this.discovery = new Discovery(
       app,
       this._ipfs,
+      this._dialer,
       this._transport.discovery,
       this._globalConnectionManager,
       options)
 
     this._connectionManager = new ConnectionManager(
       this._ipfs,
+      this._dialer,
       this.discovery,
-      this._appTopic(app),
+      this._globalConnectionManager,
       options)
 
     this._gossip = Gossip(app.name, ipfs)
@@ -61,8 +65,12 @@ class AppTransport extends EventEmitter {
     return this._transport.filter(multiaddrs)
   }
 
+  hasConnection (peerInfo) {
+    return this._connectionManager.hasConnection(peerInfo) || this.discovery.needsConnection(peerInfo)
+  }
+
   needsConnection (peerInfo) {
-    return this._connectionManager.needsConnection(peerInfo)
+    return this._connectionManager.needsConnection(peerInfo) || this.discovery.needsConnection(peerInfo)
   }
 
   _maybeStart () {
@@ -73,6 +81,7 @@ class AppTransport extends EventEmitter {
   }
 
   async _start () {
+    this._dialer.start()
     this.discovery.on('peer', this._onPeer)
     await this._awaitIpfsStart()
     this._gossip.start()
@@ -91,6 +100,7 @@ class AppTransport extends EventEmitter {
 
   stop () {
     this.discovery.removeListener('peer', this._onPeer)
+    this._dialer.stop()
     this._connectionManager.stop()
     this._globalConnectionManager.stop()
     this._gossip.stop((err) => {
@@ -102,9 +112,5 @@ class AppTransport extends EventEmitter {
 
   _onPeer (peerInfo) {
     this.emit('outbound peer connected', peerInfo)
-  }
-
-  _appTopic (app) {
-    return app.name
   }
 }
