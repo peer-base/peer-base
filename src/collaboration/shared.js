@@ -210,7 +210,12 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     } else {
       const newState = crdtType.join.call(changeEmitter, state, s)
       if (crdtType.incrementalValue) {
-        valueCache = crdtType.incrementalValue(state, newState, s, valueCache)
+        if (!valueCache) {
+          const initial = crdtType.initial()
+          valueCache = crdtType.incrementalValue(initial, newState, newState, valueCache)
+        } else {
+          valueCache = crdtType.incrementalValue(state, newState, s, valueCache)
+        }
       }
       state = newState
       shared.emit('delta', s, fromSelf)
