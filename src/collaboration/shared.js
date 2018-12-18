@@ -1,6 +1,7 @@
 /* eslint no-console: "off" */
 'use strict'
 
+const assert = require('assert')
 const debug = require('debug')('peer-base:collaboration:shared')
 const EventEmitter = require('events')
 const b58Decode = require('bs58').decode
@@ -67,7 +68,14 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     await store.start()
     const [loadedState, loadedDeltas, clock] = await store.load()
     if (loadedState) {
+      if (crdtType.incrementalValue) {
+        assert(!valueCache)
+        valueCache = crdtType.incrementalValue(state, loadedState, loadedState)
+      }
       state = loadedState
+    } else if (crdtType.incrementalValue) {
+      assert(!valueCache)
+      valueCache = crdtType.incrementalValue(state, state, state)
     }
     if (loadedDeltas) {
       deltas = loadedDeltas
@@ -210,12 +218,8 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     } else {
       const newState = crdtType.join.call(changeEmitter, state, s)
       if (crdtType.incrementalValue) {
-        if (!valueCache) {
-          const initial = crdtType.initial()
-          valueCache = crdtType.incrementalValue(initial, newState, newState, valueCache)
-        } else {
-          valueCache = crdtType.incrementalValue(state, newState, s, valueCache)
-        }
+        assert(valueCache)
+        valueCache = crdtType.incrementalValue(state, newState, s, valueCache)
       }
       state = newState
       shared.emit('delta', s, fromSelf)
