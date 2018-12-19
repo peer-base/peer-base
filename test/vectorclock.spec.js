@@ -118,6 +118,12 @@ describe('vectorclock', () => {
       const currentClock = { b: 2 }
       expect(isDeltaInteresting(delta, currentClock)).to.be.false()
     })
+
+    it('does not accept previous clock that is outside current clock', () => {
+      const delta = [{ a: 1, c: 7 }, { c: 1 }]
+      const currentClock = { }
+      expect(isDeltaInteresting(delta, currentClock)).to.be.false()
+    })
   })
 
   describe('isIdentical', () => {

@@ -45,7 +45,7 @@ exports.isDeltaInteresting = (delta, currentClock) => {
     }
   }
 
-  // find out if new clock lands outside of  current clock
+  // find out if new clock lands outside of current clock
   Object.keys(authorClock).forEach((author) => authors.add(author))
   const deltaClock = exports.sumAll(previousClock, authorClock)
 
