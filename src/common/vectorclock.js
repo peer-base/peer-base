@@ -38,7 +38,7 @@ exports.isDeltaInteresting = (delta, currentClock) => {
   const [previousClock, authorClock] = delta
 
   // find out if previous clock is inside currentClock
-  const authors = new Set([...Object.keys(currentClock), Object.keys(previousClock)])
+  const authors = new Set([...Object.keys(currentClock), ...Object.keys(previousClock)])
   for (let author of authors) {
     if ((previousClock[author] || 0) > (currentClock[author] || 0)) {
       return false
