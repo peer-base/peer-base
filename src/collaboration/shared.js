@@ -68,12 +68,12 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     await store.start()
     const [loadedState, loadedDeltas, clock] = await store.load()
     if (loadedState) {
-      if (crdtType.incrementalValue) {
+      if (crdtType.incrementalValue && !options.replicateOnly) {
         assert(!valueCache)
         valueCache = crdtType.incrementalValue(state, loadedState, loadedState)
       }
       state = loadedState
-    } else if (crdtType.incrementalValue) {
+    } else if (crdtType.incrementalValue && !options.replicateOnly) {
       assert(!valueCache)
       valueCache = crdtType.incrementalValue(state, state, state)
     }
