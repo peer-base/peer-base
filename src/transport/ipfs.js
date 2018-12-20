@@ -18,6 +18,15 @@ module.exports = (app, options) => {
     return options.ipfs
   }
 
+  const createDefaultTransport = ({
+    config,
+    options: ipfsOptions,
+    peerInfo,
+    peerBook
+  }) => new WebSocketStar({ id: peerInfo.id })
+
+  const createLibp2pTransport = options.createLibp2pTransport || createDefaultTransport
+
   const ipfsOptions = {
     repo: options && options.repo,
     EXPERIMENTAL: {
@@ -49,13 +58,15 @@ module.exports = (app, options) => {
 
   return ipfs
 
-  function createLibp2p ({
-    config,
-    options: ipfsOptions,
-    peerInfo,
-    peerBook
-  }) {
-    const appTransport = AppTransport(app, ipfs, new WebSocketStar({ id: peerInfo.id }), options && options.transport)
+  function createLibp2p (args) {
+    const {
+      config,
+      options: ipfsOptions,
+      peerInfo,
+      peerBook
+    } = args
+
+    const appTransport = AppTransport(app, ipfs, createLibp2pTransport(args), options && options.transport)
     appTransport.on('error', (err) => app.emit('error', err))
 
     if (options && options.relay) {
