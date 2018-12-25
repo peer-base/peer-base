@@ -178,25 +178,27 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     return interestingDeltas
   }
 
-  shared.deltaBatch = (since = {}) => {
+  shared.deltaBatch = (_since = {}) => {
+    let since = _since
     const deltas = shared.deltas(since)
     if (!deltas.length) {
       return [since, {}, [name, crdtType.typeName, crdtType.initial()]]
     }
 
     const batch = deltas
-      .reduce((acc, newDeltaRecord) => {
-        const [oldPreviousClock, oldAuthorClock, [, , state]] = acc
-        const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
-        const [newPreviousClock, newAuthorClock, [, , newDelta]] = newDeltaRecord
-        const newClock = vectorclock.sumAll(newPreviousClock, newAuthorClock)
-        const nextClock = vectorclock.merge(oldClock, newClock)
-
-        const minimumPreviousClock = vectorclock.minimum(oldPreviousClock, newPreviousClock)
-        const nextAuthorClock = vectorclock.subtract(minimumPreviousClock, nextClock)
-
-        const newState = crdtType.join.call(voidChangeEmitter, state, newDelta)
-        return [minimumPreviousClock, nextAuthorClock, [name, crdtType.typeName, newState]]
+      .reduce((acc, deltaRecord) => {
+        if (vectorclock.isDeltaInteresting(deltaRecord, since)) {
+          const [oldPreviousClock, , [, , oldDelta]] = acc
+          const [deltaPreviousClock, deltaAuthorClock, [, , delta]] = deltaRecord
+          const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
+          const newClock = deltaClock // vectorclock.merge(since, deltaClock)
+          const newPreviousClock = vectorclock.minimum(oldPreviousClock, deltaPreviousClock)
+          const newAuthorClock = vectorclock.subtract(newPreviousClock, newClock)
+          since = vectorclock.merge(since, newClock)
+          const newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta)
+          return [newPreviousClock, newAuthorClock, [name, crdtType.typeName, newDelta]]
+        }
+        return acc
       })
     return batch
   }

@@ -44,16 +44,23 @@ module.exports = class PushProtocol {
       return clockDiff
     }
 
-    const pushDeltas = async (peerClock) => {
-      const ds = this._shared.deltas(peerClock)
-      let newRemoteClock = {}
-      for (let d of ds) {
-        const [clock, authorClock] = d
-        newRemoteClock = vectorclock.merge(newRemoteClock, vectorclock.sumAll(clock, authorClock))
-        output.push(encode([await this._signAndEncryptDelta(d)]))
-      }
+    // const pushDeltas = async (peerClock) => {
+    //   const ds = this._shared.deltas(peerClock)
+    //   let newRemoteClock = {}
+    //   for (let d of ds) {
+    //     const [clock, authorClock] = d
+    //     newRemoteClock = vectorclock.merge(newRemoteClock, vectorclock.sumAll(clock, authorClock))
+    //     output.push(encode([await this._signAndEncryptDelta(d)]))
+    //   }
 
-      return vectorclock.merge(peerClock, newRemoteClock)
+    //   return vectorclock.merge(peerClock, newRemoteClock)
+    // }
+
+    const pushDeltaBatch = async (peerClock) => {
+      const batch = this._shared.deltaBatch(peerClock)
+      const [baseClock, authorClock] = batch
+      output.push(encode([await this._signAndEncryptDelta(batch)]))
+      return vectorclock.merge(peerClock, vectorclock.sumAll(baseClock, authorClock))
     }
 
     const pushState = async () => {
@@ -74,7 +81,8 @@ module.exports = class PushProtocol {
         debug('%s: pushing to %s', this._peerId(), remotePeerId)
         // Let's try to see if we have deltas to deliver
         if (!isPinner && !this._options.replicateOnly) {
-          remoteClock = await pushDeltas(remoteClock)
+          // remoteClock = await pushDeltas(remoteClock)
+          remoteClock = await pushDeltaBatch(remoteClock)
         }
 
         if (isPinner || remoteNeedsUpdate(myClock, remoteClock)) {
