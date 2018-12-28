@@ -178,29 +178,46 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     return interestingDeltas
   }
 
-  shared.deltaBatch = (_since = {}) => {
+  shared.deltaBatches = (_since = {}) => {
     let since = _since
     const deltas = shared.deltas(since)
     if (!deltas.length) {
-      return [since, {}, [name, crdtType.typeName, crdtType.initial()]]
+      return [[since, {}, [name, crdtType.typeName, crdtType.initial()]]]
     }
 
-    const batch = deltas
-      .reduce((acc, deltaRecord) => {
-        if (vectorclock.isDeltaInteresting(deltaRecord, since)) {
-          const [oldPreviousClock, , [, , oldDelta]] = acc
-          const [deltaPreviousClock, deltaAuthorClock, [, , delta]] = deltaRecord
-          const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
-          const newClock = deltaClock // vectorclock.merge(since, deltaClock)
-          const newPreviousClock = vectorclock.minimum(oldPreviousClock, deltaPreviousClock)
-          const newAuthorClock = vectorclock.subtract(newPreviousClock, newClock)
-          since = vectorclock.merge(since, newClock)
-          const newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta)
-          return [newPreviousClock, newAuthorClock, [name, crdtType.typeName, newDelta]]
+    let batch = [since, {}, [name, crdtType.typeName, crdtType.initial()]]
+    const batches = [batch]
+
+    deltas
+      .forEach((deltaRecord) => {
+        if (!vectorclock.isDeltaInteresting(deltaRecord, since)) {
+          return
         }
-        return acc
+        const [oldPreviousClock, oldAuthorClock, [, , oldDelta]] = batch
+        const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
+        const [deltaPreviousClock, deltaAuthorClock, [, , delta]] = deltaRecord
+        const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
+        const newClock = vectorclock.merge(oldClock, deltaClock)
+        const newPreviousClock = vectorclock.minimum(oldPreviousClock, deltaPreviousClock)
+        const newAuthorClock = vectorclock.subtract(newPreviousClock, newClock)
+        let newDelta
+        try {
+          newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta)
+        } catch (err) {
+          // could not perform join. will resort to creating a new batch for this delta.
+          batch = [deltaPreviousClock, deltaAuthorClock, [name, crdtType.typeName, delta]]
+          batches.push(batch)
+          since = vectorclock.merge(since, deltaClock)
+          return
+        }
+        since = vectorclock.merge(since, newClock)
+
+        batch[0] = newPreviousClock
+        batch[1] = newAuthorClock
+        batch[2][2] = newDelta
       })
-    return batch
+
+    return batches
   }
 
   shared.save = () => {

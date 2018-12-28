@@ -58,6 +58,7 @@ class Replication extends EventEmitter {
     if (vectorclock.doesSecondHaveFirst(clock, peerClocks.receiving)) {
       return
     }
+
     peerClocks.receiving = vectorclock.merge(peerClocks.receiving, clock)
     this.emit('receiving', peerId, peerClocks.receiving)
   }
@@ -66,14 +67,12 @@ class Replication extends EventEmitter {
     if (peerId === this._selfId) {
       return
     }
-    const myClock = this._clocks.getFor(this._selfId)
-    if (vectorclock.doesSecondHaveFirst(clock, myClock)) {
-      return
-    }
+
     const peerClocks = this._ensurePeerClocks(peerId)
     if (vectorclock.doesSecondHaveFirst(clock, peerClocks.received)) {
       return
     }
+
     peerClocks.received = vectorclock.merge(peerClocks.received, clock)
     this.emit('received', peerId, peerClocks.received)
   }
@@ -90,6 +89,7 @@ class Replication extends EventEmitter {
     if (vectorclock.doesSecondHaveFirst(clock, peerClocks.sending)) {
       return
     }
+
     peerClocks.sending = vectorclock.merge(peerClocks.sending, clock)
 
     let eventName = isPinner ? 'pinning' : 'replicating'
@@ -108,6 +108,7 @@ class Replication extends EventEmitter {
     if (vectorclock.doesSecondHaveFirst(clock, peerClocks.sent)) {
       return
     }
+
     peerClocks.sent = vectorclock.merge(peerClocks.sent, clock)
 
     let eventName = isPinner ? 'pinned' : 'replicated'
