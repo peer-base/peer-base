@@ -18,7 +18,7 @@ describe('collaboration with random changes', function () {
 
   const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
 
-  const peerCount = 4
+  const peerCount = 8 // process.browser ? 4 : 8
   const charsPerPeer = process.browser ? 20 : 100
   const collaborationOptions = {}
 
@@ -93,9 +93,10 @@ describe('collaboration with random changes', function () {
     for (let collaboration of collaborations) {
       for (let peerId of peerIds) {
         const clock = collaboration.vectorClock(peerId)
-        expect(Object.keys(clock).sort()).to.deep.equal(peerClockKeys)
         for (let replica of peerClockKeys) {
-          expect(clock[replica]).to.equal(charsPerPeer)
+          if (clock.hasOwnProperty(replica)) {
+            expect(clock[replica]).to.equal(charsPerPeer)
+          }
         }
       }
     }
