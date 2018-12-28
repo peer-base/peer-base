@@ -188,10 +188,11 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     const batch = deltas
       .reduce((acc, deltaRecord) => {
         if (vectorclock.isDeltaInteresting(deltaRecord, since)) {
-          const [oldPreviousClock, , [, , oldDelta]] = acc
+          const [oldPreviousClock, oldAuthorClock, [, , oldDelta]] = acc
+          const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
           const [deltaPreviousClock, deltaAuthorClock, [, , delta]] = deltaRecord
           const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
-          const newClock = deltaClock // vectorclock.merge(since, deltaClock)
+          const newClock = vectorclock.merge(oldPreviousClock, deltaClock)
           const newPreviousClock = vectorclock.minimum(oldPreviousClock, deltaPreviousClock)
           const newAuthorClock = vectorclock.subtract(newPreviousClock, newClock)
           since = vectorclock.merge(since, newClock)
