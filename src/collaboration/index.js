@@ -24,8 +24,14 @@ const defaultOptions = {
   resetConnectionIntervalMS: 6000,
   maxUnreachableBeforeEviction: 10,
   replicateOnly: false,
-  debouncePushMS: 500,
+  // Wait this long before pushing changes to other peers, so that we can merge
+  // many changes that happen in a short space of time together
+  debouncePushMS: 100,
+  // Max amount of time to wait
+  debouncePushMaxMS: 1000,
+  // Same as above but for pushing to a pinner
   debouncePushToPinnerMS: 5000,
+  debouncePushToPinnerMaxMS: 10000,
   receiveTimeoutMS: 3000,
   saveDebounceMS: 3000
 }

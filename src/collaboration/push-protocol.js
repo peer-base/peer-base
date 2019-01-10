@@ -10,6 +10,7 @@ const handlingData = require('../common/handling-data')
 const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 const expectedNetworkError = require('../common/expected-network-error')
+const EventEmitter = require('events')
 
 // const RGA = require('delta-crdts').type('rga')
 // const chai = require('chai')
@@ -28,20 +29,40 @@ module.exports = class PushProtocol {
   }
 
   forPeer (peerInfo) {
+    const dbg = (...args) => debug('%s: ' + args[0], this._peerId(), ...args.slice(1))
     const remotePeerId = peerInfo.id.toB58String()
-    debug('%s: push protocol to %s', this._peerId(), remotePeerId)
+    dbg('push protocol to %s', remotePeerId)
 
     const queue = new Queue({ concurrency: 1 })
     let ended = false
+    // Is the connection in eager (pushing) mode
     let pushing = true
-    let isPinner = false
+    // Last clock sent to the remote peer
     let sentClock = {}
+    // Our copy of the remote peer's clock
     let remoteClock = {}
 
-    const sendClockDiff = (clock) => {
+    // Is the remote peer a pinner
+    let isPinner
+    // To find out if the remote peer is a pinner, we need to wait till it
+    // sends us a message
+    let pinnerInfoEmitter = new EventEmitter()
+    const isPinnerPromise = () => {
+      return new Promise(resolve => {
+        if (typeof isPinner !== 'undefined') {
+          return resolve(isPinner)
+        }
+        pinnerInfoEmitter.once('isPinner', () => resolve(isPinner))
+      })
+    }
+
+    // Send the diff between the local peer's clock and the remote peer's clock
+    // to the remote peer
+    const sendClockDiff = () => {
+      const clock = this._shared.clock()
       const clockDiff = vectorclock.diff(sentClock, clock)
       sentClock = clock
-      return clockDiff
+      output.push(encode([null, [clockDiff]]))
     }
 
     // const pushDeltas = async (peerClock) => {
@@ -56,6 +77,7 @@ module.exports = class PushProtocol {
     //   return vectorclock.merge(peerClock, newRemoteClock)
     // }
 
+    // Send deltas to the remote peer
     const pushDeltaBatches = async (peerClock) => {
       const batches = this._shared.deltaBatches(peerClock)
       let newRemoteClock = {}
@@ -68,6 +90,7 @@ module.exports = class PushProtocol {
       return vectorclock.merge(peerClock, newRemoteClock)
     }
 
+    // Send our full state to the remote peer
     const pushState = async () => {
       const states = this._collaboration.collaborationStatesAsDeltas()
       const encryptedStates = new Map()
@@ -79,106 +102,122 @@ module.exports = class PushProtocol {
       return clock
     }
 
+    // Send the remote peer our clock, and send our state if we're in eager
+    // mode
     const updateRemote = async (myClock) => {
-      debug('%s: updateRemote %s', this._peerId(), remotePeerId)
+      dbg('updateRemote %s', remotePeerId)
+
+      // If we're in eager mode
       if (pushing) {
         this._replication.sending(remotePeerId, myClock, isPinner)
-        debug('%s: pushing to %s', this._peerId(), remotePeerId)
-        // Let's try to see if we have deltas to deliver
+        dbg('pushing to %s', remotePeerId)
+        // If neither this peer nor the remote peer is a pinner, let's try to
+        // see if we have deltas to deliver
         if (!isPinner && !this._options.replicateOnly) {
           // remoteClock = await pushDeltas(remoteClock)
           remoteClock = await pushDeltaBatches(remoteClock)
         }
 
+        // If the remote peer is a pinner, or if the remote still needs an
+        // update (even after sending the deltas above), send the full state
         if (isPinner || remoteNeedsUpdate(myClock, remoteClock)) {
-          if (pushing) {
-            debug('%s: deltas were not enough to %s. Still need to send entire state', this._peerId(), remotePeerId)
-            remoteClock = await pushState()
-          } else {
-            // send only clock
-            output.push(encode([null, [sendClockDiff(this._shared.clock())]]))
-          }
+          dbg('deltas were not enough to %s. Still need to send entire state', remotePeerId)
+          remoteClock = await pushState()
         } else {
-          debug('%s: remote %s does not need update', this._peerId(), remotePeerId)
+          dbg('remote %s does not need update', remotePeerId)
         }
       } else {
-        debug('%s: NOT pushing to %s', this._peerId(), remotePeerId)
-        output.push(encode([null, [sendClockDiff(this._shared.clock())]]))
+        // We're in lazy mode, so just send the clock (no state)
+        dbg('in lazy mode so only sending clock to %s', remotePeerId)
+        sendClockDiff()
       }
     }
 
+    // The remote peer needs an update if the local peer has changes that the
+    // remote peer doesn't know about
     const remoteNeedsUpdate = (_myClock, _remoteClock) => {
       const myClock = _myClock || this._shared.clock()
       const remoteClock = _remoteClock || this._clocks.getFor(remotePeerId)
-      debug('%s: comparing local clock %j to remote clock %j', this._peerId(), myClock, remoteClock)
+      dbg('comparing local clock %j to remote clock %j', myClock, remoteClock)
       const needs = !vectorclock.doesSecondHaveFirst(myClock, remoteClock)
-      debug('%s: remote %s needs update?', this._peerId(), remotePeerId, needs)
+      dbg('remote %s needs update? %s', remotePeerId, needs)
       return needs && myClock
     }
 
-    const reduceEntropy = () => {
+    // Check if the remote peer needs an update
+    const reduceEntropy = async () => {
+      await isPinnerPromise()
       queue.add(() => {
-        debug('%s: reduceEntropy to %s', this._peerId(), remotePeerId)
+        dbg('reduceEntropy to %s', remotePeerId)
         if (remoteNeedsUpdate()) {
           return updateRemote(this._shared.clock())
-        } else {
-          debug('remote is up to date')
         }
-      }).catch((onEnd))
+        dbg('remote is up to date')
+      }).catch(onEnd)
     }
+    const debouncedReduceEntropy = debounce(reduceEntropy, this._options.debouncePushMS, {
+      maxWait: this._options.debouncePushMaxMS
+    })
+    const debouncedReduceEntropyToPinner = debounce(reduceEntropy, this._options.debouncePushToPinnerMS, {
+      maxWait: this._options.debouncePushToPinnerMaxMS
+    })
 
-    const debounceReduceEntropyMS = () => isPinner ? this._options.debouncePushToPinnerMS : this._options.debouncePushMS
-
-    let debouncedReduceEntropy = debounce(reduceEntropy, debounceReduceEntropyMS())
-
+    // When the local state changes, send the clock (and state, if we're in
+    // eager mode) to the remote peer
     const onClockChanged = (newClock) => {
-      debug('%s: clock changed to %j', this._peerId(), newClock)
+      dbg('clock changed to %j', newClock)
       this._clocks.setFor(this._peerId(), newClock)
-      debouncedReduceEntropy()
+      isPinner ? debouncedReduceEntropyToPinner() : debouncedReduceEntropy()
     }
-
     this._shared.on('clock changed', onClockChanged)
-    debug('%s: registered state change handler', this._peerId())
+    dbg('registered state change handler')
 
-    const gotPresentation = (message) => {
-      debug('%s: got presentation message from %s:', this._peerId(), remotePeerId, message)
+    // Handle incoming message from remote peer
+    const messageHandler = (message) => {
+      dbg('got message from %s:', remotePeerId, message)
       const [newRemoteClock, startLazy, startEager, _isPinner] = message
 
+      // Switch to lazy mode
       if (startLazy) {
-        debug('%s: push connection to %s now in lazy mode', this._peerId(), remotePeerId)
+        dbg('push connection to %s now in lazy mode', remotePeerId)
         pushing = false
       }
 
+      // Switch to eager mode
       if (startEager) {
-        debug('%s: push connection to %s now in eager mode', this._peerId(), remotePeerId)
+        dbg('push connection to %s now in eager mode', remotePeerId)
         pushing = true
       }
 
+      // The remote peer is telling us whether or not it's a pinner
       if ((typeof _isPinner) === 'boolean') {
         const wasPinner = isPinner
         isPinner = _isPinner
 
-        debouncedReduceEntropy = debounce(reduceEntropy, debounceReduceEntropyMS())
-
         if (!wasPinner && isPinner) {
+          // It was a pinner but is no longer
           this._replication.addPinner(remotePeerId)
         } else if (wasPinner && !isPinner) {
+          // It is now a pinner
           this._replication.removePinner(remotePeerId)
         }
+
+        pinnerInfoEmitter.emit('isPinner', isPinner)
       }
 
+      // If the remote sent us its clock, update our local copy
       if (newRemoteClock) {
         remoteClock = newRemoteClock
         const mergedClock = this._clocks.setFor(remotePeerId, newRemoteClock, true, isPinner)
         this._replication.sent(remotePeerId, mergedClock, isPinner)
       }
 
+      // We have a new clock from the remote peer, so check if we need to send
+      // it some state
       if (newRemoteClock || startEager) {
         reduceEntropy()
       }
     }
-
-    let messageHandler = gotPresentation
 
     const onMessage = (err, message) => {
       if (err) {
@@ -186,7 +225,7 @@ module.exports = class PushProtocol {
         debug('error parsing message:', err)
         onEnd(err)
       } else {
-        debug('%s: got message:', this._peerId(), message)
+        dbg('got message:', message)
         try {
           messageHandler(message)
         } catch (err) {
@@ -195,22 +234,18 @@ module.exports = class PushProtocol {
       }
     }
 
-    const onCollaborationStopped = () => {
-      onEnd()
-    }
-
-    this._collaboration.on('stopped', onCollaborationStopped)
-
     const onEnd = (err) => {
       this._clocks.takeDown(remotePeerId)
       if (!ended) {
+        dbg('ending connection to %s', remotePeerId)
+        ended = true
+
         if (err && expectedNetworkError(err)) {
-          console.warn('%s: pull conn to %s ended with error', this._peerId(), remotePeerId, err.message)
+          console.warn('%s: pull conn to %s ended with error', remotePeerId, err.message)
           err = null
         }
-        ended = true
         this._shared.removeListener('clock changed', onClockChanged)
-        this._collaboration.removeListener('stopped', onCollaborationStopped)
+        this._collaboration.removeListener('stopped', onEnd)
         output.end(err)
 
         if (isPinner) {
@@ -218,9 +253,12 @@ module.exports = class PushProtocol {
         }
       }
     }
+    this._collaboration.on('stopped', onEnd)
+
     const input = pull.drain(handlingData(onMessage), onEnd)
     const output = pushable()
 
+    // Tell the remote whether or not the local peer is a pinner
     output.push(encode([null, null, { isPinner: this._options.replicateOnly }]))
 
     return { sink: input, source: output }
