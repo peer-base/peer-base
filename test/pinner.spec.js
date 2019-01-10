@@ -16,7 +16,12 @@ describe('pinner', function () {
 
   const collaborationName = 'pinner test collab'
   const peerCount = 2 // 10
-  const collaborationOptions = {}
+  const collaborationOptions = {
+    debouncePushMS: 100,
+    debouncePushToPinnerMS: 1000,
+    debouncePushMaxMS: 200,
+    debouncePushToPinnerMaxMS: 2000
+  }
 
   let appName
   let swarm = []
@@ -37,7 +42,7 @@ describe('pinner', function () {
 
   peerIndexes.forEach((peerIndex) => {
     before(() => {
-      const app = App(appName, { maxThrottleDelayMS: 1000 })
+      const app = App(appName, { maxThrottleDelayMS: 100 })
       swarm.push(app)
       return app.start()
     })
@@ -63,7 +68,7 @@ describe('pinner', function () {
     })
 
     pinner.start().then(() => {
-      pinner.on('collaboration started', (collaboration) => {
+      pinner.once('collaboration started', (collaboration) => {
         expect(collaboration.name).to.equal(collaborationName)
         done()
       })
@@ -74,8 +79,11 @@ describe('pinner', function () {
     await waitForMembers(collaborations.concat(await pinner.peerId()))
   })
 
-  it('peers can perform mutations', () => {
+  it('peers can perform mutations', (done) => {
+    let count = 0
+    const check = () => ++count === 2 && done()
     collaborations.forEach((collaboration, idx) => {
+      collaboration.replication.once('pinned', check)
       collaboration.shared.add(idx)
     })
   })
@@ -92,7 +100,7 @@ describe('pinner', function () {
       collaborations.forEach((collaboration, idx) => {
         collaboration.shared.add(idx)
       })
-    }, 1000)
+    }, 50)
 
     collaborations.forEach((collaboration) => {
       collaboration.replication.once('pinned', () => {
@@ -110,7 +118,7 @@ describe('pinner', function () {
   })
 
   it('can start new reader', async () => {
-    newReader = App(appName, { maxThrottleDelayMS: 1000 })
+    newReader = App(appName, { maxThrottleDelayMS: 100 })
     swarm.push(newReader)
     await newReader.start()
     newReaderCollab = await newReader.app.collaborate(collaborationName, 'gset', collaborationOptions)
