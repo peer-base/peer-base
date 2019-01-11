@@ -60,6 +60,7 @@ describe('collaboration with random changes', function () {
     let expectedCharacterCount = 0
     let expectedValue
     const modifications = async (collaboration, index) => {
+      const stateChangesSettled = debounceEvent(collaboration, 'state changed', process.browser ? 30000 : 10000)
       for (let i = 0; i < charsPerPeer; i++) {
         const character = characterFrom(manyCharacters, i)
         collaboration.shared.push(character)
@@ -67,7 +68,8 @@ describe('collaboration with random changes', function () {
         await delay(randomShortTime())
       }
 
-      await debounceEvent(collaboration, 'state changed', process.browser ? 30000 : 10000)
+      // Wait for state changes to complete and for things to settle
+      await stateChangesSettled
 
       const value = collaboration.shared.value()
       expect(value.length).to.equal(expectedCharacterCount)
