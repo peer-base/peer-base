@@ -29,8 +29,6 @@ module.exports = class PullProtocol {
     const waitTimers = this._waitTimers(dbg)
     const queue = new Queue({ concurrency: 1 })
     let ended = false
-    // Is the remote peer a pinner
-    let isPinner
 
     // When the local state is changed, send a clock to the remote peer to let
     // them know
@@ -50,9 +48,9 @@ module.exports = class PullProtocol {
         const [deltaRecord, newStates, protocolPeerInfo] = data
 
         // If the remote peer indicates that it is a pinner, tell it to go into lazy mode
-        if (protocolPeerInfo && protocolPeerInfo.isPinner && !isPinner) {
+        if (protocolPeerInfo && protocolPeerInfo.isPinner && !remote.isPinner) {
           dbg('remote peer %s is a pinner, switching to lazy mode', remotePeerId)
-          isPinner = true
+          remote.isPinner = true
           remote.setLazyMode()
           return
         }
@@ -71,7 +69,8 @@ module.exports = class PullProtocol {
           states = newStates[1]
         }
 
-        // We didn't get a clock, so we can't make any assumptions, bail out
+        // If we didn't get a clock, then we can't make any assumptions, so
+        // bail out
         if (Object.keys(clock || {}).length === 0) {
           dbg('did not receive clock from %s, bailing out', remotePeerId)
           return
@@ -81,8 +80,8 @@ module.exports = class PullProtocol {
         clock = this._clocks.setFor(remotePeerId, clock)
         dbg('received clock from %s: %j', remotePeerId, clock)
 
-        // We didn't get any state information, just a clock. So set a timer
-        // to wait for the data corresponding to this clock to arrive
+        // If we didn't get any state information, just a clock, then set a
+        // timer to wait for the data corresponding to this clock to arrive
         if (!states && !delta) {
           waitTimers.onClock(clock, () => {
             // If the timer expires, switch to eager mode
@@ -175,6 +174,7 @@ module.exports = class PullProtocol {
 
   _remote () {
     const output = pushable()
+    let eager = true
 
     return {
       output,
@@ -186,10 +186,16 @@ module.exports = class PullProtocol {
         this.send([clock])
       },
       setLazyMode () {
-        this.send([null, true])
+        if (eager) {
+          eager = false
+          this.send([null, true])
+        }
       },
       setEagerMode () {
-        this.send([null, false, true])
+        if (!eager) {
+          eager = true
+          this.send([null, false, true])
+        }
       },
       init (clock, isLocalPinner) {
         this.send([clock, null, null, isLocalPinner])
@@ -224,7 +230,7 @@ module.exports = class PullProtocol {
 
           // Make sure we aren't already waiting for this clock
           for (const c of timers.keys()) {
-            if (vectorclock.isIdentical(c, clock)) {
+            if (vectorclock.doesSecondHaveFirst(clock, c)) {
               dbg('already waiting for data for clock, ignoring')
               return
             }
