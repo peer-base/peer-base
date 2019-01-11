@@ -181,13 +181,9 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   shared.deltaBatches = (_since = {}) => {
     let since = _since
     const deltas = shared.deltas(since)
-    if (!deltas.length) {
-      return [[since, {}, [name, crdtType.typeName, crdtType.initial()]]]
-    }
 
     let batch = [since, {}, [name, crdtType.typeName, crdtType.initial()]]
-    const batches = [batch]
-
+    const batches = []
     deltas
       .forEach((deltaRecord) => {
         if (!vectorclock.isDeltaInteresting(deltaRecord, since)) {
@@ -217,6 +213,9 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
         batch[0] = newPreviousClock
         batch[1] = newAuthorClock
         batch[2][2] = newDelta
+        if (!batches.length) {
+          batches.push(batch)
+        }
       })
 
     return batches
