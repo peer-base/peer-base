@@ -115,14 +115,14 @@ module.exports = class PushProtocol {
         // see if we have deltas to deliver
         if (!isPinner && !this._options.replicateOnly) {
           // remoteClock = await pushDeltas(remoteClock)
-          remoteClock = await pushDeltaBatches(remoteClock)
+          remoteClock = vectorclock.merge(remoteClock, await pushDeltaBatches(remoteClock))
         }
 
         // If the remote peer is a pinner, or if the remote still needs an
         // update (even after sending the deltas above), send the full state
         if (isPinner || remoteNeedsUpdate(myClock, remoteClock)) {
           dbg('deltas were not enough to %s. Still need to send entire state', remotePeerId)
-          remoteClock = await pushState()
+          remoteClock = vectorclock.merge(remoteClock, await pushState())
         } else {
           dbg('remote %s does not need update', remotePeerId)
         }
@@ -207,7 +207,7 @@ module.exports = class PushProtocol {
 
       // If the remote sent us its clock, update our local copy
       if (newRemoteClock) {
-        remoteClock = newRemoteClock
+        remoteClock = vectorclock.merge(remoteClock, newRemoteClock)
         const mergedClock = this._clocks.setFor(remotePeerId, newRemoteClock, true, isPinner)
         this._replication.sent(remotePeerId, mergedClock, isPinner)
       }
