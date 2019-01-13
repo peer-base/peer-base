@@ -9,7 +9,6 @@ const delay = require('delay')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
-const debounceEvent = require('./utils/debounce-event')
 const b58Decode = require('bs58').decode
 const radix64 = require('radix-64')()
 const pEvent = require('p-event')
