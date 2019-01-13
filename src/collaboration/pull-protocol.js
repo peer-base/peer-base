@@ -154,7 +154,7 @@ module.exports = class PullProtocol {
         remote.end(err)
       }
     }
-    this._collaboration.on('stopped', onEnd)
+    this._collaboration.once('stopped', onEnd)
 
     const remote = this._remote()
     const input = pull.drain(handlingData(onData), onEnd)
@@ -208,7 +208,6 @@ module.exports = class PullProtocol {
 
   _waitTimers (dbg) {
     const receiveTimeoutMS = this._options.receiveTimeoutMS
-    const queue = new Queue({ concurrency: 1 })
     const timers = new Map()
     let running = true
 
@@ -219,60 +218,54 @@ module.exports = class PullProtocol {
 
     return {
       onClock (clock, onTimeout) {
-        queue.add(() => {
-          if (!running) return
+        if (!running) return
 
-          // Check if the remote has information we don't have
-          if (localHasClock(clock)) {
-            dbg('local already has clock, ignoring')
+        // Check if the remote has information we don't have
+        if (localHasClock(clock)) {
+          dbg('local already has clock, ignoring')
+          return
+        }
+
+        // Make sure we aren't already waiting for this clock
+        for (const c of timers.keys()) {
+          if (vectorclock.doesSecondHaveFirst(clock, c)) {
+            dbg('already waiting for data for clock, ignoring')
             return
           }
+        }
 
-          // Make sure we aren't already waiting for this clock
-          for (const c of timers.keys()) {
-            if (vectorclock.doesSecondHaveFirst(clock, c)) {
-              dbg('already waiting for data for clock, ignoring')
-              return
-            }
+        dbg('waiting for data for clock %j', clock)
+        const timeout = setTimeout(() => {
+          // Check if we've received the data for the clock
+          if (running && !localHasClock(clock)) {
+            dbg('did not receive data within %dms for clock %j', receiveTimeoutMS, clock)
+            onTimeout()
           }
+        }, receiveTimeoutMS)
 
-          dbg('waiting for data for clock %j', clock)
-          const timeout = setTimeout(() => {
-            // Check if we've received the data for the clock
-            if (!localHasClock(clock)) {
-              dbg('did not receive data within %dms for clock %j', receiveTimeoutMS, clock)
-              running && onTimeout()
-            }
-          }, receiveTimeoutMS)
-
-          timers.set(clock, timeout)
-        })
+        timers.set(clock, timeout)
       },
 
       onData (clock) {
-        queue.add(() => {
-          if (!running) return
+        if (!running) return
 
-          // Check each timer to see if we've received the corresponding data
-          for (const [c, timeout] of [...timers]) {
-            if (vectorclock.doesSecondHaveFirst(c, clock)) {
-              dbg('received data - clearing timeout for clock %j', c)
-              clearTimeout(timeout)
-              timers.delete(c)
-            }
+        // Check each timer to see if we've received the corresponding data
+        for (const [c, timeout] of timers) {
+          if (vectorclock.doesSecondHaveFirst(c, clock)) {
+            dbg('received data - clearing timeout for clock %j', c)
+            clearTimeout(timeout)
+            timers.delete(c)
           }
-        })
+        }
       },
 
       stop () {
         dbg('stopping wait timers')
         running = false
-        queue.add(() => {
-          for (const timeout of timers.values()) {
-            clearTimeout(timeout)
-          }
-          timers.clear()
-        })
+        for (const timeout of timers.values()) {
+          clearTimeout(timeout)
+        }
+        timers.clear()
       }
     }
   }
