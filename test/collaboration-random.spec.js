@@ -12,6 +12,7 @@ const waitForMembers = require('./utils/wait-for-members')
 const debounceEvent = require('./utils/debounce-event')
 const b58Decode = require('bs58').decode
 const radix64 = require('radix-64')()
+const pEvent = require('p-event')
 
 describe('collaboration with random changes', function () {
   this.timeout(70000)
@@ -57,25 +58,27 @@ describe('collaboration with random changes', function () {
   })
 
   it('handles random changes', async () => {
-    let expectedCharacterCount = 0
+    const expectedCharacterCount = charsPerPeer * collaborations.length
     let expectedValue
     const modifications = async (collaboration, index) => {
-      const stateChangesSettled = debounceEvent(collaboration, 'state changed', process.browser ? 30000 : 10000)
+      const receivedAllChars = pEvent(collaboration, 'state changed', () => {
+        return collaboration.shared.value().length === expectedCharacterCount
+      })
       for (let i = 0; i < charsPerPeer; i++) {
         const character = characterFrom(manyCharacters, i)
         collaboration.shared.push(character)
-        expectedCharacterCount++
         await delay(randomShortTime())
       }
 
-      // Wait for state changes to complete and for things to settle
-      await stateChangesSettled
+      // Wait for collaboration to receive all characters
+      await receivedAllChars
 
       const value = collaboration.shared.value()
       expect(value.length).to.equal(expectedCharacterCount)
       if (!expectedValue) {
         expectedValue = value
       } else {
+        // The value of all collaborations should be the same
         expect(value.length).to.equal(expectedValue.length)
         expect(value).to.deep.equal(expectedValue)
       }
