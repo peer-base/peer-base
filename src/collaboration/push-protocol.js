@@ -11,6 +11,8 @@ const encode = require('delta-crdts-msgpack-codec').encode
 const vectorclock = require('../common/vectorclock')
 const expectedNetworkError = require('../common/expected-network-error')
 const EventEmitter = require('events')
+const isUndefined = require('lodash/isUndefined')
+const pEvent = require('p-event')
 
 // const RGA = require('delta-crdts').type('rga')
 // const chai = require('chai')
@@ -46,15 +48,8 @@ module.exports = class PushProtocol {
     let isPinner
     // To find out if the remote peer is a pinner, we need to wait till it
     // sends us a message
-    let pinnerInfoEmitter = new EventEmitter()
-    const isPinnerPromise = () => {
-      return new Promise(resolve => {
-        if (typeof isPinner !== 'undefined') {
-          return resolve(isPinner)
-        }
-        pinnerInfoEmitter.once('isPinner', () => resolve(isPinner))
-      })
-    }
+    let pinnerInfoEmitter = new EventEmitter().setMaxListeners(0)
+    const isPinnerPromise = () => isUndefined(isPinner) ? pEvent(pinnerInfoEmitter, 'isPinner') : isPinner
 
     // Send the diff between the local peer's clock and the remote peer's clock
     // to the remote peer
@@ -253,7 +248,7 @@ module.exports = class PushProtocol {
         }
       }
     }
-    this._collaboration.on('stopped', onEnd)
+    this._collaboration.once('stopped', onEnd)
 
     const input = pull.drain(handlingData(onMessage), onEnd)
     const output = pushable()
