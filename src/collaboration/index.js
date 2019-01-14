@@ -18,7 +18,7 @@ const debounce = require('lodash/debounce')
 const defaultOptions = {
   preambleByteCount: 2,
   peerIdByteCount: 32,
-  debounceResetConnectionsMS: 1000,
+  debounceResetConnectionsMS: 0,
   maxDeltaRetention: 1000,
   deltaTrimTimeoutMS: 1000,
   resetConnectionIntervalMS: 6000,
@@ -96,6 +96,7 @@ class Collaboration extends EventEmitter {
     this.shared.on('state changed', debounce((fromSelf) => {
       fromSelf = fromSelf || changeFromSelf
       changeFromSelf = false
+
       this.emit('state changed', fromSelf)
     }, 0))
 

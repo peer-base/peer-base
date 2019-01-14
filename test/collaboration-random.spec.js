@@ -9,9 +9,8 @@ const delay = require('delay')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
-const b58Decode = require('bs58').decode
-const radix64 = require('radix-64')()
-const pEvent = require('p-event')
+const debounceEvent = require('./utils/debounce-event')
+const peerToClockId = require('../src/collaboration/peer-to-clock-id')
 
 describe('collaboration with random changes', function () {
   this.timeout(70000)
@@ -58,47 +57,40 @@ describe('collaboration with random changes', function () {
 
   it('handles random changes', async () => {
     const expectedCharacterCount = charsPerPeer * collaborations.length
-    let expectedValue
-    const modifications = async (collaboration, index) => {
-      const receivedAllChars = pEvent(collaboration, 'state changed', () => {
-        return collaboration.shared.value().length === expectedCharacterCount
-      })
+
+    const modifications = async (collaboration, i) => {
+      const stateSettled = debounceEvent(collaboration, 'state changed', process.browser ? 30000 : 10000)
       for (let i = 0; i < charsPerPeer; i++) {
         const character = characterFrom(manyCharacters, i)
         collaboration.shared.push(character)
         await delay(randomShortTime())
       }
 
-      // Wait for collaboration to receive all characters
-      await receivedAllChars
-
-      const value = collaboration.shared.value()
-      expect(value.length).to.equal(expectedCharacterCount)
-      if (!expectedValue) {
-        expectedValue = value
-      } else {
-        // The value of all collaborations should be the same
-        expect(value.length).to.equal(expectedValue.length)
-        expect(value).to.deep.equal(expectedValue)
-      }
+      return stateSettled
     }
 
     await Promise.all(collaborations.map(modifications))
 
-    expect(collaborations[0].shared.value().length).to.equal(expectedCharacterCount)
+    // The length of all collaborations should be the expected length
+    for (let i = 0; i < collaborations.length; i++) {
+      expect(collaborations[i].shared.value().length).to.equal(expectedCharacterCount)
+    }
+
+    // The value of all collaborations should be the same
+    const expectedValue = collaborations[0].shared.value()
+    for (const c of collaborations) {
+      expect(c.shared.value()).to.eql(expectedValue)
+    }
 
     // validate all vector clocks are correct
     const peerIds = (await Promise.all(collaborations.map(async (collaboration) => (await collaboration.app.ipfs.id()).id)))
-    const peerClockKeys = peerIds.map((peerId) => {
-      const buff = b58Decode(peerId)
-      return radix64.encodeBuffer(buff.slice(buff.length - 8))
-    }).sort()
-
+    const peerClockKeys = peerIds.map(peerToClockId).sort()
     for (let collaboration of collaborations) {
       for (let peerId of peerIds) {
+        const peerIdAsClockId = peerToClockId(peerId)
         const clock = collaboration.vectorClock(peerId)
         for (let replica of peerClockKeys) {
-          if (clock.hasOwnProperty(replica)) {
+          if (replica !== peerIdAsClockId && clock.hasOwnProperty(replica)) {
             expect(clock[replica]).to.equal(charsPerPeer)
           }
         }

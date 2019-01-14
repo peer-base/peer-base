@@ -85,7 +85,7 @@ module.exports = class PullProtocol {
         if (!states && !delta) {
           waitTimers.onClock(clock, () => {
             // If the timer expires, switch to eager mode
-            dbg('switching to eager mode')
+            dbg('switching to eager mode with peer %s', remotePeerId)
             remote.setEagerMode()
           })
           return
@@ -124,9 +124,7 @@ module.exports = class PullProtocol {
           this._replication.received(remotePeerId, clock)
           dbg('saved with new clock %j', saved)
         } else {
-          // There was no new information in the state / delta, so switch to
-          // lazy mode
-          dbg('did not save, setting %s to lazy mode', remotePeerId)
+          dbg('did not save, setting connection to %s to lazy mode', remotePeerId)
           remote.setLazyMode()
         }
       }).catch(onEnd)

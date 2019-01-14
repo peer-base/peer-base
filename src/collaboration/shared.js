@@ -5,9 +5,9 @@ const assert = require('assert')
 const debug = require('debug')('peer-base:collaboration:shared')
 const EventEmitter = require('events')
 const b58Decode = require('bs58').decode
-const radix64 = require('radix-64')()
 const vectorclock = require('../common/vectorclock')
 const Store = require('./store')
+const peerToClockId = require('./peer-to-clock-id')
 
 module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   const shared = new EventEmitter()
@@ -28,12 +28,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     }
   }
 
-  // Decoding the id results in a 34 byte buffer, so cut it down to the last
-  // 8 bytes, then radix64 encode to fit it efficiently into a string
-  const clockId = (() => {
-    const buff = b58Decode(id)
-    return radix64.encodeBuffer(buff.slice(buff.length - 8))
-  })()
+  const clockId = peerToClockId(id)
 
   const applyAndPushDelta = (delta) => {
     if (collaboration.isRoot()) {
@@ -178,7 +173,8 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     return interestingDeltas
   }
 
-  shared.deltaBatches = (_since = {}) => {
+  shared.deltaBatches = (_since = {}, targetPeerId) => {
+    const targetClockId = peerToClockId(targetPeerId)
     let since = _since
     const deltas = shared.deltas(since)
 
@@ -186,7 +182,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     const batches = []
     deltas
       .forEach((deltaRecord) => {
-        if (!vectorclock.isDeltaInteresting(deltaRecord, since)) {
+        if (!vectorclock.isDeltaInteresting(deltaRecord, since, targetClockId)) {
           return
         }
         const [oldPreviousClock, oldAuthorClock, [oldName, oldType, oldDelta]] = batch
