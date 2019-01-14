@@ -13,6 +13,7 @@ const expectedNetworkError = require('../common/expected-network-error')
 const EventEmitter = require('events')
 const isUndefined = require('lodash/isUndefined')
 const pEvent = require('p-event')
+const peerToClockId = require('./peer-to-clock-id')
 
 // const RGA = require('delta-crdts').type('rga')
 // const chai = require('chai')
@@ -74,7 +75,7 @@ module.exports = class PushProtocol {
 
     // Send deltas to the remote peer
     const pushDeltaBatches = async (peerClock) => {
-      const batches = this._shared.deltaBatches(peerClock)
+      const batches = this._shared.deltaBatches(peerClock, remotePeerId)
       let newRemoteClock = {}
       for (let batch of batches) {
         const [clock, authorClock] = batch
@@ -134,7 +135,7 @@ module.exports = class PushProtocol {
       const myClock = _myClock || this._shared.clock()
       const remoteClock = _remoteClock || this._clocks.getFor(remotePeerId)
       dbg('comparing local clock %j to remote clock %j', myClock, remoteClock)
-      const needs = !vectorclock.doesSecondHaveFirst(myClock, remoteClock)
+      const needs = vectorclock.doesRemoteNeedUpdate(myClock, remoteClock, peerToClockId(remotePeerId))
       dbg('remote %s needs update? %s', remotePeerId, needs)
       return needs && myClock
     }

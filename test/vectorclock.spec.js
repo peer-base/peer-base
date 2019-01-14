@@ -7,6 +7,7 @@ const expect = chai.expect
 
 const vectorclock = require('../src/common/vectorclock')
 const {
+  doesRemoteNeedUpdate,
   doesSecondHaveFirst,
   increment,
   isDeltaInteresting,
@@ -14,6 +15,54 @@ const {
 } = vectorclock
 
 describe('vectorclock', () => {
+  describe('doesRemoteNeedUpdate', () => {
+    it('empty', () => {
+      expect(doesRemoteNeedUpdate({}, {})).to.be.false()
+      expect(doesRemoteNeedUpdate({}, {}, 'a')).to.be.false()
+      expect(doesRemoteNeedUpdate({}, {}, 'r')).to.be.false()
+    })
+
+    it('local empty remote has changes', () => {
+      expect(doesRemoteNeedUpdate({}, { a: 1 })).to.be.false()
+      expect(doesRemoteNeedUpdate({}, { a: 1 }, 'r')).to.be.false()
+      expect(doesRemoteNeedUpdate({}, { r: 1 }, 'r')).to.be.false()
+    })
+
+    it('remote empty local has changes', () => {
+      expect(doesRemoteNeedUpdate({ a: 1 }, {})).to.be.true()
+      expect(doesRemoteNeedUpdate({ a: 1 }, {}, 'r')).to.be.true()
+      // Assume remote knows about changes to its own clock
+      expect(doesRemoteNeedUpdate({ r: 1 }, {}, 'r')).to.be.false()
+    })
+
+    it('local same as remote', () => {
+      expect(doesRemoteNeedUpdate({ a: 1 }, { a: 1, b: 2 })).to.be.false()
+      expect(doesRemoteNeedUpdate({ a: 1 }, { a: 1, b: 2 }, 'r')).to.be.false()
+      expect(doesRemoteNeedUpdate({ r: 1 }, { r: 1, b: 2 }, 'r')).to.be.false()
+    })
+
+    it('local lower value than remote', () => {
+      expect(doesRemoteNeedUpdate({ a: 1, b: 3 }, { a: 2, b: 3 })).to.be.false()
+      expect(doesRemoteNeedUpdate({ a: 1, b: 3 }, { a: 2, b: 3 }, 'r')).to.be.false()
+      expect(doesRemoteNeedUpdate({ r: 1, b: 3 }, { r: 2, b: 3 }, 'r')).to.be.false()
+    })
+
+    it('local higher value than remote', () => {
+      expect(doesRemoteNeedUpdate({ a: 2, b: 3 }, { a: 1, b: 3 })).to.be.true()
+      expect(doesRemoteNeedUpdate({ a: 2, b: 3 }, { a: 1, b: 3 }, 'r')).to.be.true()
+      // Assume remote knows about changes to its own clock
+      expect(doesRemoteNeedUpdate({ r: 2, b: 3 }, { r: 1, b: 3 }, 'r')).to.be.false()
+    })
+
+    it('local some lower some higher than remote', () => {
+      expect(doesRemoteNeedUpdate({ a: 2, b: 2 }, { a: 1, b: 3 })).to.be.true()
+      expect(doesRemoteNeedUpdate({ a: 2, b: 2 }, { a: 1, b: 3 }, 'r')).to.be.true()
+      // Assume remote knows about changes to its own clock
+      expect(doesRemoteNeedUpdate({ r: 2, b: 2 }, { r: 1, b: 3 }, 'r')).to.be.false()
+      expect(doesRemoteNeedUpdate({ a: 2, b: 2, r: 2 }, { a: 1, b: 3, r: 1 }, 'r')).to.be.true()
+    })
+  })
+
   describe('doesSecondHaveFirst', () => {
     it('empty', () => {
       expect(doesSecondHaveFirst({}, {})).to.be.true()
@@ -105,6 +154,12 @@ describe('vectorclock', () => {
       const delta = [{ a: 1 }, { a: 1 }]
       const currentClock = { b: 1 }
       expect(isDeltaInteresting(delta, currentClock)).to.be.false()
+    })
+
+    it('does not accept concurrent whose only change is target peer id', () => {
+      const delta = [{ a: 1 }, { a: 1 }]
+      const currentClock = { b: 1, a: 1 }
+      expect(isDeltaInteresting(delta, currentClock, 'a')).to.be.false()
     })
 
     it('accepts concurrent that starts from inside and expands multiple', () => {
