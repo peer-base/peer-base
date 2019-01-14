@@ -193,19 +193,21 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
         if (!vectorclock.isDeltaInteresting(deltaRecord, since)) {
           return
         }
-        const [oldPreviousClock, oldAuthorClock, [, , oldDelta]] = batch
+        const [oldPreviousClock, oldAuthorClock, [oldName, oldType, oldDelta]] = batch
         const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
-        const [deltaPreviousClock, deltaAuthorClock, [, , delta]] = deltaRecord
+        const [deltaPreviousClock, deltaAuthorClock, [deltaName, deltaType, delta]] = deltaRecord
         const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
         const newClock = vectorclock.merge(oldClock, deltaClock)
         const newPreviousClock = vectorclock.minimum(oldPreviousClock, deltaPreviousClock)
         const newAuthorClock = vectorclock.subtract(newPreviousClock, newClock)
         let newDelta
         try {
+          if (deltaName !== oldName) throw new Error('Mismatched name')
+          if (deltaType !== oldType) throw new Error('Mismatched type')
           newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta)
         } catch (err) {
           // could not perform join. will resort to creating a new batch for this delta.
-          batch = [deltaPreviousClock, deltaAuthorClock, [name, crdtType.typeName, delta]]
+          batch = [deltaPreviousClock, deltaAuthorClock, [deltaName, deltaType, delta]]
           batches.push(batch)
           since = vectorclock.merge(since, deltaClock)
           return
