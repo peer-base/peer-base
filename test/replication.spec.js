@@ -48,7 +48,16 @@ describe('replication', function () {
 
   before(async () => {
     collaborations = await Promise.all(
-      swarm.map((peer) => peer.app.collaborate(collaborationName, 'gset', collaborationOptions)))
+      swarm.map(async (peer) => {
+        const collaboration = await peer.app.collaborate(
+          collaborationName,
+          'gset',
+          collaborationOptions
+        )
+        await collaboration.sub('sub', 'gset')
+        return collaboration
+      })
+    )
     await waitForMembers(collaborations)
   })
 
@@ -72,6 +81,9 @@ describe('replication', function () {
   })
 
   it('waits for replication events', async () => {
+    const subCollaboration = await collaborations[0].sub('sub', 'gset')
+    subCollaboration.shared.add('c')
+    subCollaboration.shared.add('d')
     collaborations[0].shared.add('a')
     collaborations[0].shared.add('b')
 
@@ -98,8 +110,8 @@ describe('replication', function () {
     collaborations.forEach((collaboration) => expect(collaboration.replication.pinnerPeers().size).to.equal(1))
   })
 
-  it('converged between replicas', () => {
-    waitForValue(collaborations, new Set('a', 'b'))
+  it('converged between replicas', async () => {
+    await waitForValue(collaborations, new Set(['a', 'b']))
   })
 
   it('can stop pinner', async () => {
