@@ -136,7 +136,9 @@ describe('collaboration with random changes', function () {
         for (let replica of peerClockKeys) {
           // Ignore own key because remote may not send us updates about ourself
           if (replica !== collabPeerIdAsClockId && clock.hasOwnProperty(replica)) {
-            expect(clock[replica]).to.equal(charsPerPeer)
+            const msg = `${collaborationPeerId}'s copy of clock for ${peerId}` +
+              `has value ${clock[replica]} for key ${replica} (should be ${charsPerPeer})`
+            expect(clock[replica]).to.equal(charsPerPeer, msg)
           }
         }
       }
