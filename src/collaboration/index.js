@@ -18,7 +18,7 @@ const debounce = require('lodash/debounce')
 const defaultOptions = {
   preambleByteCount: 2,
   peerIdByteCount: 32,
-  debounceResetConnectionsMS: 0,
+  debounceResetConnectionsMS: 1000,
   maxDeltaRetention: 1000,
   deltaTrimTimeoutMS: 1000,
   resetConnectionIntervalMS: 6000,
