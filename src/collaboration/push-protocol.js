@@ -152,12 +152,17 @@ module.exports = class PushProtocol {
     // Check if the remote peer needs an update
     const reduceEntropy = async () => {
       await isPinnerPromise()
+      if (queue.size >= 2) {
+        return
+      }
       queue.add(() => {
         dbg('reduceEntropy to %s', remotePeerId)
         if (remoteNeedsUpdate()) {
           return updateRemote(this._shared.clock())
         }
-        dbg('remote is up to date')
+
+        dbg('remote is up to date, just sending clock')
+        sendClockDiff()
       }).catch(onEnd)
     }
     const debouncedReduceEntropy = debounce(reduceEntropy, this._options.debouncePushMS, {
