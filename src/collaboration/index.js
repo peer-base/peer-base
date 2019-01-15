@@ -81,9 +81,6 @@ class Collaboration extends EventEmitter {
 
     this.shared = Shared(name, selfId, this._type, this._ipfs, this, this._clocks, this._options)
     this.shared.on('error', (err) => this.emit('error', err))
-    this.shared.on('clock changed', (clock) => {
-      this._clocks.setFor(selfId, clock)
-    })
 
     // state changed
 

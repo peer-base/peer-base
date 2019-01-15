@@ -35,7 +35,6 @@ module.exports = class PullProtocol {
     const onNewLocalClock = (clock) => {
       dbg('local state mutation, new clock:', clock)
       // TODO: only send difference from previous clock
-      this._clocks.setFor(this._peerId(), clock)
       remote.sendClock(clock)
     }
     this._shared.on('clock changed', onNewLocalClock)

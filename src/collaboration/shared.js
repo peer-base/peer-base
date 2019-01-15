@@ -38,7 +38,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       const authorClock = vectorclock.increment({}, clockId)
       const deltaRecord = [previousClock, authorClock, [name, crdtType.typeName, delta]]
       pushDelta(deltaRecord)
-      shared.emit('clock changed', newClock)
+      onClockChanged(newClock)
     } else {
       collaboration.parent.shared.pushDeltaForSub(name, crdtType.typeName, delta)
       apply(delta, true)
@@ -114,7 +114,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     const authorClock = vectorclock.increment({}, clockId)
     const deltaRecord = [previousClock, authorClock, [name, type, delta]]
     pushDelta(deltaRecord)
-    shared.emit('clock changed', newClock)
+    onClockChanged(newClock)
   }
 
   shared.apply = (deltaRecord, isPartial, force) => {
@@ -141,7 +141,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     }
     if (forName === name) {
       apply(delta)
-      shared.emit('clock changed', newClock)
+      onClockChanged(newClock)
       return newClock
     } else if (typeName) {
       return collaboration.sub(forName, typeName)
@@ -250,6 +250,11 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
 
     shared.emit('state changed', fromSelf)
     return state
+  }
+
+  function onClockChanged (newClock) {
+    clocks.setFor(id, newClock)
+    shared.emit('clock changed', newClock)
   }
 }
 
