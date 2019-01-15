@@ -171,7 +171,6 @@ module.exports = class PushProtocol {
     // eager mode) to the remote peer
     const onClockChanged = (newClock) => {
       dbg('clock changed to %j', newClock)
-      this._clocks.setFor(this._peerId(), newClock)
       isPinner ? debouncedReduceEntropyToPinner() : debouncedReduceEntropy()
     }
     this._shared.on('clock changed', onClockChanged)
