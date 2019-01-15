@@ -9,7 +9,6 @@ const delay = require('delay')
 const PeerStar = require('../')
 const App = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
-const debounceEvent = require('./utils/debounce-event')
 const peerToClockId = require('../src/collaboration/peer-to-clock-id')
 
 const debug = require('debug')('peer-base:test:collaboration-random')
@@ -103,7 +102,7 @@ describe('collaboration with random changes', function () {
         return new Promise(resolve => {
           let complete = false
           collaboration._clocks.on('update', () => {
-            if(complete) {
+            if (complete) {
               return
             }
             if (checkCollaborationClocks(collaboration)) {
@@ -137,9 +136,6 @@ describe('collaboration with random changes', function () {
         for (let replica of peerClockKeys) {
           // Ignore own key because remote may not send us updates about ourself
           if (replica !== collabPeerIdAsClockId && clock.hasOwnProperty(replica)) {
-            if (clock[replica] !== charsPerPeer) {
-              console.error('%s copy of clock for %s is %d (should be %d)', collaborationPeerId, peerId, clock[replica], charsPerPeer)
-            }
             expect(clock[replica]).to.equal(charsPerPeer)
           }
         }
