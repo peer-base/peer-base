@@ -52,11 +52,12 @@ module.exports = class PushProtocol {
     let pinnerInfoEmitter = new EventEmitter().setMaxListeners(0)
     const isPinnerPromise = () => isUndefined(isPinner) ? pEvent(pinnerInfoEmitter, 'isPinner') : isPinner
 
-    // Send the diff between the local peer's clock and the remote peer's clock
-    // to the remote peer
-    const sendClockDiff = () => {
+    // Send the local peer's clock to the remote peer
+    const sendClock = () => {
       const clock = this._shared.clock()
-      const clockDiff = vectorclock.diff(sentClock, clock)
+      // If this peer is a pinner, send the full clock
+      // Otherwise just send a diff
+      const clockDiff = this._options.replicateOnly ? clock : vectorclock.diff(sentClock, clock)
       sentClock = clock
       output.push(encode([null, [clockDiff]]))
     }
@@ -106,7 +107,7 @@ module.exports = class PushProtocol {
       // If we're in lazy mode, just send the clock (no state)
       if (!pushing) {
         dbg('in lazy mode so only sending clock to %s', remotePeerId)
-        sendClockDiff()
+        sendClock()
         return
       }
 
@@ -151,7 +152,13 @@ module.exports = class PushProtocol {
 
     // Check if the remote peer needs an update
     const reduceEntropy = async () => {
+      // Wait for a message from the remote indicating whether it's a pinner
+      // before sending any updates
       await isPinnerPromise()
+
+      // A lot of updates can get queued up while waiting for the isPinner
+      // message. So don't add more than two concurrent updates to the queue
+      // (one executing and one pending)
       if (queue.size >= 2) {
         return
       }
@@ -161,8 +168,16 @@ module.exports = class PushProtocol {
           return updateRemote(this._shared.clock())
         }
 
-        dbg('remote is up to date, just sending clock')
-        sendClockDiff()
+        if (this._options.replicateOnly) {
+          // If this peer is a pinner, it doesn't deal with deltas, so no need
+          // to send the clock (because the remote is already up to date)
+          dbg('remote is up to date')
+        } else {
+          // The state of the remote is up to date, so send just the clock
+          // (no state)
+          dbg('remote is up to date, just sending clock')
+          sendClock()
+        }
       }).catch(onEnd)
     }
     const debouncedReduceEntropy = debounce(reduceEntropy, this._options.debouncePushMS, {
