@@ -47,6 +47,7 @@ module.exports = class PullProtocol {
         const [deltaRecord, newStates, protocolPeerInfo] = data
 
         // If the remote peer indicates that it is a pinner, tell it to go into lazy mode
+        // Note: The first message sent by push-protocol indicates whether it is a pinner
         if (protocolPeerInfo && protocolPeerInfo.isPinner && !remote.isPinner) {
           dbg('remote peer %s is a pinner, switching to lazy mode', remotePeerId)
           remote.isPinner = true
@@ -75,8 +76,15 @@ module.exports = class PullProtocol {
           return
         }
 
-        // Merge the remote peer's vector clock into our copy of it
-        clock = this._clocks.setFor(remotePeerId, clock)
+        if (remote.isPinner) {
+          // If the remote is a pinner, explicitly set the clock, as we assume
+          // pinner clocks are authoritative
+          clock = this._clocks.setFor(remotePeerId, clock)
+        } else {
+          // Otherwise, it may be a full clock or a clock diff. In any case we
+          // just merge it into our existing copy of that peer's clock
+          clock = this._clocks.mergeFor(remotePeerId, clock)
+        }
         dbg('received clock from %s: %j', remotePeerId, clock)
 
         // If we didn't get any state information, just a clock, then set a

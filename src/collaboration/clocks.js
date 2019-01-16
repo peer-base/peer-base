@@ -12,17 +12,22 @@ module.exports = class Clocks extends EventEmitter {
     this._replicateOnly = options && options.replicateOnly
   }
 
-  setFor (peerId, _clock, authoritative, isPinner) {
-    let clock = _clock
-    if (!this._replicateOnly) {
-      const previousClock = this.getFor(peerId)
-      clock = vectorclock.merge(previousClock, clock)
-    }
+  setFor (peerId, clock) {
     // console.log(`${this._id}: %j => %j`, previousClock, newClock)
     debug('%s: setting clock for %s: %j', this._id, peerId, clock)
     this._clocks.set(peerId, clock)
-    this.emit('update', peerId, clock, authoritative, isPinner)
+    this.emit('update', peerId, clock)
     return clock
+  }
+
+  mergeFor (peerId, clock) {
+    // If we're setting a different peer's clock, or if the local peer is not a
+    // pinner, we can merge the clock rather than setting it explicitly
+    if (this._id !== peerId || !this._replicateOnly) {
+      const previousClock = this.getFor(peerId)
+      clock = vectorclock.merge(previousClock, clock)
+    }
+    return this.setFor(peerId, clock)
   }
 
   getFor (peerId) {
