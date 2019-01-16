@@ -231,15 +231,17 @@ module.exports = class PushProtocol {
 
       // If the remote sent us its clock, update our local copy
       if (newRemoteClock) {
+        let clock
         if (isPinner) {
           // If the remote is a pinner, assume its clock is authoritative
           remoteClock = newRemoteClock
+          clock = this._clocks.setFor(remotePeerId, newRemoteClock)
         } else {
           // If the remote is a regular peer, just merge in the remote clock
           remoteClock = vectorclock.merge(remoteClock, newRemoteClock)
+          clock = this._clocks.mergeFor(remotePeerId, newRemoteClock)
         }
-        const mergedClock = this._clocks.setFor(remotePeerId, newRemoteClock, true, isPinner)
-        this._replication.sent(remotePeerId, mergedClock, isPinner)
+        this._replication.sent(remotePeerId, clock, isPinner)
       }
 
       // We have a new clock from the remote peer, so check if we need to send

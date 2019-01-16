@@ -76,7 +76,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       deltas = loadedDeltas
     }
     if (clock) {
-      clocks.setFor(id, clock)
+      clocks.mergeFor(id, clock)
     }
   }
 
@@ -253,7 +253,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   }
 
   function onClockChanged (newClock) {
-    clocks.setFor(id, newClock)
+    clocks.mergeFor(id, newClock)
     shared.emit('clock changed', newClock)
   }
 }
