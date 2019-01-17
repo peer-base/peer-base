@@ -7,8 +7,8 @@ const PeerIds = require('./peer-ids')
 
 const SWARM = [ '/ip4/127.0.0.1/tcp/9090/ws/p2p-websocket-star' ]
 
-module.exports = (appName, { startAtPeerIndex = 0 } = {}) => {
-  const peerIds = PeerIds(startAtPeerIndex)
+module.exports = (appName) => {
+  const peerIds = PeerIds()
   return Object.assign((transportOptions = {}, ipfsOptions = {}) => {
     if (!appName) {
       throw new Error('need app name')
