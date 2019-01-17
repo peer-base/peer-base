@@ -5,7 +5,7 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const App = require('./utils/create-app')
+const AppFactory = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
 const waitForValue = require('./utils/wait-for-value')
 require('./utils/fake-crdt')
@@ -15,13 +15,13 @@ describe('public collaboration', function () {
 
   const peerCount = 2 // 10
 
-  let appName
+  let App
   let swarm = []
   let collaborations
   let gossips
 
   before(() => {
-    appName = App.createName()
+    App = AppFactory(AppFactory.createName(), { startAtPeerIndex: 3 })
   })
 
   const peerIndexes = []
@@ -29,15 +29,15 @@ describe('public collaboration', function () {
     peerIndexes.push(i)
   }
 
-  peerIndexes.forEach((peerIndex) => {
-    before(() => {
-      const app = App(appName, { maxThrottleDelayMS: 1000 })
-      swarm.push(app)
-      return app.start()
-    })
+  before(() => Promise.all(peerIndexes.map(() => {
+    const app = App({ maxThrottleDelayMS: 1000 })
+    swarm.push(app)
+    return app.start()
+  })))
 
-    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
-  })
+  after(() => Promise.all(peerIndexes.map(async (peerIndex) => {
+    return swarm[peerIndex] && swarm[peerIndex].stop()
+  })))
 
   it('can be created', async () => {
     collaborations = await Promise.all(
@@ -48,7 +48,7 @@ describe('public collaboration', function () {
   it('has all members', () => waitForMembers(collaborations))
 
   it('adding another peer', async () => {
-    const peer = App(appName, { maxThrottleDelayMS: 1000 })
+    const peer = App({ maxThrottleDelayMS: 1000 })
     swarm.push(peer)
     await peer.app.start()
     const collaboration = await peer.app.collaborate('test public collaboration', 'fake')

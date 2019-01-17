@@ -5,14 +5,14 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const App = require('./utils/create-app')
+const AppFactory = require('./utils/create-app')
 
 const A_BIT = 19000
 
 describe('app swarm', function () {
   this.timeout(30000)
 
-  let appName
+  let App
   const peerCount = 10
 
   // let rendezvous
@@ -37,7 +37,8 @@ describe('app swarm', function () {
   after(() => clearInterval(interval))
 
   before(() => {
-    appName = App.createName()
+    const appName = AppFactory.createName()
+    App = AppFactory(appName)
   })
 
   const peerIndexes = []
@@ -45,15 +46,15 @@ describe('app swarm', function () {
     peerIndexes.push(i)
   }
 
-  peerIndexes.forEach((peerIndex) => {
-    before(() => {
-      const app = App(appName, { maxThrottleDelayMS: 1000 })
-      swarm.push(app)
-      return app.start()
-    })
+  before(() => Promise.all(peerIndexes.map(() => {
+    const app = App({ maxThrottleDelayMS: 1000 })
+    swarm.push(app)
+    return app.start()
+  })))
 
-    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
-  })
+  after(() => Promise.all(peerIndexes.map(async (peerIndex) => {
+    return swarm[peerIndex] && swarm[peerIndex].stop()
+  })))
 
   before((done) => {
     // wait a bit for things to sync

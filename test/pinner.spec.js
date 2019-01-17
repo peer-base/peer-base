@@ -5,8 +5,8 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const PeerStar = require('../')
-const App = require('./utils/create-app')
+const PeerBase = require('../')
+const AppFactory = require('./utils/create-app')
 const Repo = require('./utils/repo')
 const waitForMembers = require('./utils/wait-for-members')
 const waitForValue = require('./utils/wait-for-value')
@@ -24,6 +24,7 @@ describe('pinner', function () {
   }
 
   let appName
+  let App
   let swarm = []
   let pinner
   let collaborations
@@ -32,7 +33,8 @@ describe('pinner', function () {
   let expectedValue
 
   before(() => {
-    appName = App.createName()
+    appName = AppFactory.createName()
+    App = AppFactory(appName)
   })
 
   const peerIndexes = []
@@ -40,16 +42,14 @@ describe('pinner', function () {
     peerIndexes.push(i)
   }
 
-  peerIndexes.forEach((peerIndex) => {
-    before(() => {
-      const app = App(appName, { maxThrottleDelayMS: 100 })
-      swarm.push(app)
-      return app.start()
-    })
-  })
+  before(() => Promise.all(peerIndexes.map(() => {
+    const app = App({ maxThrottleDelayMS: 100 })
+    swarm.push(app)
+    return app.start()
+  })))
 
   before(async () => {
-    collaborationOptions.keys = await PeerStar.keys.generate()
+    collaborationOptions.keys = await PeerBase.keys.generate()
   })
 
   before(async () => {
@@ -60,10 +60,11 @@ describe('pinner', function () {
   })
 
   it('can add a pinner to a collaboration', (done) => {
-    pinner = PeerStar.createPinner(appName, {
+    pinner = PeerBase.createPinner(appName, {
       ipfs: {
-        swarm: App.swarm,
-        repo: Repo()
+        swarm: AppFactory.swarm,
+        repo: Repo(),
+        init: App.init()
       }
     })
 
@@ -115,8 +116,7 @@ describe('pinner', function () {
   })
 
   it('can start new reader', async () => {
-    newReader = App(appName, { maxThrottleDelayMS: 100 })
-    swarm.push(newReader)
+    newReader = App({ maxThrottleDelayMS: 100 })
     await newReader.start()
     newReaderCollab = await newReader.app.collaborate(collaborationName, 'gset', collaborationOptions)
   })

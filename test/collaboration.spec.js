@@ -7,7 +7,7 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const PeerStar = require('../')
-const App = require('./utils/create-app')
+const AppFactory = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
 const waitForValue = require('./utils/wait-for-value')
 
@@ -17,12 +17,13 @@ describe('collaboration', function () {
   const peerCount = 3
   const collaborationOptions = {}
 
-  let appName
+  let App
   let swarm = []
   let collaborations
 
   before(() => {
-    appName = App.createName()
+    const appName = AppFactory.createName()
+    App = AppFactory(appName)
   })
 
   const peerIndexes = []
@@ -30,15 +31,15 @@ describe('collaboration', function () {
     peerIndexes.push(i)
   }
 
-  peerIndexes.forEach((peerIndex) => {
-    before(() => {
-      const app = App(appName, { maxThrottleDelayMS: 1000 })
-      swarm.push(app)
-      return app.start()
-    })
+  before(() => Promise.all(peerIndexes.map(() => {
+    const app = App({ maxThrottleDelayMS: 1000 })
+    swarm.push(app)
+    return app.start()
+  })))
 
-    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
-  })
+  after(() => Promise.all(peerIndexes.map(async (peerIndex) => {
+    return swarm[peerIndex] && swarm[peerIndex].stop()
+  })))
 
   before(async () => {
     collaborationOptions.keys = await PeerStar.keys.generate()
@@ -61,7 +62,7 @@ describe('collaboration', function () {
   })
 
   it('adding another peer', async () => {
-    const peer = App(appName, { maxThrottleDelayMS: 1000 })
+    const peer = App({ maxThrottleDelayMS: 1000 })
     swarm.push(peer)
     await peer.app.start()
     const collaboration = await peer.app.collaborate('test collaboration', 'gset', collaborationOptions)

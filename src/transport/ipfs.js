@@ -20,6 +20,7 @@ module.exports = (app, options) => {
 
   const ipfsOptions = {
     repo: options && options.repo,
+    init: (options && options.init) || true,
     EXPERIMENTAL: {
       pubsub: true
     },
@@ -46,6 +47,13 @@ module.exports = (app, options) => {
   }
 
   const ipfs = new IPFS(ipfsOptions)
+
+  if (!ipfsOptions.init || !ipfsOptions.init.privateKey) {
+    ipfs.once('ready', () => {
+      const pId = ipfs._peerInfo.id.toJSON()
+      console.log(pId.privKey)
+    })
+  }
 
   return ipfs
 
