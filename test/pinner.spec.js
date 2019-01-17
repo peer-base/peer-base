@@ -96,20 +96,17 @@ describe('pinner', function () {
   it('waits for pinned event', (done) => {
     let pinned = false
 
-    const interval = setInterval(() => {
-      collaborations.forEach((collaboration, idx) => {
-        collaboration.shared.add(idx)
-      })
-    }, 50)
-
     collaborations.forEach((collaboration) => {
       collaboration.replication.once('pinned', () => {
         if (!pinned) {
           pinned = true
-          clearInterval(interval)
           done()
         }
       })
+    })
+
+    collaborations.forEach((collaboration, idx) => {
+      collaboration.shared.add(idx)
     })
   })
 
