@@ -21,7 +21,7 @@ describe('public collaboration', function () {
   let gossips
 
   before(() => {
-    App = AppFactory(AppFactory.createName(), { startAtPeerIndex: 3 })
+    App = AppFactory(AppFactory.createName())
   })
 
   const peerIndexes = []
