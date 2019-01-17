@@ -14,12 +14,12 @@ const peerToClockId = require('../src/collaboration/peer-to-clock-id')
 const debug = require('debug')('peer-base:test:collaboration-random')
 
 describe('collaboration with random changes', function () {
-  this.timeout(70000)
+  const peerCount = 8
+  const charsPerPeer = process.browser ? 20 : 100
+  this.timeout(10000 * peerCount)
 
   const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
 
-  const peerCount = 8 // process.browser ? 4 : 8
-  const charsPerPeer = process.browser ? 20 : 100
   const collaborationOptions = {}
 
   let App
