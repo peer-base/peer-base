@@ -46,7 +46,7 @@
     "delta-crdts-msgpack-codec": "~0.2.0",
     "frequency-counter": "^1.0.1",
     "interface-datastore": "~0.6.0",
-    "ipfs": "0.33.1",
+    "ipfs": "0.34.0",
     "ipfs-api": "^26.1.2",
     "leftpad": "0.0.1",
     "libp2p": "~0.24.1",
