@@ -7,7 +7,7 @@ const expect = chai.expect
 
 const delay = require('delay')
 const PeerStar = require('../')
-const App = require('./utils/create-app')
+const AppFactory = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
 const peerToClockId = require('../src/collaboration/peer-to-clock-id')
 
@@ -22,13 +22,14 @@ describe('collaboration with random changes', function () {
   const charsPerPeer = process.browser ? 20 : 100
   const collaborationOptions = {}
 
-  let appName
+  let App
   let swarm = []
   let collaborations
   let collaborationIds = new Map()
 
   before(() => {
-    appName = App.createName()
+    const appName = AppFactory.createName()
+    App = AppFactory(appName)
   })
 
   const peerIndexes = []
@@ -36,15 +37,15 @@ describe('collaboration with random changes', function () {
     peerIndexes.push(i)
   }
 
-  peerIndexes.forEach((peerIndex) => {
-    before(() => {
-      const app = App(appName, { maxThrottleDelayMS: 1000 })
-      swarm.push(app)
-      return app.start()
-    })
+  before(() => Promise.all(peerIndexes.map(() => {
+    const app = App({ maxThrottleDelayMS: 1000 })
+    swarm.push(app)
+    return app.start()
+  })))
 
-    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
-  })
+  after(() => Promise.all(peerIndexes.map(async (peerIndex) => {
+    return swarm[peerIndex] && swarm[peerIndex].stop()
+  })))
 
   before(async () => {
     collaborationOptions.keys = await PeerStar.keys.generate()

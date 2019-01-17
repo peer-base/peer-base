@@ -6,7 +6,7 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const PeerStar = require('../')
-const App = require('./utils/create-app')
+const AppFactory = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
 require('./utils/fake-crdt')
 
@@ -18,13 +18,14 @@ describe('collaboration gossip', function () {
     maxDeltaRetention: 0
   }
 
-  let appName
+  let App
   let swarm = []
   let collaborations
   let gossips
 
   before(() => {
-    appName = App.createName()
+    const appName = AppFactory.createName()
+    App = AppFactory(appName)
   })
 
   const peerIndexes = []
@@ -32,15 +33,15 @@ describe('collaboration gossip', function () {
     peerIndexes.push(i)
   }
 
-  peerIndexes.forEach((peerIndex) => {
-    before(() => {
-      const app = App(appName, { maxThrottleDelayMS: 1000 })
-      swarm.push(app)
-      return app.start()
-    })
+  before(() => Promise.all(peerIndexes.map(() => {
+    const app = App({ maxThrottleDelayMS: 1000 })
+    swarm.push(app)
+    return app.start()
+  })))
 
-    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
-  })
+  after(() => Promise.all(peerIndexes.map(async (peerIndex) => {
+    return swarm[peerIndex] && swarm[peerIndex].stop()
+  })))
 
   before(async () => {
     collaborationOptions.keys = await PeerStar.keys.generate()

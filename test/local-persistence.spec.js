@@ -5,21 +5,22 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const App = require('./utils/create-app')
+const AppFactory = require('./utils/create-app')
 
 describe('local-persistence', function () {
   this.timeout(30000)
 
-  let appName
+  let App
   let repo
 
   before(() => {
-    appName = App.createName()
+    const appName = AppFactory.createName()
+    App = AppFactory(appName)
   })
 
   it('can create collaboration and populate it', async () => {
     let saved = false
-    const app = App(appName, { maxThrottleDelayMS: 1000 })
+    const app = App({ maxThrottleDelayMS: 1000 })
     await app.start()
     repo = app.app.ipfs._repo
     expect(repo).to.exist()
@@ -42,7 +43,7 @@ describe('local-persistence', function () {
   })
 
   it('can revive collaboration from ipfs repo', async () => {
-    const app = App(appName, { maxThrottleDelayMS: 1000 }, { repo })
+    const app = App({ maxThrottleDelayMS: 1000 }, { repo })
     await app.start()
     const collaboration = await app.app.collaborate('local persistence test collaboration', 'rga')
     expect(collaboration.shared.value()).to.deep.equal(['a', 'b'])

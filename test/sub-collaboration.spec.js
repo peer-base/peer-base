@@ -6,7 +6,7 @@ chai.use(require('dirty-chai'))
 const expect = chai.expect
 
 const PeerStar = require('../')
-const App = require('./utils/create-app')
+const AppFactory = require('./utils/create-app')
 const waitForMembers = require('./utils/wait-for-members')
 const waitForValue = require('./utils/wait-for-value')
 require('./utils/fake-crdt')
@@ -19,12 +19,12 @@ describe('sub-collaboration', function () {
     maxDeltaRetention: 0
   }
 
-  let appName
+  let App
   let swarm = []
   let collaborations
 
   before(() => {
-    appName = App.createName()
+    App = AppFactory(AppFactory.createName())
   })
 
   const peerIndexes = []
@@ -32,15 +32,15 @@ describe('sub-collaboration', function () {
     peerIndexes.push(i)
   }
 
-  peerIndexes.forEach((peerIndex) => {
-    before(() => {
-      const app = App(appName, { maxThrottleDelayMS: 0 })
-      swarm.push(app)
-      return app.start()
-    })
+  before(() => Promise.all(peerIndexes.map(() => {
+    const app = App({ maxThrottleDelayMS: 1000 })
+    swarm.push(app)
+    return app.start()
+  })))
 
-    after(() => swarm[peerIndex] && swarm[peerIndex].stop())
-  })
+  after(() => Promise.all(peerIndexes.map(async (peerIndex) => {
+    return swarm[peerIndex] && swarm[peerIndex].stop()
+  })))
 
   before(async () => {
     collaborationOptions.keys = await PeerStar.keys.generate()
@@ -81,7 +81,7 @@ describe('sub-collaboration', function () {
   it('root collaboration still has same value', () => waitForValue(collaborations, 'ab'))
 
   it('can create another replica', async () => {
-    const peer = App(appName, { maxThrottleDelayMS: 1000 })
+    const peer = App({ maxThrottleDelayMS: 1000 })
     await peer.app.start()
     swarm.push(peer)
     const collaboration = await peer.app.collaborate('test sub-collaboration', 'fake', collaborationOptions)
@@ -89,8 +89,4 @@ describe('sub-collaboration', function () {
   })
 
   it('root collaboration still has same value', () => waitForValue(collaborations, 'ab'))
-
-  it('can kill 3rd replica', () => {
-    return swarm[peerCount].stop()
-  })
 })

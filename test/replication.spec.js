@@ -7,7 +7,7 @@ const expect = chai.expect
 
 const forEvent = require('p-event')
 const PeerStar = require('../')
-const App = require('./utils/create-app')
+const AppFactory = require('./utils/create-app')
 const Repo = require('./utils/repo')
 const waitForMembers = require('./utils/wait-for-members')
 const waitForValue = require('./utils/wait-for-value')
@@ -20,13 +20,15 @@ describe('replication', function () {
   const collaborationOptions = {}
 
   let appName
+  let App
   let swarm = []
   let pinner
   let pinnerPeerId
   let collaborations
 
   before(() => {
-    appName = App.createName()
+    appName = AppFactory.createName()
+    App = AppFactory(appName)
   })
 
   const peerIndexes = []
@@ -34,13 +36,15 @@ describe('replication', function () {
     peerIndexes.push(i)
   }
 
-  peerIndexes.forEach((peerIndex) => {
-    before(() => {
-      const app = App(appName, { maxThrottleDelayMS: 1000 })
-      swarm.push(app)
-      return app.start()
-    })
-  })
+  before(() => Promise.all(peerIndexes.map(() => {
+    const app = App({ maxThrottleDelayMS: 1000 })
+    swarm.push(app)
+    return app.start()
+  })))
+
+  after(() => Promise.all(peerIndexes.map(async (peerIndex) => {
+    return swarm[peerIndex] && swarm[peerIndex].stop()
+  })))
 
   before(async () => {
     collaborationOptions.keys = await PeerStar.keys.generate()
@@ -68,8 +72,9 @@ describe('replication', function () {
   it('can add a pinner to a collaboration', async () => {
     pinner = PeerStar.createPinner(appName, {
       ipfs: {
-        swarm: App.swarm,
-        repo: Repo()
+        swarm: AppFactory.swarm,
+        repo: Repo(),
+        init: App.init()
       }
     })
     await pinner.start()
