@@ -6,6 +6,7 @@ const debounce = require('lodash/debounce')
 const EventEmitter = require('events')
 const PeerSet = require('../common/peer-set')
 const Protocol = require('./protocol')
+const DialTracker = require('./dial-tracker')
 
 module.exports = class ConnectionManager extends EventEmitter {
   constructor (ipfs, globalConnectionManager, ring, collaboration, shared, clocks, replication, options) {
@@ -27,7 +28,7 @@ module.exports = class ConnectionManager extends EventEmitter {
 
     this._inboundConnections = new PeerSet()
     this._outboundConnections = new PeerSet()
-    this._dials = new PeerSet()
+    this._dials = new DialTracker()
 
     this._protocol = Protocol(ipfs, collaboration, shared, this._options.keys, clocks, replication, options)
 
@@ -52,8 +53,9 @@ module.exports = class ConnectionManager extends EventEmitter {
       collaboration.emit('error', err)
     })
 
-    this._debouncedResetConnections = debounce(
-      this._resetConnections.bind(this), this._options.debounceResetConnectionsMS)
+    // We use debounce timeout of 1ms because in practice it catches many calls
+    // close together that may not be within the same process tick
+    this._debouncedResetConnections = debounce(this._resetConnections.bind(this), 1)
   }
 
   start (diasSet) {
@@ -149,16 +151,16 @@ module.exports = class ConnectionManager extends EventEmitter {
       if (this._outboundConnections.has(peerInfo)) return
 
       // Check if we're already dialing the peer
-      if (this._dials.has(peerInfo)) return
+      if (this._dials.isDialing(peerInfo)) return
 
       // Dial the peer
-      this._dials.add(peerInfo)
+      const dialId = this._dials.add(peerInfo)
       try {
         const connection = await this._globalConnectionManager.connect(
           peerInfo, this._protocol.name())
 
         // Check if the dial was cancelled
-        if (!this._dials.has(peerInfo)) return
+        if (!this._dials.hasDial(dialId)) return
 
         this._unreachables.delete(peerInfo.id.toB58String())
         this._protocol.dialerFor(peerInfo, connection)
@@ -172,7 +174,7 @@ module.exports = class ConnectionManager extends EventEmitter {
         this._peerUnreachable(peerInfo)
         debug('error connecting:', err)
       }
-      this._dials.delete(peerInfo)
+      this._dials.removeDial(dialId)
     })
 
     // make sure we disconnect from peers not in the Dias Peer Set
@@ -181,7 +183,7 @@ module.exports = class ConnectionManager extends EventEmitter {
       if (diasSet.has(peerInfo)) return
 
       // If not, cancel any pending dial and disconnect
-      this._dials.delete(peerInfo)
+      this._dials.cancel(peerInfo)
       try {
         await this._globalConnectionManager.disconnect(peerInfo, this._protocol.name())
       } catch (err) {

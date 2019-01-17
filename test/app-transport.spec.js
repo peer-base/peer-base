@@ -69,7 +69,6 @@ describe('app-transport', function () {
   it('can be created', () => {
     appTransport = AppTransport(app, ipfs, transport, {
       maxThrottleDelayMS: 0,
-      debounceResetConnectionsMS: 0,
       preambleByteCount: 0
     })
   })
