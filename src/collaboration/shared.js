@@ -11,6 +11,7 @@ const peerToClockId = require('./peer-to-clock-id')
 
 module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   const shared = new EventEmitter()
+  shared.setMaxListeners(Infinity)
   const changeEmitter = new ChangeEmitter(shared)
   const voidChangeEmitter = new VoidChangeEmitter()
 
