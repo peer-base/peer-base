@@ -46,8 +46,7 @@ describe('connection manager', () => {
     }
 
     const opts = {
-      dialerBackoffMinMS: 10,
-      debounceResetConnectionsMS: 10
+      dialerBackoffMinMS: 10
     }
 
     let dialErr = false

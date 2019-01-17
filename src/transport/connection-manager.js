@@ -9,8 +9,7 @@ const debounce = require('lodash/debounce')
 
 const defaultOptions = {
   peerIdByteCount: 32,
-  preambleByteCount: 2,
-  debounceResetConnectionsMS: 1000
+  preambleByteCount: 2
 }
 
 module.exports = class ConnectionManager extends EventEmitter {
@@ -30,8 +29,10 @@ module.exports = class ConnectionManager extends EventEmitter {
     this._onDialed = this._onDialed.bind(this)
     this._onPeerInterest = this._onPeerInterest.bind(this)
     this._onPeerDisconnect = this._onPeerDisconnect.bind(this)
-    this._debouncedResetConnections = debounce(
-      this._resetConnections.bind(this), this._options.debounceResetConnectionsMS)
+
+    // We use debounce timeout of 1ms because in practice it catches many calls
+    // close together that may not be within the same process tick
+    this._debouncedResetConnections = debounce(this._resetConnections.bind(this), 1)
 
     this._discovery.setConnectionManager(this)
   }
