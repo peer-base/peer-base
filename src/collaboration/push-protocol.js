@@ -164,8 +164,9 @@ module.exports = class PushProtocol {
       }
       queue.add(() => {
         dbg('reduceEntropy to %s', remotePeerId)
-        if (remoteNeedsUpdate()) {
-          return updateRemote(this._shared.clock())
+        const myClock = this._shared.clock()
+        if (remoteNeedsUpdate(myClock, remoteClock)) {
+          return updateRemote(myClock)
         }
 
         if (this._options.replicateOnly) {
