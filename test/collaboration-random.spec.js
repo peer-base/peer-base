@@ -100,6 +100,10 @@ describe('collaboration with random changes', function () {
       let count = 0
       await Promise.all(collaborations.map(async (collaboration) => {
         const collaborationPeerId = collaborationIds.get(collaboration)
+        if (checkCollaborationClocks(collaboration)) {
+          debug('got all clocks for %s (%d / %d)', collaborationPeerId, ++count, peerCount)
+          return
+        }
         return new Promise(resolve => {
           let complete = false
           collaboration._clocks.on('update', () => {
@@ -162,7 +166,6 @@ describe('collaboration with random changes', function () {
         // Ignore own key because remote may not send us updates about ourself
         delete clock[collabPeerIdAsClockId]
         if (Object.keys(clock).length < peerCount - 1) {
-          // debug('not enough keys')
           return false
         }
         for (let replica of peerClockKeys) {
