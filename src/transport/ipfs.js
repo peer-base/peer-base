@@ -3,7 +3,7 @@
 
 const IPFS = require('ipfs')
 const Libp2p = require('libp2p')
-const WebSocketStar = require('libp2p-websocket-star')
+const WebSocketStar = require('libp2p-websocket-star-multi')
 const WebSockets = require('libp2p-websockets')
 const Bootstrap = require('libp2p-bootstrap')
 const Multiplex = require('libp2p-mplex')
@@ -56,7 +56,11 @@ module.exports = (app, options) => {
     peerInfo,
     peerBook
   }) {
-    const appTransport = AppTransport(app, ipfs, new WebSocketStar({ id: peerInfo.id }), options && options.transport)
+    const wsStarOptions = {
+      id: peerInfo.id,
+      servers: ipfsOptions.config.Addresses.Swarm
+    }
+    const appTransport = AppTransport(app, ipfs, new WebSocketStar(wsStarOptions), options && options.transport)
     appTransport.on('error', (err) => app.emit('error', err))
 
     if (options && options.relay) {
