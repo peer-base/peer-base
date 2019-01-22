@@ -161,7 +161,7 @@ module.exports = class PullProtocol {
     }
     this._collaboration.once('stopped', onEnd)
 
-    const remote = this._remote()
+    const remote = this._remote(remotePeerId)
     const input = pull.drain(handlingData(onData), onEnd)
 
     const vectorClock = this._shared.clock()
@@ -177,7 +177,7 @@ module.exports = class PullProtocol {
     return this._cachedPeerId
   }
 
-  _remote () {
+  _remote (remotePeerId) {
     const output = pushable()
     let eager = true
 
