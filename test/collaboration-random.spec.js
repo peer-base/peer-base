@@ -14,7 +14,7 @@ const peerToClockId = require('../src/collaboration/peer-to-clock-id')
 const debug = require('debug')('peer-base:test:collaboration-random')
 
 describe('collaboration with random changes', function () {
-  const peerCount = 8
+  const peerCount = 12
   const charsPerPeer = process.browser ? 20 : 100
   this.timeout(10000 * peerCount)
 
@@ -59,7 +59,7 @@ describe('collaboration with random changes', function () {
       const id = (await c.app.ipfs.id()).id
       collaborationIds.set(c, id)
     }))
-    await waitForMembers(collaborations)
+    // await waitForMembers(collaborations)
   })
 
   it('handles random changes', async () => {
@@ -67,10 +67,33 @@ describe('collaboration with random changes', function () {
     const peerIds = [...collaborationIds.values()]
     const peerClockKeys = peerIds.map(peerToClockId).sort()
 
+    const waitForHalfModifications = () => Promise.all(collaborations.map((collaboration) => new Promise((resolve) => {
+      const expectedCount = Math.round(expectedCharacterCount / 2)
+      const currentCount = collaboration.shared.value().length
+
+      if (currentCount >= expectedCount) {
+        return resolve()
+      }
+
+      const onStateChanged = () => {
+        const currentCount = collaboration.shared.value().length
+        if (currentCount >= expectedCount) {
+          collaboration.removeListener('state changed', onStateChanged)
+          resolve()
+        }
+      }
+
+      collaboration.on('state changed', onStateChanged)
+    })))
+
     const modifications = async (collaboration, i) => {
       const waitForCharCount = new Promise((resolve) => {
+        if (collaboration.shared.value().length === expectedCharacterCount) {
+          return resolve()
+        }
         collaboration.on('state changed', () => {
-          if (collaboration.shared.value().length === expectedCharacterCount) {
+          const currentCount = collaboration.shared.value().length
+          if (currentCount === expectedCharacterCount) {
             resolve()
           }
         })
@@ -79,7 +102,11 @@ describe('collaboration with random changes', function () {
       for (let i = 0; i < charsPerPeer; i++) {
         const character = characterFrom(manyCharacters, i)
         collaboration.shared.push(character)
-        await delay(randomShortTime())
+        if (i === Math.round(charsPerPeer / 2)) {
+          await waitForHalfModifications()
+        } else {
+          await delay(randomShortTime())
+        }
       }
 
       return waitForCharCount.then(async () => {
@@ -134,18 +161,11 @@ describe('collaboration with random changes', function () {
 
     // validate all vector clocks are correct
     for (let collaboration of collaborations) {
-      const collaborationPeerId = collaborationIds.get(collaboration)
-      const collabPeerIdAsClockId = peerToClockId(collaborationPeerId)
-      for (let peerId of peerIds) {
-        const clock = collaboration.vectorClock(peerId)
-        for (let replica of peerClockKeys) {
-          // Ignore own key because remote may not send us updates about ourself
-          if (replica !== collabPeerIdAsClockId && clock.hasOwnProperty(replica)) {
-            const msg = `${collaborationPeerId}'s copy of clock for ${peerId}` +
-              `has value ${clock[replica]} for key ${replica} (should be ${charsPerPeer})`
-            expect(clock[replica]).to.equal(charsPerPeer, msg)
-          }
-        }
+      const peerId = collaborationIds.get(collaboration)
+      const clocks = collaboration.vectorClock(peerId)
+      expect(Object.keys(clocks).length).to.equal(peerCount)
+      for (let clock of Object.values(clocks)) {
+        expect(clock).to.equal(charsPerPeer)
       }
     }
 
