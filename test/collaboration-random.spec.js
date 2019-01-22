@@ -8,7 +8,6 @@ const expect = chai.expect
 const delay = require('delay')
 const PeerStar = require('../')
 const AppFactory = require('./utils/create-app')
-const waitForMembers = require('./utils/wait-for-members')
 const peerToClockId = require('../src/collaboration/peer-to-clock-id')
 
 const debug = require('debug')('peer-base:test:collaboration-random')
