@@ -58,7 +58,8 @@ module.exports = (app, options) => {
   }) {
     const wsStarOptions = {
       id: peerInfo.id,
-      servers: ipfsOptions.config.Addresses.Swarm
+      servers: ipfsOptions.config.Addresses.Swarm,
+      ignore_no_online: true
     }
     const appTransport = AppTransport(app, ipfs, new WebSocketStar(wsStarOptions), options && options.transport)
     appTransport.on('error', (err) => app.emit('error', err))
