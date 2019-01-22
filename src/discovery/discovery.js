@@ -142,15 +142,18 @@ module.exports = class Discovery extends EventEmitter {
   }
 
   _awaitStart () {
-    return new Promise(async resolve => {
-      // Make sure libp2p has started
-      await this._awaitLibp2pStart()
+    if (!this._awaitStartPromise) {
+      this._awaitStartPromise = new Promise(async resolve => {
+        // Make sure libp2p has started
+        await this._awaitLibp2pStart()
 
-      if (this._running) {
-        return resolve()
-      }
-      this.once('start', resolve)
-    })
+        if (this._running) {
+          return resolve()
+        }
+        this.once('start', resolve)
+      })
+    }
+    return this._awaitStartPromise
   }
 
   _awaitLibp2pStart () {
