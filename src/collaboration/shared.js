@@ -9,9 +9,11 @@ const vectorclock = require('../common/vectorclock')
 const Store = require('./store')
 const peerToClockId = require('./peer-to-clock-id')
 
+const MAX_LISTENERS = 100
+
 module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   const shared = new EventEmitter()
-  shared.setMaxListeners(Infinity)
+  shared.setMaxListeners(MAX_LISTENERS)
   const changeEmitter = new ChangeEmitter(shared)
   const voidChangeEmitter = new VoidChangeEmitter()
 
@@ -161,23 +163,21 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     return (vectorclock.compare(otherClock, clock) < 0) || vectorclock.isIdentical(otherClock, clock)
   }
 
-  shared.deltas = (since = {}) => {
-    const interestingDeltas = deltas.filter((deltaRecord) => {
-      if (vectorclock.isDeltaInteresting(deltaRecord, since)) {
+  shared.deltas = (since = {}, targetPeerId) => {
+    return deltas.filter((deltaRecord) => {
+      if (vectorclock.isDeltaInteresting(deltaRecord, since, targetPeerId)) {
         const [previousClock, authorClock] = deltaRecord
         since = vectorclock.merge(since, vectorclock.sumAll(previousClock, authorClock))
         return true
       }
       return false
     })
-
-    return interestingDeltas
   }
 
   shared.deltaBatches = (_since = {}, targetPeerId) => {
     const targetClockId = peerToClockId(targetPeerId)
     let since = _since
-    const deltas = shared.deltas(since)
+    const deltas = shared.deltas(since, targetPeerId)
 
     let batch = [since, {}, [name, crdtType.typeName, crdtType.initial()]]
     const batches = []
@@ -186,6 +186,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
         if (!vectorclock.isDeltaInteresting(deltaRecord, since, targetClockId)) {
           return
         }
+
         const [oldPreviousClock, oldAuthorClock, [oldName, oldType, oldDelta]] = batch
         const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
         const [deltaPreviousClock, deltaAuthorClock, [deltaName, deltaType, delta]] = deltaRecord
@@ -198,6 +199,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
           if (deltaName !== oldName) throw new Error('Mismatched name')
           if (deltaType !== oldType) throw new Error('Mismatched type')
           newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta)
+          since = vectorclock.merge(since, newClock)
         } catch (err) {
           // could not perform join. will resort to creating a new batch for this delta.
           batch = [deltaPreviousClock, deltaAuthorClock, [deltaName, deltaType, delta]]
@@ -205,11 +207,11 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
           since = vectorclock.merge(since, deltaClock)
           return
         }
-        since = vectorclock.merge(since, newClock)
 
         batch[0] = newPreviousClock
         batch[1] = newAuthorClock
         batch[2][2] = newDelta
+
         if (!batches.length) {
           batches.push(batch)
         }
@@ -254,7 +256,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   }
 
   function onClockChanged (newClock) {
-    clocks.mergeFor(id, newClock)
+    newClock = clocks.mergeFor(id, newClock)
     shared.emit('clock changed', newClock)
   }
 }
