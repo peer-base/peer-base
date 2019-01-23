@@ -160,8 +160,8 @@ describe('collaboration with random changes', function () {
     let count = 0
     for (const c of collaborations) {
       debug('Value', String(count++).padStart(2),
-                     collaborationIds.get(c).slice(-3),
-                     c.shared.value().join(''))
+        collaborationIds.get(c).slice(-3),
+        c.shared.value().join(''))
     }
 
     const expectedValue = collaborations[0].shared.value()
