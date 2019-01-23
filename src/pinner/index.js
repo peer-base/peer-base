@@ -76,6 +76,10 @@ class AppPinner extends EventEmitter {
     return this._globalConnectionManager
   }
 
+  setTransportConnectionManager (connMgr) {
+    this.transportConnectionManager = connMgr
+  }
+
   peerCountGuess () {
     return this._peerCountGuess.guess()
   }

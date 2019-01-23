@@ -113,6 +113,10 @@ class App extends EventEmitter {
     this.emit('global connection manager')
   }
 
+  setTransportConnectionManager (connMgr) {
+    this.transportConnectionManager = connMgr
+  }
+
   peerCountGuess () {
     return this._peerCountGuess.guess()
   }
