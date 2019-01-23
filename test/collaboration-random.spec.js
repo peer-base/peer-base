@@ -13,8 +13,8 @@ const peerToClockId = require('../src/collaboration/peer-to-clock-id')
 const debug = require('debug')('peer-base:test:collaboration-random')
 
 describe('collaboration with random changes', function () {
-  const peerCount = 10
-  const charsPerPeer = process.browser ? 20 : 100
+  const peerCount = 15
+  const charsPerPeer = process.browser ? 6 : 6
   this.timeout(10000 * peerCount)
 
   const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
@@ -98,9 +98,11 @@ describe('collaboration with random changes', function () {
         })
       })
 
-      for (let i = 0; i < charsPerPeer; i++) {
-        const character = characterFrom(manyCharacters, i)
+      for (let j = 0; j < charsPerPeer; j++) {
+        const character = characterFrom(manyCharacters, i * charsPerPeer + j)
         collaboration.shared.push(character)
+        const id = collaborationIds.get(collaboration).slice(-3)
+        debug(`Push: ${String(i).padStart(2)} ${id} ${j}`)
         if (i === Math.round(charsPerPeer / 2)) {
           await waitForHalfModifications()
         } else {
@@ -123,6 +125,7 @@ describe('collaboration with random changes', function () {
       debug('all clocks up to date')
     } else {
       debug('waiting for clocks')
+      /*
       let count = 0
       await Promise.all(collaborations.map(async (collaboration) => {
         const collaborationPeerId = collaborationIds.get(collaboration)
@@ -144,6 +147,7 @@ describe('collaboration with random changes', function () {
           })
         })
       }))
+      */
       debug('got all clocks for all collaborations')
     }
 
@@ -153,6 +157,13 @@ describe('collaboration with random changes', function () {
     }
 
     // The value of all collaborations should be the same
+    let count = 0
+    for (const c of collaborations) {
+      debug('Value', String(count++).padStart(2),
+                     collaborationIds.get(c).slice(-3),
+                     c.shared.value().join(''))
+    }
+
     const expectedValue = collaborations[0].shared.value()
     for (const c of collaborations) {
       expect(c.shared.value()).to.eql(expectedValue)
@@ -169,7 +180,9 @@ describe('collaboration with random changes', function () {
     }
 
     function randomShortTime () {
-      return Math.floor(Math.random() * 10)
+      // return Math.floor(Math.random() * 10)
+      // Range: 37ms to 2.5s ... use inverse log so mostly quick
+      return Math.floor((1 / Math.log(Math.random() * 5 + 1.02) * 50) + 10)
     }
 
     function characterFrom (characters, index) {
