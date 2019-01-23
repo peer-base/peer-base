@@ -198,7 +198,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
         try {
           if (deltaName !== oldName) throw new Error('Mismatched name')
           if (deltaType !== oldType) throw new Error('Mismatched type')
-          newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta)
+          newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta, { strict: true })
           since = vectorclock.merge(since, newClock)
         } catch (err) {
           // could not perform join. will resort to creating a new batch for this delta.
