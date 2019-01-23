@@ -37,7 +37,7 @@ describe('collaboration with random changes', function () {
   }
 
   before(() => Promise.all(peerIndexes.map(() => {
-    const app = App({ maxThrottleDelayMS: 1000 })
+    const app = App()
     swarm.push(app)
     return app.start()
   })))
