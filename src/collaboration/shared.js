@@ -235,7 +235,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     if (options.replicateOnly) {
       state = s
     } else {
-      const newState = crdtType.join.call(changeEmitter, state, s)
+      const newState = crdtType.join.call(changeEmitter, state, s, { strict: true })
       if (crdtType.incrementalValue) {
         assert(valueCache)
         valueCache = crdtType.incrementalValue(state, newState, s, valueCache)
