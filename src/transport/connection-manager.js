@@ -71,6 +71,23 @@ module.exports = class ConnectionManager extends EventEmitter {
     return this._diasSet(this._ring).has(peerInfo)
   }
 
+  // Waits until a connection by a peer interested in this app has been made
+  awaitAppPeer () {
+    if (this._ring.size) {
+      return
+    }
+    return new Promise((resolve) => {
+      const onRingChange = (peerInfo) => {
+        // If peerInfo is defined, a peer was added to the ring
+        if (peerInfo) {
+          this._ring.removeListener('changed', onRingChange)
+          resolve()
+        }
+      }
+      this._ring.on('changed', onRingChange)
+    })
+  }
+
   _onPeerInterest (peerInfo, isInterested) {
     const id = peerInfo.id.toB58String()
     if (isInterested) {

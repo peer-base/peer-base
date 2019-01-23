@@ -27,7 +27,8 @@ describe('app-transport', function () {
       name: 'peer-base test app name',
       setGossip: fake(),
       setGlobalConnectionManager: fake(),
-      peerCountGuess: () => 1
+      peerCountGuess: () => 1,
+      setTransportConnectionManager: fake()
     }
 
     ipfs = {

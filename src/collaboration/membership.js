@@ -11,7 +11,7 @@ const ORMap = require('delta-crdts')('ormap')
 const Ring = require('../common/ring')
 const DiasSet = require('../common/dias-peer-set')
 const ConnectionManager = require('./connection-manager')
-const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-henristic')
+const MembershipGossipFrequencyHeuristic = require('./membership-gossip-frequency-heuristic')
 const { encode } = require('delta-crdts-msgpack-codec')
 
 module.exports = class Membership extends EventEmitter {
@@ -26,7 +26,10 @@ module.exports = class Membership extends EventEmitter {
     this._members = new Map()
     const gfh = this._options.gossipFrequencyHeuristic || new MembershipGossipFrequencyHeuristic(app, this, options)
     this._membershipGossipFrequencyHeuristic = gfh
-    this._someoneHasMembershipWrong = false
+
+    // Start by setting this to true so the local peer will broadcast its own
+    // peer ID on startup
+    this._someoneHasMembershipWrong = true
 
     this._ring = Ring(this._options.preambleByteCount)
     this.connectionManager = this._options.connectionManager || new ConnectionManager(
@@ -136,10 +139,11 @@ module.exports = class Membership extends EventEmitter {
   async deliverRemoteMembership (membership) {
     await this.waitForStart()
 
+    let changed = false
     let remoteHash = membership
     if (typeof membership !== 'string') {
       // If the parameter is the remote membership state, join to the local state
-      this._joinMembership(membership)
+      changed = this._joinMembership(membership)
 
       // Figure out the hash of the remote membership state
       remoteHash = this._createSummaryHashFromCrdtState(membership)
@@ -149,6 +153,8 @@ module.exports = class Membership extends EventEmitter {
     const localMembershipHash = this._createMembershipSummaryHash()
     const hashMismatch = remoteHash !== localMembershipHash
     this._someoneHasMembershipWrong = this._someoneHasMembershipWrong || hashMismatch
+
+    this.emit('message received', changed)
   }
 
   _ensureSelfIsInMembershipCRDT () {
@@ -280,6 +286,8 @@ module.exports = class Membership extends EventEmitter {
       debug('MEMBERSHIP CHANGED!')
       this.emit('changed')
     }
+
+    return changed
   }
 
   _membershipTopic () {

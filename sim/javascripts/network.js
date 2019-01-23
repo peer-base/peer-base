@@ -64,6 +64,11 @@ class Network extends EventEmitter {
       },
       peerCountGuess() {
         return network.peers.length
+      },
+      transportConnectionManager: {
+        awaitAppPeer() {
+          return new Promise(resolve => setTimeout(resolve, 0))
+        }
       }
     }
     const collaborationMock = {

@@ -76,6 +76,11 @@ describe('membership', function () {
       const globalConnectionManager = mock.connectionManager()
 
       const app = {
+        transportConnectionManager: {
+          awaitAppPeer () {
+            return new Promise(resolve => setTimeout(resolve, 0))
+          }
+        },
         peerCountGuess () {
           return 1
         },
@@ -86,6 +91,9 @@ describe('membership', function () {
         },
         gossipMessages () {
           return this._gossipMessages || []
+        },
+        setTransportConnectionManager (connMgr) {
+          this.transportConnectionManager = connMgr
         }
       }
       const collaboration = {
@@ -127,8 +135,14 @@ describe('membership', function () {
     })
 
     it('does not need urgent broadcast on delivery of gossip summary message that matches local hash', async () => {
-      const membership = createMembership()
-      await membership.start()
+      const gfh = mock.gossipFrequencyHeuristic()
+      const membership = createMembership({
+        gossipFrequencyHeuristic: gfh
+      })
+      const starting = membership.start()
+      // Ensure that a message is broadcast, which will set urgent mode to false
+      gfh.emit('gossip now')
+      await starting
       const matchingHash = membership._createMembershipSummaryHash()
       await membership.deliverRemoteMembership(matchingHash)
       expect(membership.needsUrgentBroadcast()).to.equal(false)
@@ -164,8 +178,15 @@ describe('membership', function () {
     })
 
     it('does not need urgent broadcast on delivery of gossip message that does contain this peer and addresses', async () => {
-      const membership = createMembership()
-      await membership.start()
+      const gfh = mock.gossipFrequencyHeuristic()
+      const membership = createMembership({
+        gossipFrequencyHeuristic: gfh
+      })
+      const starting = membership.start()
+      // Ensure that a message is broadcast, which will set urgent mode to false
+      gfh.emit('gossip now')
+      await starting
+
       const remoteCrdt = ORMap(randomB58String())
       const addresses = membership._ipfs._peerInfo.multiaddrs.toArray().map((ma) => ma.toString())
       remoteCrdt.applySub(membership._peerId, 'mvreg', 'write', addresses)
@@ -182,8 +203,14 @@ describe('membership', function () {
         return remoteCrdt.state()
       }
 
-      const membership = createMembership()
-      await membership.start()
+      const gfh = mock.gossipFrequencyHeuristic()
+      const membership = createMembership({
+        gossipFrequencyHeuristic: gfh
+      })
+      const starting = membership.start()
+      // Ensure that a message is broadcast, which will set urgent mode to false
+      gfh.emit('gossip now')
+      await starting
 
       const addresses = membership._ipfs._peerInfo.multiaddrs.toArray().map((ma) => ma.toString())
       const state1 = getRemoteState([
@@ -330,6 +357,11 @@ describe('membership', function () {
         ipfs = mock.ipfs()
         globalConnectionManager = mock.connectionManager()
         app = {
+          transportConnectionManager: {
+            awaitAppPeer () {
+              return new Promise(resolve => setTimeout(resolve, 0))
+            }
+          },
           peerCountGuess () {
             return memberships.length
           },

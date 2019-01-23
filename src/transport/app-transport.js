@@ -38,6 +38,7 @@ class AppTransport extends EventEmitter {
       this.discovery,
       this._globalConnectionManager,
       options)
+    this._app.setTransportConnectionManager(this._connectionManager)
 
     this._gossip = Gossip(app.name, ipfs)
     this._gossip.on('error', (err) => this.emit('error', err))
