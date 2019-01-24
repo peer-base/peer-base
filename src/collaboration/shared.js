@@ -174,50 +174,119 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     })
   }
 
-  shared.deltaBatches = (_since = {}, targetPeerId) => {
+  shared.deltaBatches = (since = {}, targetPeerId) => {
     const targetClockId = peerToClockId(targetPeerId)
-    let since = _since
     const deltas = shared.deltas(since, targetPeerId)
+    const self = this
 
-    let batch = [since, {}, [name, crdtType.typeName, crdtType.initial()]]
     const batches = []
-    deltas
-      .forEach((deltaRecord) => {
-        if (!vectorclock.isDeltaInteresting(deltaRecord, since, targetClockId)) {
-          return
+    let currentBatch = {
+      previousClock: since,
+      authorClock: {},
+      name,
+      type: crdtType.typeName,
+      deltas: []
+    }
+    for (const deltaRecord of deltas) {
+      if (!vectorclock.isDeltaInteresting(deltaRecord, currentBatch.since, targetClockId)) {
+        continue
+      }
+      const oldClock = vectorclock.sumAll(currentBatch.since, currentBatch.authorClock)
+      const [deltaPreviousClock, deltaAuthorClock, [deltaName, deltaType, delta]] = deltaRecord
+      const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
+
+      if (
+        deltaName !== currentBatch.name ||
+        deltaType !== currentBatch.type ||
+        deltaType !== 'rga'
+      ) {
+        // could not perform join. will resort to creating a new batch for this delta.
+        emitBatch()
+        currentBatch = {
+          previousClock: deltaPreviousClock,
+          authorClock: {},
+          name: deltaName,
+          type: deltaType,
+          deltas: [ deltaRecord ]
         }
+        since = vectorclock.merge(since, deltaClock)
+        continue
+      }
 
-        const [oldPreviousClock, oldAuthorClock, [oldName, oldType, oldDelta]] = batch
-        const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
-        const [deltaPreviousClock, deltaAuthorClock, [deltaName, deltaType, delta]] = deltaRecord
-        const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
-        const newClock = vectorclock.merge(oldClock, deltaClock)
-        const newPreviousClock = vectorclock.minimum(oldPreviousClock, deltaPreviousClock)
-        const newAuthorClock = vectorclock.subtract(newPreviousClock, newClock)
-        let newDelta
-        try {
-          if (deltaName !== oldName) throw new Error('Mismatched name')
-          if (deltaType !== oldType) throw new Error('Mismatched type')
-          newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta, { strict: true })
-          since = vectorclock.merge(since, newClock)
-        } catch (err) {
-          // could not perform join. will resort to creating a new batch for this delta.
-          batch = [deltaPreviousClock, deltaAuthorClock, [deltaName, deltaType, delta]]
-          batches.push(batch)
-          since = vectorclock.merge(since, deltaClock)
-          return
-        }
-
-        batch[0] = newPreviousClock
-        batch[1] = newAuthorClock
-        batch[2][2] = newDelta
-
-        if (!batches.length) {
-          batches.push(batch)
-        }
-      })
-
+      // we only know how to combine rga deltas currently
+      const newClock = vectorclock.merge(oldClock, deltaClock)
+      since = vectorclock.merge(since, newClock)
+      currentBatch.previousClock = vectorclock.minimum(
+        oldPreviousClock, deltaPreviousClock)
+      currentBatch.authorClock = vectorclock.subtract(
+        currentBatch.previousClock, newClock)
+      deltas.push(deltaRecord)
+    }
+    emitBatch()
     return batches
+
+    function emitBatch () {
+      if (currentBatch.deltas.length > 0) {
+        // Build delta batch
+        const { previousClock, authorClock, name, type, deltas } = currentBatch
+        let delta
+        if (type === 'rga') {
+          // For rga, we can build an 'intersection' of the deltas we want to
+          // send in the batch with the full state we have
+          let baseState
+          if (name === self.name) {
+            baseState = state
+          } else {
+            const sub = collaboration._subs.get(name)
+            baseState = sub.shared.state()
+          }
+          delta = intersectRga(baseState, deltas)
+        } else {
+          assert(deltas.length === 1)
+          delta = deltas[0]
+        }
+        batches.push([previousClock, authorClock, [name, type, delta]])
+      }
+      currentBatch = undefined
+    }
+
+    // this probably belongs in delta-crdts
+    function intersectRga (state, deltas) {
+      const vertexes = new Set()
+      for (const [, , [, , delta]] of deltas) {
+        const edges = delta[2]
+        for (const [left, right] of edges) {
+          vertexesForBatch.add(left)
+          vertexesForBatch.add(right)
+        }
+      }
+      const added = new Map(
+        [...state[0].entries()].filter(([key,]) => vertexes.has(key))
+      )
+      const deleted = new Set(
+        [...state[1].values()].filter((key => vertexes.has(key)))
+      )
+      const edges = new Map()
+      let key = null
+      let lastRight = null
+      let previousAdded = false
+      do {
+        const left = key
+        const right = state[2].get(key)
+        if (vertexes.has(left) && vertexes.has(right)) {
+          if (!previousAdded) {
+            edges.add(lastRight, left)
+          }
+          edges.add(left, right)
+          previousAdded = true
+        } else {
+          previousAdded = false
+        }
+        key = state[2].get(right)
+        lastRight = right
+      } while (key)
+      return [ added, deleted, edges ]
+    }
   }
 
   shared.save = () => {
