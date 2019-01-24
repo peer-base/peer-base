@@ -62,28 +62,14 @@ module.exports = class PushProtocol {
       output.push(encode([null, [clockDiff]]))
     }
 
-    // const pushDeltas = async (peerClock) => {
-    //   const ds = this._shared.deltas(peerClock)
-    //   let newRemoteClock = {}
-    //   for (let d of ds) {
-    //     const [clock, authorClock] = d
-    //     newRemoteClock = vectorclock.merge(newRemoteClock, vectorclock.sumAll(clock, authorClock))
-    //     output.push(encode([await this._signAndEncryptDelta(d)]))
-    //   }
-
-    //   return vectorclock.merge(peerClock, newRemoteClock)
-    // }
-
     // Send deltas to the remote peer
-    const pushDeltaBatches = async (peerClock) => {
-      const batches = this._shared.deltaBatches(peerClock, remotePeerId)
+    const pushDeltaBatch = async (peerClock) => {
+      const batch = this._shared.deltaBatch(peerClock, remotePeerId)
+      // printBatch(batch)
       let newRemoteClock = {}
-      for (let batch of batches) {
-        const [clock, authorClock] = batch
-        newRemoteClock = vectorclock.merge(newRemoteClock, vectorclock.sumAll(clock, authorClock))
-        output.push(encode([await this._signAndEncryptDelta(batch)]))
-      }
-
+      const [clock, authorClock] = batch
+      newRemoteClock = vectorclock.merge(newRemoteClock, vectorclock.sumAll(clock, authorClock))
+      output.push(encode([await this._signAndEncryptDelta(batch)]))
       return vectorclock.merge(peerClock, newRemoteClock)
     }
 
@@ -126,7 +112,7 @@ module.exports = class PushProtocol {
       // If this peer is not a pinner we may have deltas to send
       if (!this._options.replicateOnly) {
         // remoteClock = await pushDeltas(remoteClock)
-        remoteClock = vectorclock.merge(remoteClock, await pushDeltaBatches(remoteClock))
+        remoteClock = await pushDeltaBatch(remoteClock)
       }
 
       // If the remote still needs an update (even after sending the deltas
