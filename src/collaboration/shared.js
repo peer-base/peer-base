@@ -177,7 +177,6 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   shared.deltaBatches = (since = {}, targetPeerId) => {
     const targetClockId = peerToClockId(targetPeerId)
     const deltas = shared.deltas(since, targetPeerId)
-    const self = this
 
     const batches = []
     let currentBatch = {
@@ -188,11 +187,16 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       deltas: []
     }
     for (const deltaRecord of deltas) {
-      if (!vectorclock.isDeltaInteresting(deltaRecord, currentBatch.since, targetClockId)) {
+      if (!vectorclock.isDeltaInteresting(deltaRecord, since, targetClockId)) {
         continue
       }
-      const oldClock = vectorclock.sumAll(currentBatch.since, currentBatch.authorClock)
-      const [deltaPreviousClock, deltaAuthorClock, [deltaName, deltaType, delta]] = deltaRecord
+      const oldClock = vectorclock.sumAll(
+        currentBatch.previousClock, currentBatch.authorClock)
+      const [
+        deltaPreviousClock,
+        deltaAuthorClock,
+        [deltaName, deltaType,]
+      ] = deltaRecord
       const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
 
       if (
@@ -204,7 +208,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
         emitBatch()
         currentBatch = {
           previousClock: deltaPreviousClock,
-          authorClock: {},
+          authorClock: deltaAuthorClock,
           name: deltaName,
           type: deltaType,
           deltas: [ deltaRecord ]
@@ -217,10 +221,10 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       const newClock = vectorclock.merge(oldClock, deltaClock)
       since = vectorclock.merge(since, newClock)
       currentBatch.previousClock = vectorclock.minimum(
-        oldPreviousClock, deltaPreviousClock)
+        currentBatch.previousClock, deltaPreviousClock)
       currentBatch.authorClock = vectorclock.subtract(
         currentBatch.previousClock, newClock)
-      deltas.push(deltaRecord)
+      currentBatch.deltas.push(deltaRecord)
     }
     emitBatch()
     return batches
@@ -228,16 +232,22 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     function emitBatch () {
       if (currentBatch.deltas.length > 0) {
         // Build delta batch
-        const { previousClock, authorClock, name, type, deltas } = currentBatch
+        const {
+          previousClock,
+          authorClock,
+          name: forName,
+          type,
+          deltas
+        } = currentBatch
         let delta
         if (type === 'rga') {
           // For rga, we can build an 'intersection' of the deltas we want to
           // send in the batch with the full state we have
           let baseState
-          if (name === self.name) {
+          if (forName === name) {
             baseState = state
           } else {
-            const sub = collaboration._subs.get(name)
+            const sub = collaboration._subs.get(forName)
             baseState = sub.shared.state()
           }
           delta = intersectRga(baseState, deltas)
@@ -256,8 +266,8 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       for (const [, , [, , delta]] of deltas) {
         const edges = delta[2]
         for (const [left, right] of edges) {
-          vertexesForBatch.add(left)
-          vertexesForBatch.add(right)
+          vertexes.add(left)
+          vertexes.add(right)
         }
       }
       const added = new Map(
@@ -275,9 +285,9 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
         const right = state[2].get(key)
         if (vertexes.has(left) && vertexes.has(right)) {
           if (!previousAdded) {
-            edges.add(lastRight, left)
+            edges.set(lastRight, left)
           }
-          edges.add(left, right)
+          edges.set(left, right)
           previousAdded = true
         } else {
           previousAdded = false
