@@ -4,6 +4,7 @@
 const debug = require('debug')('peer-base:collaboration:protocol')
 const EventEmitter = require('events')
 const pull = require('pull-stream')
+const pl = require('pull-length-prefixed')
 
 const PushProtocol = require('./push-protocol')
 const PullProtocol = require('./pull-protocol')
@@ -56,6 +57,7 @@ class Protocol extends EventEmitter {
       pull(
         conn,
         this.observeInbound(peerId),
+        pl.decode(),
         this._pullProtocol.forPeer(peerInfo),
         this.observeOutbound(peerId),
         passthrough((err) => {
@@ -65,6 +67,7 @@ class Protocol extends EventEmitter {
           }
           this.emit('inbound connection closed', peerInfo)
         }),
+        pl.encode(),
         conn
       )
     })
@@ -77,6 +80,7 @@ class Protocol extends EventEmitter {
     pull(
       conn,
       this.observeInbound(peerId),
+      pl.decode(),
       this._pushProtocol.forPeer(peerInfo),
       this.observeOutbound(peerId),
       passthrough((err) => {
@@ -86,6 +90,7 @@ class Protocol extends EventEmitter {
         }
         this.emit('outbound connection closed', peerInfo)
       }),
+      pl.encode(),
       conn
     )
   }
