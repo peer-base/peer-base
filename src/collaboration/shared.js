@@ -284,16 +284,16 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
         const left = key
         const right = state[2].get(key)
         if (vertexes.has(left) && vertexes.has(right)) {
-          if (!previousAdded) {
+          if (!previousAdded && lastRight !== left) {
             edges.set(lastRight, left)
           }
           edges.set(left, right)
           previousAdded = true
+          lastRight = right
         } else {
           previousAdded = false
         }
-        key = state[2].get(right)
-        lastRight = right
+        key = right
       } while (key)
       return [ added, deleted, edges ]
     }
