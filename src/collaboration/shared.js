@@ -174,30 +174,45 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     })
   }
 
-  shared.deltaBatch = (_since = {}, targetPeerId) => {
+  shared.deltaBatches = (_since = {}, targetPeerId) => {
     let since = _since
     const deltas = shared.deltas(since, targetPeerId)
-    const bottom = [since, {}, [name, crdtType.typeName, crdtType.initial()]]
-    return deltas.reduce((batch, deltaRecord) => {
-      const [oldPreviousClock, oldAuthorClock, [oldName, oldType, oldDelta]] = batch
+    let mainBatch
+    const batches = []
+    deltas.forEach((deltaRecord) => {
+      const [deltaPreviousClock, deltaAuthorClock, [deltaName, , delta]] = deltaRecord
+      if (deltaName !== name) {
+        if (mainBatch) {
+          mainBatch = undefined
+        }
+        batches.push(deltaRecord)
+        return
+      }
+
+      // main batch
+      if (!mainBatch) {
+        mainBatch = deltaRecord
+        batches.push(mainBatch)
+        return
+      }
+
+      const [oldPreviousClock, oldAuthorClock, [, , oldDelta]] = mainBatch
+
+      // join delta with current batch
       const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
-      const [deltaPreviousClock, deltaAuthorClock, [deltaName, deltaType, delta]] = deltaRecord
       const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
       const newClock = vectorclock.merge(oldClock, deltaClock)
       const newPreviousClock = vectorclock.minimum(oldPreviousClock, deltaPreviousClock)
       const newAuthorClock = vectorclock.subtract(newPreviousClock, newClock)
 
-      if (deltaName !== oldName) throw new Error('Mismatched name')
-      if (deltaType !== oldType) throw new Error('Mismatched type')
-
       const newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta)
 
-      batch[0] = newPreviousClock
-      batch[1] = newAuthorClock
-      batch[2][2] = newDelta
+      mainBatch[0] = newPreviousClock
+      mainBatch[1] = newAuthorClock
+      mainBatch[2][2] = newDelta
+    })
 
-      return batch
-    }, bottom)
+    return batches
   }
 
   shared.save = () => {
