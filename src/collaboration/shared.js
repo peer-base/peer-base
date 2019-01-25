@@ -177,6 +177,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   shared.deltaBatch = (_since = {}, targetPeerId) => {
     let since = _since
     const deltas = shared.deltas(since, targetPeerId)
+    const bottom = [since, {}, [name, crdtType.typeName, crdtType.initial()]]
     return deltas.reduce((batch, deltaRecord) => {
       const [oldPreviousClock, oldAuthorClock, [oldName, oldType, oldDelta]] = batch
       const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
@@ -196,7 +197,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       batch[2][2] = newDelta
 
       return batch
-    })
+    }, bottom)
   }
 
   shared.save = () => {
