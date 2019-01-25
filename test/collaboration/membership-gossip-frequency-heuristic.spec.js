@@ -50,18 +50,33 @@ describe('membership gossip frequency heuristic', () => {
   it('heuristic fires gossip now after each snapshot interval', async () => {
     const options = {
       samplingIntervalMS: 10,
-      targetGlobalMembershipGossipFrequencyMS: 100,
+      targetGlobalMembershipGossipFrequencyMS: 200,
       urgencyFrequencyMultiplier: 2
     }
-    // Should fire on start, then approx every 50ms afterwards
+    // Should fire on start, then approx every 100ms afterwards
     // Note:
     // targetGlobalMembershipGossipFrequencyMS / urgencyFrequencyMultiplier
-    // = 100 / 2
-    // = 50ms
+    // = 200 / 2
+    // = 100ms
     const { heuristic, eventManager } = createTestObjects(options)
+
+    const start = Date.now()
     heuristic.start()
-    await delay(150)
-    expect(eventManager.events.length).to.be.gte(3)
+
+    // Should fire on start
+    await eventManager.awaitNextEvent()
+    const firstReceived = Date.now()
+    expect(firstReceived - start).to.be.lt(100)
+
+    // Should fire approximately every 100ms
+    await eventManager.awaitNextEvent()
+    const secondReceived = Date.now()
+    expect(secondReceived - firstReceived).to.be.lte(150)
+
+    await eventManager.awaitNextEvent()
+    const thirdReceived = Date.now()
+    expect(secondReceived - firstReceived).to.be.lte(150)
+
     heuristic.stop()
   })
 
