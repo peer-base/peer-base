@@ -16,7 +16,6 @@ describe('sub-collaboration', function () {
 
   const peerCount = 2 // 10
   const collaborationOptions = {
-    maxDeltaRetention: 0
   }
 
   let App
