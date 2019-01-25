@@ -113,8 +113,7 @@ module.exports = class PushProtocol {
 
       // If this peer is not a pinner we may have deltas to send
       if (!this._options.replicateOnly) {
-        // remoteClock = await pushDeltas(remoteClock)
-        remoteClock = await pushDeltaBatches(remoteClock)
+        remoteClock = vectorclock.merge(remoteClock, await pushDeltaBatches(remoteClock))
       }
 
       // If the remote still needs an update (even after sending the deltas
