@@ -12,7 +12,7 @@ const AppFactory = require('./utils/create-app')
 const debug = require('debug')('peer-base:test:collaboration-random')
 
 describe('collaboration with random changes', function () {
-  const peerCount = 10
+  const peerCount = process.browser ? 10 : 15
   const charsPerPeer = process.browser ? 20 : 100
   this.timeout(20000 * peerCount)
 
