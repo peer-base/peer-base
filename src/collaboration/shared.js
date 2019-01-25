@@ -15,7 +15,6 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
   const shared = new EventEmitter()
   shared.setMaxListeners(MAX_LISTENERS)
   const changeEmitter = new ChangeEmitter(shared)
-  const voidChangeEmitter = new VoidChangeEmitter()
 
   const store = new Store(ipfs, collaboration, options)
 
@@ -187,44 +186,42 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       deltas: []
     }
     for (const deltaRecord of deltas) {
-      if (!vectorclock.isDeltaInteresting(deltaRecord, since, targetClockId)) {
-        continue
-      }
-      const oldClock = vectorclock.sumAll(
-        currentBatch.previousClock, currentBatch.authorClock)
-      const [
-        deltaPreviousClock,
-        deltaAuthorClock,
-        [deltaName, deltaType,]
-      ] = deltaRecord
-      const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
+      if (vectorclock.isDeltaInteresting(deltaRecord, since, targetClockId)) {
+        const oldClock = vectorclock.sumAll(
+          currentBatch.previousClock, currentBatch.authorClock)
+        const [
+          deltaPreviousClock,
+          deltaAuthorClock,
+          [deltaName, deltaType]
+        ] = deltaRecord
+        const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
 
-      if (
-        deltaName !== currentBatch.name ||
-        deltaType !== currentBatch.type ||
-        deltaType !== 'rga'
-      ) {
-        // could not perform join. will resort to creating a new batch for this delta.
-        emitBatch()
-        currentBatch = {
-          previousClock: deltaPreviousClock,
-          authorClock: deltaAuthorClock,
-          name: deltaName,
-          type: deltaType,
-          deltas: [ deltaRecord ]
+        if (
+          deltaName === currentBatch.name &&
+          deltaType === currentBatch.type &&
+          deltaType === 'rga'
+        ) {
+          // we only know how to combine rga deltas currently
+          const newClock = vectorclock.merge(oldClock, deltaClock)
+          since = vectorclock.merge(since, newClock)
+          currentBatch.previousClock = vectorclock.minimum(
+            currentBatch.previousClock, deltaPreviousClock)
+          currentBatch.authorClock = vectorclock.subtract(
+            currentBatch.previousClock, newClock)
+          currentBatch.deltas.push(deltaRecord)
+        } else {
+          // could not combine. will resort to creating a new batch for this delta
+          emitBatch()
+          currentBatch = {
+            previousClock: deltaPreviousClock,
+            authorClock: deltaAuthorClock,
+            name: deltaName,
+            type: deltaType,
+            deltas: [ deltaRecord ]
+          }
+          since = vectorclock.merge(since, deltaClock)
         }
-        since = vectorclock.merge(since, deltaClock)
-        continue
       }
-
-      // we only know how to combine rga deltas currently
-      const newClock = vectorclock.merge(oldClock, deltaClock)
-      since = vectorclock.merge(since, newClock)
-      currentBatch.previousClock = vectorclock.minimum(
-        currentBatch.previousClock, deltaPreviousClock)
-      currentBatch.authorClock = vectorclock.subtract(
-        currentBatch.previousClock, newClock)
-      currentBatch.deltas.push(deltaRecord)
     }
     emitBatch()
     return batches
@@ -271,10 +268,10 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
         }
       }
       const added = new Map(
-        [...state[0].entries()].filter(([key,]) => vertexes.has(key))
+        [...state[0].entries()].filter(([key]) => vertexes.has(key))
       )
       const deleted = new Set(
-        [...state[1].values()].filter((key => vertexes.has(key)))
+        [...state[1].values()].filter(key => vertexes.has(key))
       )
       const edges = new Map()
       let key = null
@@ -356,15 +353,5 @@ class ChangeEmitter {
     events.forEach((event) => {
       this._client.emit('change', event)
     })
-  }
-}
-
-class VoidChangeEmitter {
-  changed (event) {
-    // DO NOTHING
-  }
-
-  emitAll () {
-    // DO NOTHING
   }
 }
