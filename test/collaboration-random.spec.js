@@ -8,14 +8,13 @@ const expect = chai.expect
 const delay = require('delay')
 const PeerStar = require('../')
 const AppFactory = require('./utils/create-app')
-const peerToClockId = require('../src/collaboration/peer-to-clock-id')
 
 const debug = require('debug')('peer-base:test:collaboration-random')
 
 describe('collaboration with random changes', function () {
-  const peerCount = process.browser ? 5 : 10
+  const peerCount = 10
   const charsPerPeer = process.browser ? 20 : 100
-  this.timeout(10000 * peerCount)
+  this.timeout(20000 * peerCount)
 
   const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
 
@@ -63,8 +62,6 @@ describe('collaboration with random changes', function () {
 
   it('handles random changes', async () => {
     const expectedCharacterCount = charsPerPeer * collaborations.length
-    const peerIds = [...collaborationIds.values()]
-    const peerClockKeys = peerIds.map(peerToClockId).sort()
 
     const waitForHalfModifications = () => Promise.all(collaborations.map((collaboration) => new Promise((resolve) => {
       const expectedCount = Math.round(expectedCharacterCount / 2)
@@ -91,7 +88,8 @@ describe('collaboration with random changes', function () {
           return resolve()
         }
         collaboration.on('state changed', () => {
-          const currentCount = collaboration.shared.value().length
+          const value = collaboration.shared.value()
+          const currentCount = value.length
           if (currentCount === expectedCharacterCount) {
             resolve()
           }
@@ -115,37 +113,9 @@ describe('collaboration with random changes', function () {
 
     // Wait for all the state changes to come in
     debug('waiting for state changes')
+
     await Promise.all(collaborations.map(modifications))
     debug('got all state changes')
-
-    // Wait for any remaining clocks to arrive
-    if (checkAllClocks()) {
-      debug('all clocks up to date')
-    } else {
-      debug('waiting for clocks')
-      let count = 0
-      await Promise.all(collaborations.map(async (collaboration) => {
-        const collaborationPeerId = collaborationIds.get(collaboration)
-        if (checkCollaborationClocks(collaboration)) {
-          debug('got all clocks for %s (%d / %d)', collaborationPeerId, ++count, peerCount)
-          return
-        }
-        return new Promise(resolve => {
-          let complete = false
-          collaboration._clocks.on('update', () => {
-            if (complete) {
-              return
-            }
-            if (checkCollaborationClocks(collaboration)) {
-              complete = true
-              debug('got all clocks for %s (%d / %d)', collaborationPeerId, ++count, peerCount)
-              resolve()
-            }
-          })
-        })
-      }))
-      debug('got all clocks for all collaborations')
-    }
 
     // The length of all collaborations should be the expected length
     for (let i = 0; i < collaborations.length; i++) {
@@ -174,35 +144,6 @@ describe('collaboration with random changes', function () {
 
     function characterFrom (characters, index) {
       return characters[index % characters.length]
-    }
-
-    function checkCollaborationClocks (collaboration) {
-      const collaborationPeerId = collaborationIds.get(collaboration)
-      const collabPeerIdAsClockId = peerToClockId(collaborationPeerId)
-      for (let peerId of peerIds) {
-        const clock = Object.assign({}, collaboration.vectorClock(peerId))
-
-        // Ignore own key because remote may not send us updates about ourself
-        delete clock[collabPeerIdAsClockId]
-        if (Object.keys(clock).length < peerCount - 1) {
-          return false
-        }
-        for (let replica of peerClockKeys) {
-          if (clock.hasOwnProperty(replica) && clock[replica] !== charsPerPeer) {
-            return false
-          }
-        }
-      }
-      return true
-    }
-
-    function checkAllClocks () {
-      for (let collaboration of collaborations) {
-        if (!checkCollaborationClocks(collaboration)) {
-          return false
-        }
-      }
-      return true
     }
   })
 })
