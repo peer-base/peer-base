@@ -75,7 +75,7 @@ describe('membership gossip frequency heuristic', () => {
 
     await eventManager.awaitNextEvent()
     const thirdReceived = Date.now()
-    expect(secondReceived - firstReceived).to.be.lte(150)
+    expect(thirdReceived - secondReceived).to.be.lte(150)
 
     heuristic.stop()
   })

@@ -187,6 +187,7 @@ module.exports = class PushProtocol {
     // Handle incoming message from remote peer
     const messageHandler = (message) => {
       dbg('got message from %s:', remotePeerId, message)
+      const wasPushing = pushing
       const [newRemoteClock, startLazy, startEager, _isPinner] = message
 
       // Switch to lazy mode
@@ -220,8 +221,11 @@ module.exports = class PushProtocol {
       // If the remote sent us its clock, update our local copy
       if (newRemoteClock) {
         let clock
-        if (isPinner) {
-          // If the remote is a pinner, assume its clock is authoritative
+        // If the remote is a pinner, assume its clock is authoritative.
+        // If remote is asking us to start pushing, we're going to start
+        // from the remote clock.
+        const overwriteRemoteClock = isPinner || (!wasPushing && pushing)
+        if (overwriteRemoteClock) {
           remoteClock = newRemoteClock
           clock = this._clocks.setFor(remotePeerId, newRemoteClock)
         } else {
