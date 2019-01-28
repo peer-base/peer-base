@@ -3,6 +3,7 @@
 const debug = require('debug')('peer-base:collaboration:clocks')
 const EventEmitter = require('events')
 const vectorclock = require('../common/vectorclock')
+const peerToClockId = require('./peer-to-clock-id')
 
 module.exports = class Clocks extends EventEmitter {
   constructor (id, options) {
@@ -31,7 +32,7 @@ module.exports = class Clocks extends EventEmitter {
   }
 
   getFor (peerId) {
-    return this._clocks.get(peerId) || {}
+    return this._clocks.get(peerId) || { [peerToClockId(peerId)]: 0 }
   }
 
   takeDown (peerId) {
