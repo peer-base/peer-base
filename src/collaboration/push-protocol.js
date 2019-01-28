@@ -226,8 +226,11 @@ module.exports = class PushProtocol {
         // from the remote clock.
         const overwriteRemoteClock = isPinner || (!wasPushing && pushing)
         if (overwriteRemoteClock) {
-          remoteClock = newRemoteClock
-          clock = this._clocks.setFor(remotePeerId, newRemoteClock)
+          queue.clear()
+          queue.add(() => {
+            remoteClock = newRemoteClock
+            clock = this._clocks.setFor(remotePeerId, newRemoteClock)
+          })
         } else {
           // If the remote is a regular peer, just merge in the remote clock
           remoteClock = vectorclock.merge(remoteClock, newRemoteClock)
