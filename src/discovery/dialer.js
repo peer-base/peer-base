@@ -31,7 +31,7 @@ module.exports = class Dialer extends EventEmitter {
 
     debug('stop')
     this._running = false
-    for (const id of this._timeouts.keys()) {
+    for (const id of new Set([...this._timeouts.keys(), ...this._dialing])) {
       this._cancelDial(id)
     }
   }
@@ -88,7 +88,7 @@ module.exports = class Dialer extends EventEmitter {
         debug('error dialing peer %s: %s. Backing off %dms', id, err.message, backoff)
         const timeout = setTimeout(() => {
           this._timeouts.delete(id)
-          this.dial(peerInfo, cb, attempt)
+          this.dial(peerInfo, cb, attempt, redial)
         }, backoff)
         this._timeouts.set(id, { timeout, cb })
       } else {
