@@ -5,7 +5,6 @@ const chai = require('chai')
 chai.use(require('dirty-chai'))
 const expect = chai.expect
 
-const EventEmitter = require('events')
 const CRDT = require('delta-crdts')
 const Repo = require('./utils/repo')
 const Clocks = require('../src/collaboration/clocks')
@@ -17,22 +16,9 @@ describe('shared delta batches', () => {
   let shared
 
   before(async () => {
-    const name = null
-    const id = '1234abcdef'
-    const crdtType = CRDT.type('rga')
-    const repo = Repo()
-    ipfs = {
-      _repo: repo
-    }
-    const collaboration = {
-      fqn: () => 'fqn',
-      isRoot: () => true
-    }
-    const clocks = new Clocks(id)
-    const options = {}
-    shared = Shared(name, id, crdtType, ipfs, collaboration, clocks, options)
-    await startRepo(repo)
-    await shared.start()
+    const { shared: _shared, ipfs: _ipfs } = await createShared('id')
+    ipfs = _ipfs
+    shared = _shared
   })
 
   after(() => ipfs._repo.teardown())
@@ -44,12 +30,13 @@ describe('shared delta batches', () => {
     const replica2 = CRDT('rga')('replica 2')
 
     const deltas = [
-      [{}, {'a': 1}, [null, 'rga', replica1.push('a')]],
-      [{}, {'b': 1}, [null, 'rga', replica2.push('b')]],
-      [{a: 1}, {'a': 1}, [null, 'rga', replica1.push('c')]],
-      [{b: 1}, {'b': 1}, [null, 'rga', replica2.push('d')]],
+      [{}, { a: 1 }, [null, 'rga', replica1.push('a')]],
+      [{}, { b: 1 }, [null, 'rga', replica2.push('b')]],
+      [{ a: 1 }, { a: 1 }, [null, 'rga', replica1.push('c')]],
+      [{ b: 1 }, { b: 1 }, [null, 'rga', replica2.push('d')]]
     ]
     for (let delta of deltas) {
+      // making sure the deltas are accepted
       expect(shared.apply(delta)).to.exist()
     }
   })
@@ -65,6 +52,25 @@ describe('shared delta batches', () => {
     expect(replica.value()).to.deep.equal(shared.value())
   })
 })
+
+async function createShared (id) {
+  const name = null
+  const crdtType = CRDT.type('rga')
+  const repo = Repo()
+  const ipfs = {
+    _repo: repo
+  }
+  const collaboration = {
+    fqn: () => 'fqn',
+    isRoot: () => true
+  }
+  const clocks = new Clocks(id)
+  const options = {}
+  const shared = Shared(name, id, crdtType, ipfs, collaboration, clocks, options)
+  await startRepo(repo)
+  await shared.start()
+  return { shared, ipfs }
+}
 
 function startRepo (repo) {
   return new Promise((resolve, reject) => {
