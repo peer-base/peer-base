@@ -237,7 +237,7 @@ class Collaboration extends EventEmitter {
     this.stats.start()
     this._unregisterObserver = this._membership.connectionManager.observe(this.stats.observer)
 
-    await Array.from(this._subs.values()).map((sub) => sub.start())
+    await Promise.all(Array.from(this._subs.values()).map((sub) => sub.start()))
   }
 
   save (force = false) {
