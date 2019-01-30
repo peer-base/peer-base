@@ -9,8 +9,8 @@ const EventEmitter = require('events')
 const CRDT = require('delta-crdts')
 const Repo = require('./utils/repo')
 const Clocks = require('../src/collaboration/clocks')
-
 const Shared = require('../src/collaboration/shared')
+const transmit = require('./utils/transmit')
 
 describe('shared delta batches', () => {
   let ipfs
@@ -39,10 +39,30 @@ describe('shared delta batches', () => {
 
   after(() => shared.stop())
 
-  it('applies delta', () => {
-    const replica = CRDT('rga')('other id')
-    const delta = [{}, {'a': 1}, [null, 'rga', replica.push('a')]]
-    shared.apply(delta)
+  before(() => {
+    const replica1 = CRDT('rga')('replica 1')
+    const replica2 = CRDT('rga')('replica 2')
+
+    const deltas = [
+      [{}, {'a': 1}, [null, 'rga', replica1.push('a')]],
+      [{}, {'b': 1}, [null, 'rga', replica2.push('b')]],
+      [{a: 1}, {'a': 1}, [null, 'rga', replica1.push('c')]],
+      [{b: 1}, {'b': 1}, [null, 'rga', replica2.push('d')]],
+    ]
+    for (let delta of deltas) {
+      expect(shared.apply(delta)).to.exist()
+    }
+  })
+
+  it('returns correct batches', () => {
+    const replica = CRDT('rga')('read only replica')
+    const deltas = shared.deltaBatches()
+    for (let deltaRecord of deltas) {
+      const [, , [, , delta]] = deltaRecord
+      replica.apply(transmit(delta))
+    }
+
+    expect(replica.value()).to.deep.equal(shared.value())
   })
 })
 
