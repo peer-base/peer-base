@@ -13,7 +13,7 @@ const debug = require('debug')('peer-base:test:collaboration-random')
 
 describe('collaboration with random changes', function () {
   const peerCount = process.browser ? 10 : 15
-  const charsPerPeer = 6
+  const charsPerPeer = 20
   this.timeout(20000 * peerCount)
 
   const manyCharacters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('')
