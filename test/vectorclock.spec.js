@@ -11,7 +11,8 @@ const {
   doesSecondHaveFirst,
   increment,
   isDeltaInteresting,
-  isIdentical
+  isIdentical,
+  areDeltasJoint
 } = vectorclock
 
 describe('vectorclock', () => {
@@ -212,6 +213,15 @@ describe('vectorclock', () => {
 
     it('second subset of first', () => {
       expect(isIdentical({ a: 1, b: 2 }, { b: 2 })).to.be.false()
+    })
+  })
+
+  describe.only('areDeltasJoint', () => {
+    it('works', () => {
+      expect(areDeltasJoint([{}, {}], [{}, {}])).to.be.true()
+      expect(areDeltasJoint([{}, {a:1}], [{}, {a:1}])).to.be.true()
+      expect(areDeltasJoint([{}, {a:1}], [{}, {b:1}])).to.be.true()
+      expect(areDeltasJoint([{a: 1}, {a:1}], [{b:1}, {b:1}])).to.be.false()
     })
   })
 
