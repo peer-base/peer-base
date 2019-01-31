@@ -118,7 +118,13 @@ exports.minimum = (a, b) => {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)])
   const result = {}
   for (let key of keys) {
-    result[key] = Math.min((a[key] || 0), (b[key] || 0))
+    if (a[key] === undefined) {
+      result[key] = b[key]
+    } else if (b[key] === undefined) {
+      result[key] = a[key]
+    } else {
+      result[key] = Math.min(a[key], b[key])
+    }
   }
 
   return result

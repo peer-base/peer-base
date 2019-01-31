@@ -163,9 +163,9 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     return (vectorclock.compare(otherClock, clock) < 0) || vectorclock.isIdentical(otherClock, clock)
   }
 
-  shared.deltas = (since = {}, targetPeerId) => {
+  shared.deltas = (since = {}) => {
     return deltas.filter((deltaRecord) => {
-      if (vectorclock.isDeltaInteresting(deltaRecord, since, targetPeerId)) {
+      if (vectorclock.isDeltaInteresting(deltaRecord, since)) {
         const [previousClock, authorClock] = deltaRecord
         since = vectorclock.merge(since, vectorclock.sumAll(previousClock, authorClock))
         return true
@@ -174,43 +174,59 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     })
   }
 
-  shared.deltaBatches = (_since = {}, targetPeerId) => {
+  shared.deltaBatches = (_since = {}) => {
     let since = _since
-    const deltas = shared.deltas(since, targetPeerId)
+    const deltas = shared.deltas(since)
     let mainBatch
     const batches = []
-    deltas.forEach((deltaRecord) => {
-      const [deltaPreviousClock, deltaAuthorClock, [deltaName, , delta]] = deltaRecord
-      if (deltaName !== name) {
-        if (mainBatch) {
-          mainBatch = undefined
+    try {
+      deltas.forEach((deltaRecord) => {
+        const [deltaPreviousClock, deltaAuthorClock, [deltaName, , delta]] = deltaRecord
+        if (deltaName !== name) {
+          if (mainBatch) {
+            mainBatch = undefined
+          }
+          batches.push(deltaRecord)
+          return
         }
-        batches.push(deltaRecord)
-        return
+
+        // main batch
+        if (!mainBatch) {
+          mainBatch = deltaRecord
+          batches.push(mainBatch)
+          return
+        }
+
+        const [oldPreviousClock, oldAuthorClock, [, , oldDelta]] = mainBatch
+
+        // join delta with current batch
+        const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
+        const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
+        const newClock = vectorclock.merge(oldClock, deltaClock)
+
+        const newPreviousClock = vectorclock.minimum(oldPreviousClock, deltaPreviousClock)
+        if (!vectorclock.doesSecondHaveFirst(_since, newPreviousClock)) {
+          const rewind = new Error('Broaden search to earlier clock')
+          rewind.since = newPreviousClock
+          throw rewind
+        }
+
+        const newAuthorClock = vectorclock.subtract(newPreviousClock, newClock)
+
+        const newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta)
+
+        mainBatch[0] = newPreviousClock
+        mainBatch[1] = newAuthorClock
+        mainBatch[2][2] = newDelta
+      })
+    } catch (e) {
+      if (e.message === 'Broaden search to earlier clock') {
+        debug('rewind', e.since)
+        return shared.deltaBatches(e.since)
+      } else {
+        throw e
       }
-
-      // main batch
-      if (!mainBatch) {
-        mainBatch = deltaRecord
-        batches.push(mainBatch)
-        return
-      }
-
-      const [oldPreviousClock, oldAuthorClock, [, , oldDelta]] = mainBatch
-
-      // join delta with current batch
-      const oldClock = vectorclock.sumAll(oldPreviousClock, oldAuthorClock)
-      const deltaClock = vectorclock.sumAll(deltaPreviousClock, deltaAuthorClock)
-      const newClock = vectorclock.merge(oldClock, deltaClock)
-      const newPreviousClock = vectorclock.minimum(oldPreviousClock, deltaPreviousClock)
-      const newAuthorClock = vectorclock.subtract(newPreviousClock, newClock)
-
-      const newDelta = crdtType.join.call(voidChangeEmitter, oldDelta, delta)
-
-      mainBatch[0] = newPreviousClock
-      mainBatch[1] = newAuthorClock
-      mainBatch[2][2] = newDelta
-    })
+    }
 
     return batches
   }

@@ -240,10 +240,10 @@ describe('vectorclock', () => {
     ],
     minimum: [
       {},
-      { a: 0 },
-      { a: 0 },
-      { a: 0, b: 0, c: 0, d: 0 },
-      { a: 0, b: 1, c: 0 }
+      { a: 1 },
+      { a: 1 },
+      { a: 1, b: 2, c: 1, d: 2 },
+      { a: 1, b: 1, c: 2 }
     ],
     subtract: [
       {},
