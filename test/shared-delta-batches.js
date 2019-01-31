@@ -14,6 +14,7 @@ const transmit = require('./utils/transmit')
 describe('shared delta batches', () => {
   let ipfs
   let shared
+  let commonDeltas
 
   before(async () => {
     const { shared: _shared, ipfs: _ipfs } = await createShared('id')
@@ -29,27 +30,38 @@ describe('shared delta batches', () => {
     const replica1 = CRDT('rga')('replica 1')
     const replica2 = CRDT('rga')('replica 2')
 
-    const deltas = [
+    commonDeltas = [
       [{}, { a: 1 }, [null, 'rga', replica1.push('a')]],
       [{}, { b: 1 }, [null, 'rga', replica2.push('b')]],
+    ]
+
+    const moreDeltas = [
       [{ a: 1 }, { a: 1 }, [null, 'rga', replica1.push('c')]],
       [{ b: 1 }, { b: 1 }, [null, 'rga', replica2.push('d')]]
     ]
-    for (let delta of deltas) {
+    for (let delta of commonDeltas.concat(moreDeltas)) {
       // making sure the deltas are accepted
-      expect(shared.apply(delta)).to.exist()
+      expect(shared.apply(transmit(delta))).to.exist()
     }
   })
 
   it('returns correct batches', () => {
     const replica = CRDT('rga')('read only replica')
-    const deltas = shared.deltaBatches()
-    for (let deltaRecord of deltas) {
+    for (let deltaRecord of commonDeltas) {
       const [, , [, , delta]] = deltaRecord
       replica.apply(transmit(delta))
     }
+    expect(replica.value()).to.deep.equal(['b', 'a'])
 
-    expect(replica.value()).to.deep.equal(shared.value())
+    const deltas = shared.deltaBatches({a:1, b:1})
+
+    expect(deltas.length).to.equal(2)
+    for (let deltaRecord of deltas) {
+      const [fromClock, authorClock] = deltaRecord
+      for (let key of Object.keys(fromClock)) {
+        expect(fromClock[key]).to.not.equal(0)
+      }
+    }
   })
 })
 
