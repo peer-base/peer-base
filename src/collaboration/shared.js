@@ -190,7 +190,8 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
       }
 
       // main batch
-      if (!mainBatch) {
+      const startNewBatch = !mainBatch || !vectorclock.areDeltasJoint(mainBatch, deltaRecord)
+      if (startNewBatch) {
         mainBatch = deltaRecord
         batches.push(mainBatch)
         return
