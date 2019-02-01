@@ -5,6 +5,12 @@ const vectorclock = require('vectorclock')
 exports.compare = vectorclock.compare
 
 exports.isIdentical = (a, b) => {
+  if (!a && !b) {
+    return true
+  }
+  if (!a || !b) {
+    return false
+  }
   const keys = new Set([...Object.keys(a), ...Object.keys(b)])
 
   for (let key of keys) {
