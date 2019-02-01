@@ -59,7 +59,9 @@ module.exports = class PushProtocol {
       // Otherwise just send a diff
       const clockDiff = this._options.replicateOnly ? clock : vectorclock.diff(sentClock, clock)
       sentClock = clock
-      output.push(encode([null, [clockDiff]]))
+      if (Object.keys(clockDiff).length) {
+        output.push(encode([null, [clockDiff]]))
+      }
     }
 
     // Send deltas to the remote peer
