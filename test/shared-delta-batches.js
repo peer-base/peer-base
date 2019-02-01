@@ -68,10 +68,11 @@ describe('shared delta batches', () => {
 describe.only('three replicas', () => {
   const replicas = 3
   const peers = []
+  const peerIds = ['b', 'c', 'a']
 
   before(async () => {
     for (let i = 1; i <= 3; i++) {
-      peers[i] = await createShared(`id${i}`)
+      peers[i] = await createShared(`id${peerIds[i - 1]}`)
     }
   })
 
@@ -87,46 +88,136 @@ describe.only('three replicas', () => {
     }
   })
 
-  before(async () => {
-    /*
-    const replica1 = CRDT('rga')('replica 1')
-    const replica2 = CRDT('rga')('replica 2')
-
-
-    commonDeltas = [
-      [{}, { a: 1 }, [null, 'rga', replica1.push('a')]],
-      [{}, { b: 1 }, [null, 'rga', replica2.push('b')]],
-    ]
-
-    const moreDeltas = [
-      [{ a: 1 }, { a: 1 }, [null, 'rga', replica1.push('c')]],
-      [{ b: 1 }, { b: 1 }, [null, 'rga', replica2.push('d')]]
-    ]
-    for (let delta of commonDeltas.concat(moreDeltas)) {
-      // making sure the deltas are accepted
-      expect(shared.apply(transmit(delta))).to.exist()
-    }
-    */
-  })
-
   it('converges on all peers', async () => {
-    // push 'a' on peer 1
-    let clock1a
-    peers[1].shared.once('clock changed', clock => clock1a = clock)
-    await peers[1].shared.push('a')
-    console.log('Jim1-a', peers[1].shared.value().join(''), clock1a)
+    // push '4' on peer 3
+    let clock3_4
+    peers[3].shared.once('clock changed', clock => clock3_4 = clock)
+    await peers[3].shared.push('4')
+    console.log('3_4', peers[3].shared.value().join(''), clock3_4)
 
-    // sync peer 1 => peer 2 and push 'bc'
-    const batches1a = peers[1].shared.deltaBatches({})
-    let clock2abc
-    for (let batch of transmit(batches1a)) {
+    // generate batch for peer 3 => peer 1
+    const batches3_4 = transmit(peers[3].shared.deltaBatches({}))
+
+    // sync peer 3 => peer 1
+    let clock1_4
+    for (let batch of batches3_4) {
+      peers[1].shared.once('clock changed', clock => clock1_4 = clock)
+      peers[1].shared.apply(batch)
+    }
+    console.log('1_4', peers[1].shared.value().join(''), clock1_4)
+
+    // push '5' on peer 3
+    let clock3_45
+    peers[3].shared.once('clock changed', clock => clock3_45 = clock)
+    await peers[3].shared.push('5')
+    console.log('3_45', peers[3].shared.value().join(''), clock3_45)
+
+    // push 'a' on peer 1
+    let clock1_4a
+    peers[1].shared.once('clock changed', clock => clock1_4a = clock)
+    await peers[1].shared.push('a')
+    console.log('1_4a', peers[1].shared.value().join(''), clock1_4a)
+
+    // generate batch for peer 3 => peer 1
+    const batches3_5 = transmit(peers[3].shared.deltaBatches(clock1_4a))
+
+    // generate batch for peer 1 => peer 3
+    const batches1_a = transmit(peers[1].shared.deltaBatches(clock3_45))
+
+    // push '6' on peer 3
+    let clock3_456
+    peers[3].shared.once('clock changed', clock => clock3_456 = clock)
+    await peers[3].shared.push('6')
+    console.log('3_456', peers[3].shared.value().join(''), clock3_456)
+
+    // push 'e' on peer 1
+    let clock1_4ae
+    peers[1].shared.once('clock changed', clock => clock1_4ae = clock)
+    await peers[1].shared.push('e')
+    console.log('1_4ae', peers[1].shared.value().join(''), clock1_4ae)
+
+    // sync peer 3 => peer 1
+    let clock1_4ae5
+    for (let batch of batches3_5) {
+      peers[1].shared.once('clock changed', clock => clock1_4ae5 = clock)
+      peers[1].shared.apply(batch)
+    }
+    console.log('1_4ae5', peers[1].shared.value().join(''), clock1_4ae5)
+
+    // sync peer 1 => peer 3
+    let clock3_4a56
+    for (let batch of batches1_a) {
+      peers[3].shared.once('clock changed', clock => clock3_4a56 = clock)
+      peers[3].shared.apply(batch)
+    }
+    console.log('3_4a56', peers[3].shared.value().join(''), clock3_4a56)
+
+    // push '7' on peer 3
+    let clock3_4a567
+    peers[3].shared.once('clock changed', clock => clock3_4a567 = clock)
+    await peers[3].shared.push('7')
+    console.log('3_4a567', peers[3].shared.value().join(''), clock3_4a567)
+
+    // push 'i' on peer 1
+    let clock1_4ae5i
+    peers[1].shared.once('clock changed', clock => clock1_4ae5i = clock)
+    await peers[1].shared.push('i')
+    console.log('1_4ae5i', peers[1].shared.value().join(''), clock1_4ae5i)
+
+    // generate batch for peer 1 => peer 3
+    // Note: this only pushed 'i' for some reason in my trace
+    const batches1_ei = transmit(peers[1].shared.deltaBatches(clock3_4a56))
+
+    // generate batch for peer 3 => peer 1
+    const batches3_ae67 = transmit(peers[3].shared.deltaBatches(clock1_4ae5i))
+
+    // push 'o' on peer 1
+    let clock1_4ae5io
+    peers[1].shared.once('clock changed', clock => clock1_4ae5io = clock)
+    await peers[1].shared.push('o')
+    console.log('1_4ae5io', peers[1].shared.value().join(''), clock1_4ae5io)
+
+    // generate batch for peer 1 => peer 3
+    const batches1_o = transmit(peers[1].shared.deltaBatches(clock3_4a567))
+
+    // generate batch for peer 3 => peer 2
+    const batches3_4ae5io67 = transmit(peers[3].shared.deltaBatches({}))
+
+    // sync peer 3 => peer 1
+    let clock1_4ae5io67
+    for (let batch of batches3_ae67) {
+      // When broken, deltas for 'ae' are not included in batch, only '67'
+      peers[1].shared.once('clock changed', clock => clock1_4ae5io67 = clock)
+      peers[1].shared.apply(batch)
+    }
+    console.log('1_4ae5io67', peers[1].shared.value().join(''), clock1_4ae5io67)
+
+    // sync peer 1 => peer 3
+    let clock3_4ae5i67
+    for (let batch of batches1_ei) {
+      peers[3].shared.once('clock changed', clock => clock3_4ae5i67 = clock)
+      peers[3].shared.apply(batch)
+    }
+    console.log('3_4ae5i67', peers[3].shared.value().join(''), clock3_4ae5i67)
+
+    // sync peer 1 => peer 3
+    let clock3_4ae5io67
+    for (let batch of batches1_o) {
+      peers[3].shared.once('clock changed', clock => clock3_4ae5io67 = clock)
+      peers[3].shared.apply(batch)
+    }
+    console.log('3_4ae5io67', peers[3].shared.value().join(''), clock3_4ae5io67)
+
+    // sync peer 3 => peer 2
+    let clock2_4ae5io67
+    for (let batch of batches3_4ae5io67) {
+      // When broken, deltas for 'ae' are not included in batch
+      peers[2].shared.once('clock changed', clock => clock2_4ae5io67 = clock)
       peers[2].shared.apply(batch)
     }
-    await peers[2].shared.push('b')
-    peers[2].shared.once('clock changed', clock => clock2abc = clock)
-    await peers[2].shared.push('c')
-    console.log('Jim2-abc', peers[2].shared.value().join(''), clock2abc)
+    console.log('2_4ae5io67', peers[2].shared.value().join(''), clock2_4ae5io67)
 
+    /*
     // sync peer 2 => peer 1
     const batches2bc = peers[2].shared.deltaBatches(clock1a)
     console.log('Jim batches2bc', batches2bc)
@@ -147,6 +238,7 @@ describe.only('three replicas', () => {
       peers[3].shared.apply(batch)
     }
     console.log('Jim3-abc', peers[3].shared.value().join(''), clock3abc)
+    */
 
     /*
     const replica = CRDT('rga')('read only replica')
