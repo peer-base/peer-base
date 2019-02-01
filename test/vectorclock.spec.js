@@ -216,12 +216,12 @@ describe('vectorclock', () => {
     })
   })
 
-  describe.only('areDeltasJoint', () => {
+  describe('areDeltasJoint', () => {
     it('works', () => {
       expect(areDeltasJoint([{}, {}], [{}, {}])).to.be.true()
-      expect(areDeltasJoint([{}, {a:1}], [{}, {a:1}])).to.be.true()
-      expect(areDeltasJoint([{}, {a:1}], [{}, {b:1}])).to.be.true()
-      expect(areDeltasJoint([{a: 1}, {a:1}], [{b:1}, {b:1}])).to.be.false()
+      expect(areDeltasJoint([{}, { a: 1 }], [{}, { a: 1 }])).to.be.true()
+      expect(areDeltasJoint([{}, { a: 1 }], [{}, { b: 1 }])).to.be.true()
+      expect(areDeltasJoint([{ a: 1 }, { a: 1 }], [{ b: 1 }, { b: 1 }])).to.be.false()
     })
   })
 

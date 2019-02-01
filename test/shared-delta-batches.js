@@ -32,7 +32,7 @@ describe('shared delta batches', () => {
 
     commonDeltas = [
       [{}, { a: 1 }, [null, 'rga', replica1.push('a')]],
-      [{}, { b: 1 }, [null, 'rga', replica2.push('b')]],
+      [{}, { b: 1 }, [null, 'rga', replica2.push('b')]]
     ]
 
     const moreDeltas = [
@@ -53,11 +53,11 @@ describe('shared delta batches', () => {
     }
     expect(replica.value()).to.deep.equal(['b', 'a'])
 
-    const deltas = shared.deltaBatches({a:1, b:1})
+    const deltas = shared.deltaBatches({ a: 1, b: 1 })
 
     expect(deltas.length).to.equal(2)
     for (let deltaRecord of deltas) {
-      const [fromClock, authorClock] = deltaRecord
+      const [fromClock] = deltaRecord
       for (let key of Object.keys(fromClock)) {
         expect(fromClock[key]).to.not.equal(0)
       }
