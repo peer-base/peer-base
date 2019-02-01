@@ -63,6 +63,7 @@ class Protocol extends EventEmitter {
         passthrough((err) => {
           if (err && !expectedNetworkError(err)) {
             console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
+            console.error(err.stack)
             debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
           }
           this.emit('inbound connection closed', peerInfo)
@@ -86,6 +87,7 @@ class Protocol extends EventEmitter {
       passthrough((err) => {
         if (err && !expectedNetworkError(err)) {
           console.error(`connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
+          console.error(err.stack)
           debug(`${this._peerId()}: connection to ${peerInfo.id.toB58String()} ended with error: ${err.message}`)
         }
         this.emit('outbound connection closed', peerInfo)
