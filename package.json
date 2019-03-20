@@ -86,7 +86,7 @@
     "lodash.uniq": "^4.5.0",
     "pull-pair": "^1.1.0",
     "rimraf": "^2.6.3",
-    "sinon": "^7.2.3",
+    "sinon": "^7.3.0",
     "watchify": "^3.11.0"
   },
   "browser": {
