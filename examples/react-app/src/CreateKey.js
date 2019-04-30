@@ -22,8 +22,4 @@ export default class CreateKey extends Component {
 
     return (<Redirect to={`${this.props.match.url}/${this.state.name}/${Keys.uriEncode(this.state.keys)}`} />)
   }
-
-  shouldComponentUpdate () {
-    return false
-  }
 }
