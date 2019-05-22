@@ -507,7 +507,7 @@ await app.stop()
 
 ## Local store strategies
 
-If you want to know or change the way that peer-star persists the collaboration locally, you can read [docs/LOCAL_STORES.md](docs/LOCAL_STORES.md).
+If you want to know or change the way that peer-star persists the collaboration locally, you can read [LOCAL_STORES.md](LOCAL_STORES.md).
 
 ## IPFS Circuit Relay support
 
