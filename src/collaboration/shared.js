@@ -70,7 +70,7 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
         assert(!valueCache)
         valueCache = crdtType.incrementalValue(state, loadedState, loadedState)
       }
-      state = loadedState
+      state = crdtType.join.call(changeEmitter, state, loadedState)
     } else if (crdtType.incrementalValue && !options.replicateOnly) {
       assert(!valueCache)
       valueCache = crdtType.incrementalValue(state, state, state)
