@@ -48,7 +48,7 @@
     "frequency-counter": "^1.0.1",
     "hat": "0.0.3",
     "interface-datastore": "~0.6.0",
-    "ipfs": "0.34.2",
+    "ipfs": "0.37.0",
     "ipfs-api": "^26.1.2",
     "leftpad": "0.0.1",
     "libp2p": "~0.24.4",
