@@ -1,4 +1,4 @@
-# peer-star-app - Protocol explanation
+# peer-base - Protocol explanation
 
 ## Discovery
 

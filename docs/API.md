@@ -80,7 +80,7 @@ Keys can be used to collaborate. If provided, they authenticate changes to the c
 ### `await Keys.generate()`
 
 ```js
-const Keys = require('peer-star-app').keys
+const Keys = require('peer-base').keys
 
 const keys = await Keys.generate()
 ```
@@ -90,7 +90,7 @@ const keys = await Keys.generate()
 Encode keys into a URI-acceptable string:
 
 ```js
-const Keys = require('peer-star-app').keys
+const Keys = require('peer-base').keys
 const keys = await Keys.generate()
 
 const string = Keys.uriEncode(keys)
@@ -101,7 +101,7 @@ const string = Keys.uriEncode(keys)
 Encode the read-only key into a URI-acceptable string:
 
 ```js
-const Keys = require('peer-star-app').keys
+const Keys = require('peer-base').keys
 const keys = await Keys.generate()
 
 const string = Keys.uriEncodeReadOnly(keys)
@@ -112,7 +112,7 @@ const string = Keys.uriEncodeReadOnly(keys)
 Decode keys from a string:
 
 ```js
-const Keys = require('peer-star-app').keys
+const Keys = require('peer-base').keys
 const keys = await Keys.generate()
 
 const string = Keys.uriEncode(keys)
@@ -125,7 +125,7 @@ const decodedKeys = await Keys.uriDecode(string)
 You can distribute a read-only key by using `PeerBase.keys.uriEncodeReadOnly(keys)`:
 
 ```js
-const Keys = require('peer-star-app').keys
+const Keys = require('peer-base').keys
 const keys = await Keys.generate()
 
 const string = Keys.uriEncodeReadOnly(keys)
@@ -134,7 +134,7 @@ const string = Keys.uriEncodeReadOnly(keys)
 ### Generate symmetrical key
 
 ```js
-const Keys = require('peer-star-app').keys
+const Keys = require('peer-base').keys
 
 // options are optional. defaults to:
 const options = {
@@ -511,7 +511,7 @@ If you want to know or change the way that peer-star persists the collaboration 
 
 ## IPFS Circuit Relay support
 
-Peer-star-app supports using a circuit relay peer. For that you need to set up a go-ipfs node with circuit relay enabled. On your peer-star-app options, you can then pass in `options.ipfs.relay` with an object with the following attributes:
+peer-base supports using a circuit relay peer. For that you need to set up a go-ipfs node with circuit relay enabled. On your peer-base options, you can then pass in `options.ipfs.relay` with an object with the following attributes:
 
 * `relayWSAddr`: the multiaddress for the websocket server of the relay server
 * `apiAddr`: the multiaddress for the relay server API address (which we need for polling the known peers)
@@ -550,7 +550,7 @@ Emitted when a collaboration stops (probably because of innactivity).
 To install a pinner you can:
 
 ```sh
-$ npm install -g peer-star-app
+$ npm install -g peer-base
 $ PEER_STAR_APP_NAME=my-app-name pinner
 ```
 
