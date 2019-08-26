@@ -5,7 +5,7 @@
   "dependencies": {
     "fast-diff": "^1.2.0",
     "libp2p-websocket-star-rendezvous": "^0.3.0",
-    "peer-star-app": "../../",
+    "peer-base": "../../",
     "peer-star-network-vis-react": "^0.1.3",
     "peer-star-react": "^0.1.0",
     "react": "^16.5.2",

@@ -3,7 +3,7 @@ import { HashRouter as Router, Route, Link } from 'react-router-dom'
 import logo from './logo.svg'
 import './App.css'
 
-import PeerStarApp from 'peer-star-app'
+import PeerStarApp from 'peer-base'
 
 import Home from './Home'
 import routes from './routes'

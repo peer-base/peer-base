@@ -5,7 +5,7 @@
 Clone this repo.
 
 ```bash
-$ cd peer-star-app
+$ cd peer-base
 $ cd examples/react-app
 $ npm install
 ```

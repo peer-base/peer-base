@@ -1,5 +1,5 @@
 import React from 'react'
-import PeerStarApp from 'peer-star-app'
+import PeerStarApp from 'peer-base'
 import NetworkVis from 'peer-star-network-vis-react'
 import discussionTreeCrdt from './lib/discussion-tree-crdt'
 import CollaborationStats from './CollaborationStats'

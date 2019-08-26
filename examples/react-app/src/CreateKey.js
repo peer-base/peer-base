@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { Redirect } from 'react-router-dom'
-import PeerStar, { keys as Keys } from 'peer-star-app'
+import PeerStar, { keys as Keys } from 'peer-base'
 
 export default class CreateKey extends Component {
   state = {}
