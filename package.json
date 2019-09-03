@@ -61,7 +61,7 @@
     "lodash": "^4.17.11",
     "memdown": "^3.0.0",
     "msgpack-lite": "~0.1.26",
-    "multiaddr": "^6.0.3",
+    "multiaddr": "^7.0.0",
     "multihashing": "~0.3.3",
     "p-event": "^2.2.0",
     "p-queue": "^3.0.0",
