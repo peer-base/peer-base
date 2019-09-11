@@ -5,8 +5,13 @@ Build real-time collaborative DApps on top of IPFS
 [![Build Status](https://travis-ci.org/peer-base/peer-base.svg?branch=master)](https://travis-ci.org/peer-base/peer-base) [![Greenkeeper badge](https://badges.greenkeeper.io/peer-base/peer-base.svg)](https://greenkeeper.io/) [![made by Protocol Labs](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](https://protocol.ai)
 
 
-* [Example app](examples/react-app)
-* [How to run the example app](#run-example-app)
+## Examples
+
+* [React example app](examples/react-app)
+  * [How to run the example app](#run-example-app)
+* [Peer-chess: realtime chess over IPFS](https://github.com/jbenet/peer-chess)
+* [Home automation: toggling lights with peer-base](https://github.com/jimpick/peer-base-home-automation-react/blob/master/src/PeerBaseLights.js)
+* [Discussify: browser extension for commenting on web pages](https://github.com/ipfs-shipyard/discussify-browser-extension)
 
 # Documentation
 
