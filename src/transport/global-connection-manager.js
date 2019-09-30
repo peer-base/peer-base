@@ -6,6 +6,7 @@ const pull = require('pull-stream')
 const EventEmitter = require('events')
 const PeerSet = require('../common/peer-set')
 const expectedNetworkError = require('../common/expected-network-error')
+const ipfsLibp2p = require('../common/ipfs-libp2p')
 
 module.exports = class GlobalConnectionManager extends EventEmitter {
   constructor (ipfs, appTransport) {
@@ -22,13 +23,15 @@ module.exports = class GlobalConnectionManager extends EventEmitter {
   }
 
   start () {
-    this._ipfs._libp2pNode.on('peer:connect', this._onPeerConnect)
-    this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
+    const libp2p = ipfsLibp2p(this._ipfs)
+    libp2p.on('peer:connect', this._onPeerConnect)
+    libp2p.on('peer:disconnect', this._onPeerDisconnect)
   }
 
   stop () {
-    this._ipfs._libp2pNode.removeListener('peer:connect', this._onPeerConnect)
-    this._ipfs._libp2pNode.removeListener('peer:disconnect', this._onPeerDisconnect)
+    const libp2p = ipfsLibp2p(this._ipfs)
+    libp2p.removeListener('peer:connect', this._onPeerConnect)
+    libp2p.removeListener('peer:disconnect', this._onPeerDisconnect)
 
     // TODO: disconnect all
   }

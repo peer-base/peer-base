@@ -5,6 +5,7 @@ const EventEmitter = require('events')
 const DialCache = require('./dial-cache')
 const DialThrottle = require('./dial-throttle')
 const PeerInterestDiscovery = require('../discovery/peer-interest-discovery')
+const ipfsLibp2p = require('../common/ipfs-libp2p')
 
 // The peerDiscovery emitter emits 'peer' events when a new peer is discovered.
 // This class listens for those events and dials the peer.
@@ -158,10 +159,11 @@ module.exports = class Discovery extends EventEmitter {
 
   _awaitLibp2pStart () {
     return new Promise(resolve => {
-      if (this._ipfs._libp2pNode.isStarted()) {
+      const libp2p = ipfsLibp2p(this._ipfs)
+      if (libp2p.isStarted()) {
         return resolve()
       }
-      this._ipfs._libp2pNode.once('start', resolve)
+      libp2p.once('start', resolve)
     })
   }
 }

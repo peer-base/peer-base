@@ -5,6 +5,7 @@ const EventEmitter = require('events')
 const Ring = require('../common/ring')
 const DiasSet = require('../common/dias-peer-set')
 const PeerSet = require('../common/peer-set')
+const ipfsLibp2p = require('../common/ipfs-libp2p')
 const debounce = require('lodash/debounce')
 
 const defaultOptions = {
@@ -39,7 +40,7 @@ module.exports = class ConnectionManager extends EventEmitter {
 
   start () {
     this._diasSet = DiasSet(this._options.peerIdByteCount, this._ipfs._peerInfo, this._options.preambleByteCount)
-    this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
+    ipfsLibp2p(this._ipfs).on('peer:disconnect', this._onPeerDisconnect)
     this._discovery.on('peer:interest', this._onPeerInterest)
     this._dialer.on('dialed', this._onDialed)
     this._dialer.start()
@@ -48,7 +49,7 @@ module.exports = class ConnectionManager extends EventEmitter {
 
   stop () {
     this._running = false
-    this._ipfs._libp2pNode.removeListener('peer:disconnect', this._onPeerDisconnect)
+    ipfsLibp2p(this._ipfs).removeListener('peer:disconnect', this._onPeerDisconnect)
     this._discovery.removeListener('peer:interest', this._onPeerInterest)
     this._dialer.removeListener('dialed', this._onDialed)
 

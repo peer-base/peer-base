@@ -3,6 +3,8 @@
 const debug = require('debug')('peer-base:discovery:peer-interest')
 const EventEmitter = require('events')
 
+const ipfsLibp2p = require('../common/ipfs-libp2p')
+
 const defaultOptions = {
   // Wait this amount of time to find out from floodsub if a peer we discovered
   // is interested in our app topic
@@ -29,14 +31,16 @@ module.exports = class PeerInterestDiscovery extends EventEmitter {
   start () {
     debug('start')
     this._running = true
-    this._ipfs._libp2pNode._floodSub.on('floodsub:subscription-change', this._onSubscriptionChange)
-    this._ipfs._libp2pNode.on('peer:disconnect', this._onPeerDisconnect)
+    const libp2p = ipfsLibp2p(this._ipfs)
+    libp2p._floodSub.on('floodsub:subscription-change', this._onSubscriptionChange)
+    libp2p.on('peer:disconnect', this._onPeerDisconnect)
   }
 
   stop () {
     debug('stop')
-    this._ipfs._libp2pNode._floodSub.removeListener('floodsub:subscription-change', this._onSubscriptionChange)
-    this._ipfs._libp2pNode.removeListener('peer:disconnect', this._onPeerDisconnect)
+    const libp2p = ipfsLibp2p(this._ipfs)
+    libp2p._floodSub.removeListener('floodsub:subscription-change', this._onSubscriptionChange)
+    libp2p.removeListener('peer:disconnect', this._onPeerDisconnect)
     for (const [id, peer] of this._peers) {
       this._clearTimer(id)
       this._globalConnectionManager.maybeHangUp(peer.peerInfo)
