@@ -163,6 +163,8 @@ module.exports = (name, id, crdtType, ipfs, collaboration, clocks, options) => {
     return (vectorclock.compare(otherClock, clock) < 0) || vectorclock.isIdentical(otherClock, clock)
   }
 
+  shared.applyAndPushDelta = applyAndPushDelta
+
   shared.deltas = (since = {}, targetPeerId) => {
     return deltas.filter((deltaRecord) => {
       if (vectorclock.isDeltaInteresting(deltaRecord, since, targetPeerId)) {
