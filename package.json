@@ -59,7 +59,7 @@
     "libp2p-websocket-star-multi": "~0.4.0",
     "libp2p-websockets": "~0.12.1",
     "lodash": "^4.17.11",
-    "memdown": "^3.0.0",
+    "memdown": "^5.1.0",
     "msgpack-lite": "~0.1.26",
     "multiaddr": "^6.0.3",
     "multihashing": "~0.3.3",
