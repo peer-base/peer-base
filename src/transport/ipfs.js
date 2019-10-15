@@ -8,6 +8,7 @@ const WebSockets = require('libp2p-websockets')
 const Bootstrap = require('libp2p-bootstrap')
 const Multiplex = require('libp2p-mplex')
 const SECIO = require('libp2p-secio')
+const floodsub = require('libp2p-floodsub')
 const get = require('lodash/get')
 const AppTransport = require('./app-transport')
 const Relay = require('./ipfs-relay')
@@ -21,9 +22,6 @@ module.exports = (app, options) => {
   const ipfsOptions = {
     repo: options && options.repo,
     init: (options && options.init) || true,
-    EXPERIMENTAL: {
-      pubsub: true
-    },
     config: {
       Addresses: {
         Swarm: (options && options.swarm) || ['/dns4/ws-star1.par.dwebops.pub/tcp/443/wss/p2p-websocket-star']
@@ -75,7 +73,8 @@ module.exports = (app, options) => {
         transport: [ appTransport, WebSockets ],
         streamMuxer: [ Multiplex ],
         connEncryption: [ SECIO ],
-        peerDiscovery: [ appTransport.discovery, Bootstrap ]
+        peerDiscovery: [ appTransport.discovery, Bootstrap ],
+        pubsub: floodsub
       },
       config: {
         peerDiscovery: {
@@ -98,8 +97,7 @@ module.exports = (app, options) => {
           }
         },
         EXPERIMENTAL: {
-          dht: get(ipfsOptions, 'EXPERIMENTAL.dht', false),
-          pubsub: get(ipfsOptions, 'EXPERIMENTAL.pubsub', false)
+          dht: get(ipfsOptions, 'EXPERIMENTAL.dht', false)
         }
       }
     })

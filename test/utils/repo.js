@@ -11,13 +11,10 @@ function createTempRepo (repoPath) {
 
   const repo = new IPFSRepo(repoPath)
 
-  repo.teardown = () => {
-    return new Promise((resolve, reject) => {
-      repo.close(() => {
-        clean(repoPath)
-        resolve()
-      })
-    })
+  repo.teardown = async () => {
+    await repo.close()
+
+    clean(repoPath)
   }
 
   return repo
