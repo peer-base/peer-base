@@ -64,7 +64,7 @@
     "multiaddr": "^6.0.3",
     "multihashing": "~0.3.3",
     "p-event": "^2.2.0",
-    "p-queue": "^3.0.0",
+    "p-queue": "^6.2.1",
     "peer-id": "~0.12.2",
     "peer-info": "~0.15.1",
     "prom-client": "^11.2.1",
