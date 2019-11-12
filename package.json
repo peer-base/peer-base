@@ -81,7 +81,7 @@
     "chai": "^4.2.0",
     "d3": "^5.7.0",
     "dirty-chai": "^2.0.1",
-    "execa": "^1.0.0",
+    "execa": "^3.3.0",
     "ipfs-repo": "~0.26.1",
     "libp2p-websocket-star-rendezvous": "~0.3.0",
     "lodash.uniq": "^4.5.0",
