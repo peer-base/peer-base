@@ -40,7 +40,7 @@
     "big-integer": "^1.6.41",
     "browser-process-hrtime": "^1.0.0",
     "datastore-core": "~0.6.0",
-    "datastore-level": "~0.10.0",
+    "datastore-level": "~0.14.0",
     "debug": "^4.1.1",
     "delay": "^4.1.0",
     "delta-crdts": "~0.10.2",
