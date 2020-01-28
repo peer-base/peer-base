@@ -51,7 +51,7 @@
     "ipfs": "0.34.2",
     "ipfs-api": "^26.1.2",
     "leftpad": "0.0.1",
-    "libp2p": "~0.24.4",
+    "libp2p": "~0.27.0",
     "libp2p-bootstrap": "~0.9.7",
     "libp2p-crypto": "~0.16.0",
     "libp2p-mplex": "~0.8.4",
